@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 const UserSchema = new mongoose.Schema({
   name: { type: String, trim: true },
   email: { type: String, lowercase: true, trim: true, required: true, unique: true },
+  rollNumber: { type: String, trim: true, unique: true, sparse: true }, // Student roll number (unique identifier)
   phoneNumber: { type: String, trim: true },
   role: { type: String, enum: ["student", "poc", "admin", "superadmin", "official"], default: "student" },
   // convenience booleans (your UI can use role or these)
@@ -25,6 +26,7 @@ const UserSchema = new mongoose.Schema({
 
 // Quick indexes
 UserSchema.index({ email: 1 });
+UserSchema.index({ rollNumber: 1 });
 UserSchema.index({ role: 1 });
 
 export default mongoose.model("User", UserSchema);
