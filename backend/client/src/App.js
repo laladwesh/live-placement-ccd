@@ -3,6 +3,12 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "./pages/Login";
 import OAuthCallback from "./pages/OAuthCallback";
 import Dashboard from "./pages/Dashboard";
+import AdminDashboard from "./pages/AdminDashboard";
+import CompanyDetails from "./pages/CompanyDetails";
+import POCDashboard from "./pages/POCDashboard";
+import POCCompanyStudents from "./pages/POCCompanyStudents";
+import StudentDashboard from "./pages/StudentDashboard";
+import StudentShortlistDetails from "./pages/StudentShortlistDetails";
 import PrivateRoute from "./components/PrivateRoute";
 import AuthCallback from "./pages/AuthCallback";
 
@@ -15,6 +21,36 @@ function App() {
         <Route path="/dashboard" element={
           <PrivateRoute>
             <Dashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/admin" element={
+          <PrivateRoute>
+            <AdminDashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/company/:companyId" element={
+          <PrivateRoute>
+            <CompanyDetails />
+          </PrivateRoute>
+        } />
+        <Route path="/poc" element={
+          <PrivateRoute>
+            <POCDashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/poc/company/:companyId" element={
+          <PrivateRoute>
+            <POCCompanyStudents />
+          </PrivateRoute>
+        } />
+        <Route path="/student" element={
+          <PrivateRoute>
+            <StudentDashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/student/shortlist/:shortlistId" element={
+          <PrivateRoute>
+            <StudentShortlistDetails />
           </PrivateRoute>
         } />
         <Route path="/" element={<Navigate to="/login" replace />} />
