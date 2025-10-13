@@ -10,9 +10,13 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { connectDB } from "./config/db.js";
+import { initializeSocket } from "./config/socket.js";
 // import authRoutes from "./routes/auth.route.js";
 import authRoutes from './routes/auth.routes.js'
 import adminRoutes from "./routes/admin.route.js";
+import companyRoutes from "./routes/company.routes.js";
+import pocRoutes from "./routes/poc.routes.js";
+import studentRoutes from "./routes/student.routes.js";
 import { logger } from "./utils/logger.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 import { whoami } from "./controllers/me.controller.js";
@@ -27,6 +31,9 @@ const server = http.createServer(app);
 
 // Connect DB
 await connectDB(MONGO_URI);
+
+// Initialize Socket.IO
+initializeSocket(server);
 
 // basic middleware
 app.use(helmet());
@@ -44,6 +51,9 @@ app.use("/api/auth", authRoutes);
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 // app.use("/api/auth", authRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/admin", companyRoutes);
+app.use("/api/poc", pocRoutes);
+app.use("/api/student", studentRoutes);
 app.get("/api/users/me", authMiddleware, whoami);
 
 // =======================================================
