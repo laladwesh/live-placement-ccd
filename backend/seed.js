@@ -1,13 +1,15 @@
 /**
  * seed.js
- * Run with: node src/utils/seed.js
+ * Run with: node seed.js
  *
  * Creates:
- * - 2 Microsoft (Azure) users (isAllowed: true)
- * - 2 Google users (isAllowed: true)
- * - 1 local user with password (isAllowed: true)
- * - 1 admin user (with password, isAllowed: true)
+ * - 1 Superadmin (Google OAuth)
+ * - 1 Admin (Google OAuth)
+ * - 2 POCs (Local password)
+ * - 2 Officials (Local password)
  *
+ * Note: Students should be added via CSV upload using sample-students.csv
+ * 
  * Make sure your MONGO_URI is set in .env or environment before running.
  */
 
@@ -30,12 +32,12 @@ const main = async () => {
 
     // emails to remove (so seed is idempotent)
     const emailsToRemove = [
-      "g.avinash@iitg.ac.in",
-      "spirit@iitg.ac.in",
       "guptaavinash302@gmail.com",
       "laladwesh@gmail.com",
-      "localuser@iitg.ac.in",
-      "admin@iitg.ac.in"
+      "poc1@iitg.ac.in",
+      "poc2@iitg.ac.in",
+      "official1@iitg.ac.in",
+      "official2@iitg.ac.in"
     ];
 
     await User.deleteMany({ email: { $in: emailsToRemove } });
@@ -44,50 +46,56 @@ const main = async () => {
     const salt = await bcrypt.genSalt(10);
 
     const users = [
-      // Microsoft (Azure) users — these will sign in via Azure (email must match)
+      // Google OAuth - Superadmin
       {
-        name: "G Avinash (Azure)",
-        email: "g.avinash@iitg.ac.in",
-        role: "student",
-        isAllowed: true
-      },
-      {
-        name: "Spirit (Azure)",
-        email: "spirit@iitg.ac.in",
-        role: "student",
-        isAllowed: true
-      },
-
-      // Google users — these will sign in via Google (email must match)
-      {
-        name: "Avinash Gupta (Google)",
+        name: "Avinash Gupta",
         email: "guptaavinash302@gmail.com",
-        role: "student",
+        role: "superadmin",
         isAllowed: true
       },
+
+      // Google OAuth - Admin
       {
-        name: "Lala Dwesh (Google)",
+        name: "Lala Dwesh",
         email: "laladwesh@gmail.com",
-        role: "student",
-        isAllowed: true
-      },
-
-      // Local credential user (email + password)
-      {
-        name: "Local Student",
-        email: "localuser@iitg.ac.in",
-        role: "student",
-        password: "LocalPass123!" ,
-        isAllowed: true
-      },
-
-      // Admin user (for management)
-      {
-        name: "Placement Admin",
-        email: "admin@iitg.ac.in",
         role: "admin",
-        password: "AdminPass123!",
         isAllowed: true
+      },
+
+      // Local Password - POCs
+      {
+        name: "POC John Doe",
+        email: "poc1@iitg.ac.in",
+        role: "poc",
+        password: "PocPass123!",
+        isAllowed: true,
+        phoneNumber: "+91-9876543210"
+      },
+      {
+        name: "POC Jane Smith",
+        email: "poc2@iitg.ac.in",
+        role: "poc",
+        password: "PocPass123!",
+        isAllowed: true,
+        phoneNumber: "+91-9876543211"
+      },
+
+      // Local Password - Officials
+      {
+        name: "Official Rajesh Kumar",
+        email: "official1@iitg.ac.in",
+        role: "official",
+        password: "OfficialPass123!",
+        isAllowed: true,
+        phoneNumber: "+91-9876543220"
+      },
+      {
+        name: "Official Priya Singh",
+        email: "official2@iitg.ac.in",
+        role: "official",
+        password: "OfficialPass123!",
+        isAllowed: true,
+        phoneNumber: "+91-9876543221"
       }
     ];
 
@@ -103,6 +111,7 @@ const main = async () => {
         role: u.role,
         passwordHash,
         isAllowed: !!u.isAllowed,
+        phoneNumber: u.phoneNumber || "",
         providers: u.providers || []
       });
 
@@ -114,15 +123,25 @@ const main = async () => {
       }
     }
 
-    console.log("\nSeeding complete. You can now:");
-    console.log("- Sign in locally with the local user:");
-    console.log("  email: localuser@iitg.ac.in  password: LocalPass123!");
-    console.log("- Sign in as admin:");
-    console.log("  email: admin@iitg.ac.in  password: AdminPass123!");
-    console.log("- Sign in via Azure using the Microsoft accounts:");
-    console.log("  g.avinash@iitg.ac.in  and  spirit@iitg.ac.in");
-    console.log("- Sign in via Google using the Gmail accounts:");
-    console.log("  guptaavinash302@gmail.com  and  laladwesh@gmail.com");
+    console.log("\n✅ Seeding complete! User accounts created:\n");
+    
+    console.log("📱 GOOGLE OAUTH USERS:");
+    console.log("  🔴 Superadmin: guptaavinash302@gmail.com");
+    console.log("  🟠 Admin:      laladwesh@gmail.com");
+    
+    console.log("\n LOCAL PASSWORD USERS:");
+    console.log("  🟢 POC 1: poc1@iitg.ac.in → Password: PocPass123!");
+    console.log("  🟢 POC 2: poc2@iitg.ac.in → Password: PocPass123!");
+    console.log("  🟡 Official 1: official1@iitg.ac.in → Password: OfficialPass123!");
+    console.log("  🟡 Official 2: official2@iitg.ac.in → Password: OfficialPass123!");
+    
+    console.log("\n📝 Login Instructions:");
+    console.log("  • Google users: Click 'Sign in with Google' button");
+    console.log("  • Local users: Use email + password shown above");
+    console.log("\n📊 Student Accounts:");
+    console.log("  • Students should be added via CSV upload");
+    console.log("  • Use sample-students.csv as reference");
+    console.log("  • CSV Format: rollNumber,email,name,phoneNumber,status");
     process.exit(0);
   } catch (err) {
     console.error("Seed error:", err);
