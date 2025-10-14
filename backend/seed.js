@@ -10,7 +10,6 @@
  *
  * Note: Students should be added via CSV upload using sample-students.csv
  * 
- * Make sure your MONGO_URI is set in .env or environment before running.
  */
 
 import dotenv from "dotenv";
@@ -123,22 +122,22 @@ const main = async () => {
       }
     }
 
-    console.log("\n✅ Seeding complete! User accounts created:\n");
+    console.log("\n Seeding complete! User accounts created:\n");
     
-    console.log("📱 GOOGLE OAUTH USERS:");
-    console.log("  🔴 Superadmin: guptaavinash302@gmail.com");
-    console.log("  🟠 Admin:      laladwesh@gmail.com");
+    console.log(" GOOGLE OAUTH USERS:");
+    console.log("   Superadmin: guptaavinash302@gmail.com");
+    console.log("   Admin:      laladwesh@gmail.com");
     
     console.log("\n LOCAL PASSWORD USERS:");
-    console.log("  🟢 POC 1: poc1@iitg.ac.in → Password: PocPass123!");
-    console.log("  🟢 POC 2: poc2@iitg.ac.in → Password: PocPass123!");
-    console.log("  🟡 Official 1: official1@iitg.ac.in → Password: OfficialPass123!");
-    console.log("  🟡 Official 2: official2@iitg.ac.in → Password: OfficialPass123!");
+    console.log("   POC 1: poc1@iitg.ac.in → Password: PocPass123!");
+    console.log("   POC 2: poc2@iitg.ac.in → Password: PocPass123!");
+    console.log("   Official 1: official1@iitg.ac.in → Password: OfficialPass123!");
+    console.log("   Official 2: official2@iitg.ac.in → Password: OfficialPass123!");
     
-    console.log("\n📝 Login Instructions:");
+    console.log("\n Login Instructions:");
     console.log("  • Google users: Click 'Sign in with Google' button");
     console.log("  • Local users: Use email + password shown above");
-    console.log("\n📊 Student Accounts:");
+    console.log("\n Student Accounts:");
     console.log("  • Students should be added via CSV upload");
     console.log("  • Use sample-students.csv as reference");
     console.log("  • CSV Format: rollNumber,email,name,phoneNumber,status");
