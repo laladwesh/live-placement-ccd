@@ -89,10 +89,10 @@ export const updateInterviewStage = async (req, res) => {
     const pocId = req.user._id;
 
     // Validate stage
-    const validStages = ["R1", "R2", "R3", Stage.REJECTED];
+    const validStages = ["R1", "R2", "R3", "R4", Stage.REJECTED];
     if (!validStages.includes(stage)) {
       return res.status(400).json({ 
-        message: "Invalid stage. Must be R1, R2, R3, or REJECTED" 
+        message: "Invalid stage. Must be R1, R2, R3, R4, or REJECTED" 
       });
     }
 

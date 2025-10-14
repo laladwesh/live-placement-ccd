@@ -7,6 +7,7 @@ export const Stage = {
   R1: "R1",
   R2: "R2",
   R3: "R3",
+  R4: "R4",
   OFFERED: "OFFERED",
   REJECTED: "REJECTED"
 };
