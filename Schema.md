@@ -28,6 +28,7 @@
 - `shortlistedStudents` — Array of ObjectId (student user ids)
 - `waitlistedStudents` — Array of ObjectId (student user ids)
 - `placedStudents` — Array of ObjectId (student user ids)
+- `isProcessCompleted`
 
 ### 4) `Pair / Application` (one doc per company-student pair)
 
