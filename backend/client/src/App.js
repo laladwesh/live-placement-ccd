@@ -4,6 +4,7 @@ import Login from "./pages/Login";
 import OAuthCallback from "./pages/OAuthCallback";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminCompanyDetails from "./pages/AdminCompanyDetails";
 import CompanyDetails from "./pages/CompanyDetails";
 import POCDashboard from "./pages/POCDashboard";
 import POCCompanyStudents from "./pages/POCCompanyStudents";
@@ -26,6 +27,11 @@ function App() {
         <Route path="/admin" element={
           <PrivateRoute>
             <AdminDashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/admin/company" element={
+          <PrivateRoute>
+            <AdminCompanyDetails />
           </PrivateRoute>
         } />
         <Route path="/company/:companyId" element={

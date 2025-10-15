@@ -1,50 +1,47 @@
 // src/pages/AdminDashboard.jsx
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { format } from "date-fns";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
-import CompanyCard from "../components/CompanyCard";
-import AddCompanyModal from "../components/AddCompanyModal";
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminDashboard() {
-  const { socket, connected } = useSocket();
+  const navigate = useNavigate();
+  const { socket } = useSocket();
   const [user, setUser] = useState(null);
-  const [companies, setCompanies] = useState([]);
+  const [pendingOffers, setPendingOffers] = useState([]);
+  const [confirmedOffers, setConfirmedOffers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [updatingOfferId, setUpdatingOfferId] = useState(null);
 
   useEffect(() => {
-    fetchUser();
-    fetchCompanies();
+    const initialize = async () => {
+      await fetchUser();
+      await fetchOffers();
+      setLoading(false);
+    };
+    initialize();
   }, []);
 
-  // Socket.IO listeners - Silent background updates
+  // Socket.IO listeners for real-time updates
   useEffect(() => {
     if (!socket) return;
 
-    // Join admin room
+    // Join admin room for broadcasts
     socket.emit("join:admin");
 
-    // Silent refresh function - no loading screen
-    const silentRefresh = async () => {
-      try {
-        const res = await api.get("/admin/companies");
-        setCompanies(res.data.companies || []);
-      } catch (err) {
-        console.error("Silent refresh error:", err);
-      }
+    const handleOfferUpdate = (data) => {
+      console.log("📢 Offer update received via socket:", data);
+      fetchOffers(); // Re-fetch all offers to stay in sync
     };
 
-    // Listen for company updates
-    socket.on("company:update", (data) => {
-      console.log("🏢 Company update received:", data.action, data.data);
-      silentRefresh(); // Silent background refresh
-    });
+    socket.on("offer:created", handleOfferUpdate);
+    socket.on("offer:confirmed", handleOfferUpdate);
 
-    // Cleanup
     return () => {
-      socket.off("company:update");
+      socket.off("offer:created", handleOfferUpdate);
+      socket.off("offer:confirmed", handleOfferUpdate);
     };
   }, [socket]);
 
@@ -59,34 +56,39 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchCompanies = async () => {
+  const fetchOffers = async () => {
     try {
-      setLoading(true);
-      const res = await api.get("/admin/companies");
-      setCompanies(res.data.companies || []);
+      const [pendingRes, confirmedRes] = await Promise.all([
+        api.get("/admin/offers?status=PENDING"),
+        api.get("/admin/offers?status=ACCEPTED"),
+      ]);
+      setPendingOffers(pendingRes.data.offers || []);
+      setConfirmedOffers(confirmedRes.data.offers || []);
     } catch (err) {
-      console.error("Error fetching companies:", err);
-    } finally {
-      setLoading(false);
+      console.error("Error fetching offers:", err);
     }
   };
 
-  const handleCompanyAdded = () => {
-    setShowAddModal(false);
-    fetchCompanies();
+  const handleConfirmOffer = async (offerId) => {
+    if (!window.confirm("Are you sure you want to confirm this offer? This will mark the student as placed.")) {
+      return;
+    }
+    setUpdatingOfferId(offerId);
+    try {
+      // API call to confirm the offer and update student's `isPlaced` status
+      await api.patch(`/admin/offers/${offerId}/confirm`);
+      // The socket listener will handle the UI update, but we can also trigger a manual fetch
+      // to ensure the UI updates immediately, even if there's a socket delay.
+      fetchOffers();
+    } catch (err) {
+      console.error("Error confirming offer:", err);
+      alert(err.response?.data?.message || "Failed to confirm the offer. Please try again.");
+    } finally {
+      // The offer will disappear from the pending list, so no need to reset the state
+      // for this specific ID if the call is successful.
+      setUpdatingOfferId(null);
+    }
   };
-
-  const handleCompanyUpdated = () => {
-    fetchCompanies();
-  };
-
-  const handleCompanyDeleted = () => {
-    fetchCompanies();
-  };
-
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
 
   if (!user) {
     return (
@@ -97,7 +99,7 @@ export default function AdminDashboard() {
     );
   }
 
-  // Check if user is admin
+  // Role check
   if (user.role !== "admin" && user.role !== "superadmin") {
     return (
       <div className="min-h-screen bg-slate-50">
@@ -116,102 +118,106 @@ export default function AdminDashboard() {
       <Navbar user={user} />
       
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-              <p className="text-slate-600 mt-1">Manage companies and placement process</p>
-            </div>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Offer Management</h1>
+            <p className="text-slate-600 mt-1">Review pending offers and confirm student placements.</p>
+          </div>
+          <div>
             <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+              onClick={() => navigate("/admin/company")}
+              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition flex items-center gap-2"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Company
+              Manage Companies
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
             </button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">Total Companies</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">{companies.length}</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">With POCs</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">
-                {companies.filter(c => c.pocs && c.pocs.length > 0).length}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">Pending Offers</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">0</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">Confirmed Offers</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">0</div>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search companies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <svg
-              className="w-5 h-5 absolute left-3 top-2.5 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
           </div>
         </div>
 
-        {/* Companies Grid */}
         {loading ? (
           <div className="text-center py-12">
             <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="text-slate-600 mt-4">Loading companies...</p>
-          </div>
-        ) : filteredCompanies.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <svg className="w-16 h-16 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <p className="text-slate-600 mt-4">
-              {searchTerm ? "No companies match your search" : "No companies yet. Add your first company!"}
-            </p>
+            <p className="text-slate-600 mt-4">Loading offers...</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCompanies.map(company => (
-              <CompanyCard
-                key={company._id}
-                company={company}
-                onUpdate={handleCompanyUpdated}
-                onDelete={handleCompanyDeleted}
-              />
-            ))}
+          <div className="space-y-12">
+            {/* Pending Offers Section */}
+            <section>
+              <h2 className="text-2xl font-semibold text-slate-800 border-b pb-2 mb-4">
+                Pending Offers ({pendingOffers.length})
+              </h2>
+              {pendingOffers.length > 0 ? (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Student</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Company</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Offer Date</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Remarks</th>
+                        <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {pendingOffers.map((offer) => (
+                        <tr key={offer._id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{offer.student?.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{offer.company?.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{format(new Date(offer.createdAt), "dd MMM, yyyy")}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">{offer.remarks || "-"}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                            <button
+                              onClick={() => handleConfirmOffer(offer._id)}
+                              className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed"
+                              disabled={updatingOfferId === offer._id}
+                            >
+                              {updatingOfferId === offer._id ? "Confirming..." : "Confirm Offer"}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-500">No pending offers to review.</p>
+              )}
+            </section>
+
+            {/* Confirmed Offers Section */}
+            <section>
+              <h2 className="text-2xl font-semibold text-slate-800 border-b pb-2 mb-4">
+                Confirmed Placements ({confirmedOffers.length})
+              </h2>
+              {confirmedOffers.length > 0 ? (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Student</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Company</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Confirmation Date</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-slate-200">
+                      {confirmedOffers.map((offer) => (
+                        <tr key={offer._id}>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{offer.student?.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{offer.company?.name}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{format(new Date(offer.updatedAt), "dd MMM, yyyy")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-slate-500">No students have been placed yet.</p>
+              )}
+            </section>
           </div>
         )}
       </main>
-
-      {/* Add Company Modal */}
-      {showAddModal && (
-        <AddCompanyModal
-          onClose={() => setShowAddModal(false)}
-          onSuccess={handleCompanyAdded}
-        />
-      )}
     </div>
   );
 }
+
