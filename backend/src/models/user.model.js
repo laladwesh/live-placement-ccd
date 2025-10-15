@@ -24,6 +24,13 @@ const UserSchema = new mongoose.Schema({
   timestamps: true
 });
 
+// Pre-save hook to set convenience booleans based on role
+UserSchema.pre('save', function(next) {
+  this.isPoc = this.role === 'poc';
+  this.isAdmin = this.role === 'admin' || this.role === 'superadmin';
+  next();
+});
+
 // Quick indexes
 UserSchema.index({ email: 1 });
 UserSchema.index({ rollNumber: 1 });

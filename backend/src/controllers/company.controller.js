@@ -1,17 +1,19 @@
 // backend/src/controllers/company.controller.js
 import Company from "../models/company.model.js";
 import User from "../models/user.model.js";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { logger } from "../utils/logger.js";
 import { emitCompanyUpdate } from "../config/socket.js";
 
 /**
  * Create a new company
  * POST /api/admin/companies
- * Body: { name, venue, description, maxRounds, pocIds }
+ * Body: { name, venue, description, maxRounds, pocIds, newPocs }
  */
 export const createCompany = async (req, res) => {
   try {
-    const { name, venue, description, maxRounds, pocIds } = req.body;
+    const { name, venue, description, maxRounds, pocIds = [], newPocs = [] } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Company name is required" });
@@ -23,8 +25,33 @@ export const createCompany = async (req, res) => {
       return res.status(400).json({ message: "Company with this name already exists" });
     }
 
+    // 1. Create new POC users if provided
+    const newPocIds = [];
+    if (Array.isArray(newPocs) && newPocs.length > 0) {
+      for (const pocData of newPocs) {
+        if (!pocData.email || !pocData.name || !pocData.phoneNumber) {
+          return res.status(400).json({ message: "New POCs must have a name, email, and phone number." });
+        }
+        const existingUser = await User.findOne({ email: pocData.email });
+        if (existingUser) {
+          return res.status(400).json({ message: `A user with email ${pocData.email} already exists.` });
+        }
+
+        // Create a user without a password, ready for OAuth login
+        const newUser = new User({
+          name: pocData.name,
+          email: pocData.email,
+          phoneNumber: pocData.phoneNumber,
+          role: "poc",
+          isAllowed: true, // New POCs are allowed by default
+        });
+        await newUser.save();
+        newPocIds.push(newUser._id);
+        logger.info(`New POC user created for OAuth login: ${newUser.email}`);
+      }
+    }
+
     // Validate POCs if provided
-    let validPocIds = [];
     if (pocIds && Array.isArray(pocIds) && pocIds.length > 0) {
       const pocs = await User.find({ 
         _id: { $in: pocIds },
@@ -36,15 +63,17 @@ export const createCompany = async (req, res) => {
           message: "One or more POC IDs are invalid or users don't have POC/admin role" 
         });
       }
-      validPocIds = pocs.map(p => p._id);
     }
+
+    // Combine existing and newly created POCs, ensuring no duplicates
+    const allPocIds = [...new Set([...pocIds, ...newPocIds.map(id => id.toString())])];
 
     const company = new Company({
       name: name.trim(),
       venue: venue?.trim() || "",
       description: description?.trim() || "",
       maxRounds: maxRounds || 4,
-      pocs: validPocIds
+      pocs: allPocIds
     });
 
     await company.save();
