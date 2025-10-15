@@ -32,6 +32,7 @@ const main = async () => {
     // emails to remove (so seed is idempotent)
     const emailsToRemove = [
       "guptaavinash302@gmail.com",
+      "vibhugupta908@gmail.com",
       "laladwesh@gmail.com",
       "poc1@iitg.ac.in",
       "poc2@iitg.ac.in",
@@ -49,6 +50,14 @@ const main = async () => {
       {
         name: "Avinash Gupta",
         email: "guptaavinash302@gmail.com",
+        role: "superadmin",
+        isAllowed: true
+      },
+
+      // Google OAuth - Superadmin (New)
+      {
+        name: "Vibhu Gupta",
+        email: "vibhugupta908@gmail.com",
         role: "superadmin",
         isAllowed: true
       },
@@ -126,6 +135,7 @@ const main = async () => {
     
     console.log(" GOOGLE OAUTH USERS:");
     console.log("   Superadmin: guptaavinash302@gmail.com");
+    console.log("   Superadmin: vibhugupta908@gmail.com");
     console.log("   Admin:      laladwesh@gmail.com");
     
     console.log("\n LOCAL PASSWORD USERS:");

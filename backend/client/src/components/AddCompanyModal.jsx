@@ -8,7 +8,8 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
     venue: "",
     description: "",
     maxRounds: 4,
-    pocIds: []
+    pocIds: [],
+    newPocs: []
   });
   const [pocs, setPocs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,29 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
         ? prev.pocIds.filter(id => id !== pocId)
         : [...prev.pocIds, pocId];
       return { ...prev, pocIds };
+    });
+  };
+
+  const handleAddNewPOC = () => {
+    setFormData(prev => ({
+      ...prev,
+      newPocs: [...prev.newPocs, { name: "", email: "", phoneNumber: "" }]
+    }));
+  };
+
+  const handleNewPOCChange = (index, e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newPocs = [...prev.newPocs];
+      newPocs[index][name] = value;
+      return { ...prev, newPocs };
+    });
+  };
+
+  const handleRemoveNewPOC = (index) => {
+    setFormData(prev => {
+      const newPocs = prev.newPocs.filter((_, i) => i !== index);
+      return { ...prev, newPocs };
     });
   };
 
@@ -138,6 +162,62 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
               <option value={3}>3 Rounds</option>
               <option value={4}>4 Rounds</option>
             </select>
+          </div>
+
+          {/* Create New POCs */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-slate-700">
+                Create & Assign New POCs
+              </label>
+              <button
+                type="button"
+                onClick={handleAddNewPOC}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                + Add POC
+              </button>
+            </div>
+            {formData.newPocs.map((poc, index) => (
+              <div key={index} className="p-4 border border-slate-200 rounded-lg space-y-3 relative">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveNewPOC(index)}
+                  className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    name="name"
+                    value={poc.name}
+                    onChange={(e) => handleNewPOCChange(index, e)}
+                    placeholder="POC Name"
+                    required
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="email"
+                    name="email"
+                    value={poc.email}
+                    onChange={(e) => handleNewPOCChange(index, e)}
+                    placeholder="POC Email"
+                    required
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <input
+                  type="text"
+                  name="phoneNumber"
+                  value={poc.phoneNumber}
+                  onChange={(e) => handleNewPOCChange(index, e)}
+                  placeholder="Phone Number"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            ))}
           </div>
 
           {/* Assign POCs */}
