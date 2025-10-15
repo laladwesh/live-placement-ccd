@@ -40,3 +40,14 @@
 - `stage` — Enum `('R1','R2','R3','R4')` — which round the pair is currently at
 - `interviewStatus` — Enum `('R','Y','G')` — round result / color-coded status
 - `isOffered` — Boolean — whether an offer was issued (true/false)
+
+
+When a student is shortlisted for a company, perform three writes to the database: 
+
+Create/Update the Pair / Application document.
+
+Push the company's ID into the Student.shortlistedCompanies array.
+
+Push the student's ID into the Company.shortlistedStudents array.
+
+(handle this carefully in code (e.g., using Mongoose middleware or transactions) to ensure that if one write fails, the others are rolled back to prevent data from becoming inconsistent.)
