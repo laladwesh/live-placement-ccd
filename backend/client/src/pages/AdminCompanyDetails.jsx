@@ -4,6 +4,7 @@ import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import CompanyCard from "../components/CompanyCard";
 import AddCompanyModal from "../components/AddCompanyModal";
+import EditCompanyModal from "../components/EditCompanyModal"; // Assuming this component exists or will be created
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminCompanyDetails() {
@@ -12,6 +13,8 @@ export default function AdminCompanyDetails() {
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false); // New state for edit modal visibility
+  const [companyToEdit, setCompanyToEdit] = useState(null); // New state to hold company data for editing
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -84,6 +87,18 @@ export default function AdminCompanyDetails() {
     fetchCompanies();
   };
 
+  // Handler for when a company edit is initiated from CompanyCard
+  const handleEditCompany = (company) => {
+    setCompanyToEdit(company);
+    setShowEditModal(true);
+  };
+
+  // Callback for when a company is successfully edited in the modal
+  const handleCompanyEdited = () => {
+    setShowEditModal(false);
+    setCompanyToEdit(null); // Clear the company to edit
+    fetchCompanies(); // Refresh the list of companies
+  };
   const filteredCompanies = companies.filter(company =>
     company.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -199,6 +214,7 @@ export default function AdminCompanyDetails() {
                 company={company}
                 onUpdate={handleCompanyUpdated}
                 onDelete={handleCompanyDeleted}
+                onEdit={handleEditCompany} // Pass the new handler to CompanyCard
               />
             ))}
           </div>
@@ -210,6 +226,18 @@ export default function AdminCompanyDetails() {
         <AddCompanyModal
           onClose={() => setShowAddModal(false)}
           onSuccess={handleCompanyAdded}
+        />
+      )}
+
+      {/* Edit Company Modal - NEW */}
+      {showEditModal && companyToEdit && (
+        <EditCompanyModal
+          company={companyToEdit} // Pass the company data to the modal
+          onClose={() => {
+            setShowEditModal(false);
+            setCompanyToEdit(null); // Clear the company to edit on close
+          }}
+          onSuccess={handleCompanyEdited}
         />
       )}
     </div>
