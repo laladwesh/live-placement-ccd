@@ -9,9 +9,10 @@ export const whoami = (req, res) => {
     const user = {
       id: req.user._id,
       name: req.user.name,
-      email: req.user.email,
+      emailId: req.user.emailId,
+      phoneNo: req.user.phoneNo,
       role: req.user.role,
-      isBlocked: req.user.isBlocked || false,
+      companyName: req.user.companyName || null,
       createdAt: req.user.createdAt || null,
     };
 
