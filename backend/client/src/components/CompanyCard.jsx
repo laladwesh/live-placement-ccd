@@ -1,9 +1,11 @@
 // src/components/CompanyCard.jsx
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import EditCompanyModal from "./EditCompanyModal";
 import api from "../api/axios";
 
 export default function CompanyCard({ company, onUpdate, onDelete }) {
+  const navigate = useNavigate();
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -78,24 +80,24 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
           <div className="flex items-center justify-between text-sm">
             <span className="text-slate-500">POCs Assigned</span>
             <span className="font-medium text-slate-900">
-              {company.pocs?.length || 0}
+              {company.POCs?.length || 0}
             </span>
           </div>
         </div>
 
         {/* POCs List */}
-        {company.pocs && company.pocs.length > 0 && (
+        {company.POCs && company.POCs.length > 0 && (
           <div className="border-t pt-4">
             <div className="text-xs text-slate-500 mb-2">Assigned POCs:</div>
             <div className="space-y-1">
-              {company.pocs.map(poc => (
+              {company.POCs.map(poc => (
                 <div key={poc._id} className="flex items-center gap-2 text-sm">
                   <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-medium">
                     {poc.name?.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="text-slate-700 truncate">{poc.name}</div>
-                    <div className="text-xs text-slate-500 truncate">{poc.email}</div>
+                    <div className="text-xs text-slate-500 truncate">{poc.emailId}</div>
                   </div>
                 </div>
               ))}
@@ -106,16 +108,26 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
         {/* Actions */}
         <div className="mt-4 pt-4 border-t flex gap-2">
           <button 
-            onClick={() => window.location.href = `/company/${company._id}`}
-            className="flex-1 px-3 py-2 text-sm bg-slate-50 text-slate-700 rounded hover:bg-slate-100 transition"
+            onClick={() => navigate(`/admin/companies/${company._id}`)}
+            className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition font-medium flex items-center justify-center gap-1"
+            title="Manage shortlist and upload CSV"
           >
-            View Details
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Manage Company
           </button>
           <button 
-            onClick={() => window.location.href = `/company/${company._id}`}
-            className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition"
+            onClick={() => navigate(`/poc/companies/${company._id}/students`)}
+            className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition font-medium flex items-center justify-center gap-1"
+            title="View and manage students as POC"
           >
-            Manage Students
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+            Act as POC
           </button>
         </div>
       </div>
