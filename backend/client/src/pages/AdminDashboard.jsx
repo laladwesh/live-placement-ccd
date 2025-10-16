@@ -120,18 +120,56 @@ export default function AdminDashboard() {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Offer Management</h1>
-            <p className="text-slate-600 mt-1">Review pending offers and confirm student placements.</p>
+            <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
+            <p className="text-slate-600 mt-1">Manage placements, offers, students and companies.</p>
           </div>
-          <div>
-            <button
-              onClick={() => navigate("/admin/company")}
-              className="px-4 py-2 bg-white border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50 transition flex items-center gap-2"
-            >
-              Manage Companies
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>
-            </button>
-          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+          <button
+            onClick={() => navigate("/admin/students")}
+            className="p-6 bg-white border-2 border-blue-200 rounded-lg hover:border-blue-400 hover:shadow-md transition text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-slate-900">Student Management</h3>
+            </div>
+            <p className="text-sm text-slate-600">Upload students via CSV</p>
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/company")}
+            className="p-6 bg-white border-2 border-green-200 rounded-lg hover:border-green-400 hover:shadow-md transition text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+              </svg>
+              <h3 className="text-lg font-semibold text-slate-900">Company Management</h3>
+            </div>
+            <p className="text-sm text-slate-600">Manage companies & upload shortlists</p>
+          </button>
+
+          <button
+            onClick={() => navigate("/admin/offers")}
+            className="p-6 bg-white border-2 border-purple-200 rounded-lg hover:border-purple-400 hover:shadow-md transition text-left"
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <svg className="w-8 h-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-lg font-semibold text-slate-900">Offer Management</h3>
+            </div>
+            <p className="text-sm text-slate-600">Review & approve pending offers</p>
+          </button>
+        </div>
+
+        {/* Offers Section */}
+        <div className="mb-6">
+          <h2 className="text-2xl font-bold text-slate-900 mb-4">Recent Offers</h2>
         </div>
 
         {loading ? (
