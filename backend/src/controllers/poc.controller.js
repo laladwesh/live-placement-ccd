@@ -1,8 +1,9 @@
 // backend/src/controllers/poc.controller.js
 import Company from "../models/company.model.js";
-import Shortlist, { Stage } from "../models/shortlist.model.js";
+import Shortlist, { Status, Stage, InterviewStatus } from "../models/shortlist.model.js";
 import Offer, { OfferStatus } from "../models/offer.model.js";
 import User from "../models/user.model.js";
+import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
 import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded } from "../config/socket.js";
 
@@ -15,8 +16,8 @@ export const getPOCCompanies = async (req, res) => {
     const pocId = req.user._id;
 
     // Find companies where this POC is assigned
-    const companies = await Company.find({ pocs: pocId })
-      .populate('pocs', 'name email phoneNumber')
+    const companies = await Company.find({ POCs: pocId })
+      .populate('POCs', 'name emailId phoneNo')
       .sort({ name: 1 });
 
     return res.json({ companies });
@@ -33,13 +34,24 @@ export const getPOCCompanies = async (req, res) => {
 export const getPOCCompanyStudents = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const pocId = req.user._id;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
-    // Verify POC is assigned to this company
-    const company = await Company.findOne({ 
-      _id: companyId, 
-      pocs: pocId 
-    }).populate('pocs', 'name email phoneNumber');
+    // Admins can access any company
+    // POCs can only access companies they're assigned to
+    let company;
+    
+    if (userRole === 'admin') {
+      // Admin can access any company
+      company = await Company.findById(companyId)
+        .populate('POCs', 'name emailId phoneNo');
+    } else {
+      // POC must be assigned to this company
+      company = await Company.findOne({ 
+        _id: companyId, 
+        POCs: userId 
+      }).populate('POCs', 'name emailId phoneNo');
+    }
 
     if (!company) {
       return res.status(403).json({ 
@@ -48,27 +60,69 @@ export const getPOCCompanyStudents = async (req, res) => {
     }
 
     // Get all shortlisted students
-    const shortlists = await Shortlist.find({ company: companyId })
-      .populate('student', 'name email rollNumber phoneNumber isPlaced isBlocked')
-      .populate('updatedByPocId', 'name email')
+    const shortlists = await Shortlist.find({ companyId: companyId })
+      .populate('studentId', 'name emailId phoneNo')
       .sort({ createdAt: -1 });
+
+    // Get Student documents for placement status
+    const studentIds = shortlists.map(s => s.studentId._id);
+    const students = await Student.find({ userId: { $in: studentIds } });
+    const studentMap = new Map(students.map(s => [s.userId.toString(), s]));
+
+    // Enrich shortlists with placement status and format for frontend
+    const enrichedShortlists = shortlists.map(s => {
+      const studentDoc = studentMap.get(s.studentId._id.toString());
+      
+      // Determine currentStage based on isOffered, stage, or status
+      let currentStage;
+      if (s.isOffered) {
+        currentStage = "OFFERED";
+      } else if (s.stage) {
+        currentStage = s.stage; // R1, R2, R3, R4, or REJECTED
+      } else {
+        currentStage = s.status.toUpperCase(); // SHORTLISTED or WAITLISTED
+      }
+
+      return {
+        _id: s._id,
+        companyId: s.companyId,
+        companyName: s.companyName,
+        status: s.status,
+        stage: s.stage,
+        currentStage: currentStage,
+        interviewStatus: s.interviewStatus,
+        isOffered: s.isOffered,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+        student: {
+          _id: s.studentId._id,
+          name: s.studentId.name,
+          email: s.studentId.emailId,
+          phoneNumber: s.studentId.phoneNo,
+          rollNumber: studentDoc?.rollNumber,
+          isPlaced: studentDoc?.isPlaced || false,
+          isBlocked: studentDoc?.isBlocked || false
+        }
+      };
+    });
 
     // Calculate stats
     const stats = {
       total: shortlists.length,
-      shortlisted: shortlists.filter(s => s.currentStage === Stage.SHORTLISTED).length,
-      waitlisted: shortlists.filter(s => s.currentStage === "WAITLISTED").length,
-      r1: shortlists.filter(s => s.currentStage === "R1").length,
-      r2: shortlists.filter(s => s.currentStage === "R2").length,
-      r3: shortlists.filter(s => s.currentStage === "R3").length,
-      offered: shortlists.filter(s => s.currentStage === Stage.OFFERED).length,
-      rejected: shortlists.filter(s => s.currentStage === Stage.REJECTED).length,
-      placed: shortlists.filter(s => s.student?.isPlaced).length
+      shortlisted: enrichedShortlists.filter(s => s.currentStage === "SHORTLISTED").length,
+      waitlisted: enrichedShortlists.filter(s => s.currentStage === "WAITLISTED").length,
+      r1: enrichedShortlists.filter(s => s.stage === Stage.R1).length,
+      r2: enrichedShortlists.filter(s => s.stage === Stage.R2).length,
+      r3: enrichedShortlists.filter(s => s.stage === Stage.R3).length,
+      r4: enrichedShortlists.filter(s => s.stage === Stage.R4).length,
+      offered: enrichedShortlists.filter(s => s.isOffered).length,
+      placed: students.filter(s => s.isPlaced).length,
+      rejected: enrichedShortlists.filter(s => s.stage === "REJECTED").length
     };
 
     return res.json({
       company,
-      shortlists,
+      shortlists: enrichedShortlists,
       stats
     });
   } catch (err) {
@@ -86,10 +140,11 @@ export const updateInterviewStage = async (req, res) => {
   try {
     const { shortlistId } = req.params;
     const { stage } = req.body;
-    const pocId = req.user._id;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
     // Validate stage
-    const validStages = ["R1", "R2", "R3", "R4", Stage.REJECTED];
+    const validStages = [Stage.R1, Stage.R2, Stage.R3, Stage.R4, Stage.REJECTED];
     if (!validStages.includes(stage)) {
       return res.status(400).json({ 
         message: "Invalid stage. Must be R1, R2, R3, R4, or REJECTED" 
@@ -97,43 +152,43 @@ export const updateInterviewStage = async (req, res) => {
     }
 
     const shortlist = await Shortlist.findById(shortlistId)
-      .populate('student', 'name email isPlaced isBlocked')
-      .populate('company', 'name pocs');
+      .populate('studentId', 'name emailId')
+      .populate('companyId', 'name POCs');
 
     if (!shortlist) {
       return res.status(404).json({ message: "Shortlist entry not found" });
     }
 
-    // Verify POC is assigned to this company
-    if (!shortlist.company.pocs.some(poc => poc.toString() === pocId.toString())) {
-      return res.status(403).json({ 
-        message: "You are not assigned to this company" 
-      });
+    // Admins can update any company, POCs only their assigned companies
+    if (userRole !== 'admin') {
+      // Verify POC is assigned to this company
+      if (!shortlist.companyId.POCs.some(poc => poc.toString() === userId.toString())) {
+        return res.status(403).json({ 
+          message: "You are not assigned to this company" 
+        });
+      }
     }
 
     // Check if student is already placed
-    if (shortlist.student.isPlaced) {
+    const student = await Student.findOne({ userId: shortlist.studentId._id });
+    if (student && student.isPlaced) {
       return res.status(400).json({ 
         message: "Student is already placed and cannot be modified" 
       });
     }
 
     // Update stage
-    shortlist.currentStage = stage;
-    shortlist.updatedByPocId = pocId;
-    shortlist.updatedAt = new Date();
+    shortlist.stage = stage;
     await shortlist.save();
 
-    await shortlist.populate('updatedByPocId', 'name email');
-
-    logger.info(`POC ${req.user.email} updated ${shortlist.student.email} to stage ${stage}`);
+    logger.info(`POC ${req.user.emailId} updated ${shortlist.studentId.emailId} to stage ${stage}`);
 
     // Emit socket event for real-time update
-    emitShortlistUpdate(shortlist.company._id.toString(), shortlist.student._id.toString(), {
+    emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
       shortlistId: shortlist._id,
-      companyId: shortlist.company._id,
-      studentId: shortlist.student._id,
-      stage: shortlist.currentStage,
+      companyId: shortlist.companyId._id,
+      studentId: shortlist.studentId._id,
+      stage: shortlist.stage,
       updatedAt: shortlist.updatedAt
     });
 
@@ -154,25 +209,30 @@ export const updateInterviewStage = async (req, res) => {
 export const createOffer = async (req, res) => {
   try {
     const { shortlistId } = req.params;
-    const pocId = req.user._id;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
     const shortlist = await Shortlist.findById(shortlistId)
-      .populate('student', 'name email isPlaced isBlocked')
-      .populate('company', 'name pocs');
+      .populate('studentId', 'name emailId')
+      .populate('companyId', 'name POCs');
 
     if (!shortlist) {
       return res.status(404).json({ message: "Shortlist entry not found" });
     }
 
-    // Verify POC is assigned to this company
-    if (!shortlist.company.pocs.some(poc => poc.toString() === pocId.toString())) {
-      return res.status(403).json({ 
-        message: "You are not assigned to this company" 
-      });
+    // Admins can create offers for any company, POCs only their assigned companies
+    if (userRole !== 'admin') {
+      // Verify POC is assigned to this company
+      if (!shortlist.companyId.POCs.some(poc => poc.toString() === userId.toString())) {
+        return res.status(403).json({ 
+          message: "You are not assigned to this company" 
+        });
+      }
     }
 
     // Check if student is already placed
-    if (shortlist.student.isPlaced) {
+    const student = await Student.findOne({ userId: shortlist.studentId._id });
+    if (student && student.isPlaced) {
       return res.status(400).json({ 
         message: "Student is already placed and cannot receive another offer" 
       });
@@ -180,8 +240,8 @@ export const createOffer = async (req, res) => {
 
     // Check if offer already exists
     const existingOffer = await Offer.findOne({
-      student: shortlist.student._id,
-      company: shortlist.company._id
+      studentId: shortlist.studentId._id,
+      companyId: shortlist.companyId._id
     });
 
     if (existingOffer) {
@@ -190,47 +250,49 @@ export const createOffer = async (req, res) => {
       });
     }
 
-    // Create offer
+    // Create offer with PENDING approval status (requires admin approval)
     const offer = new Offer({
-      student: shortlist.student._id,
-      company: shortlist.company._id,
-      offerStatus: OfferStatus.PENDING,
-      remarks: `Offer created by ${req.user.name}`
+      studentId: shortlist.studentId._id,
+      companyId: shortlist.companyId._id,
+      approvalStatus: "PENDING",  // Waiting for admin approval
+      offerStatus: "PENDING",      // Will be sent to student after admin approves
+      venue: shortlist.companyId.venue,
+      remarks: `Offer created by ${req.user.name} (POC)`
     });
 
     await offer.save();
 
-    // Update shortlist stage to OFFERED
-    shortlist.currentStage = Stage.OFFERED;
-    shortlist.updatedByPocId = pocId;
-    shortlist.updatedAt = new Date();
+    // Update shortlist to mark as offered
+    shortlist.isOffered = true;
     await shortlist.save();
 
-    await offer.populate('student', 'name email phoneNumber');
-    await offer.populate('company', 'name venue');
+    await offer.populate('studentId', 'name emailId phoneNo');
+    await offer.populate('companyId', 'name venue');
 
-    logger.info(`POC ${req.user.email} created offer for ${shortlist.student.email} at ${shortlist.company.name}`);
+    logger.info(`POC ${req.user.emailId} created offer for ${shortlist.studentId.emailId} at ${shortlist.companyId.name} - PENDING admin approval`);
 
     // Emit socket events for real-time update
-    emitOfferCreated(shortlist.company._id.toString(), shortlist.student._id.toString(), {
+    emitOfferCreated(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
       offerId: offer._id,
-      companyId: offer.company._id,
-      studentId: offer.student._id,
-      companyName: offer.company.name
+      companyId: offer.companyId._id,
+      studentId: offer.studentId._id,
+      companyName: offer.companyId.name,
+      approvalStatus: "PENDING"
     });
 
-    emitShortlistUpdate(shortlist.company._id.toString(), shortlist.student._id.toString(), {
+    emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
       shortlistId: shortlist._id,
-      companyId: shortlist.company._id,
-      studentId: shortlist.student._id,
-      stage: shortlist.currentStage,
+      companyId: shortlist.companyId._id,
+      studentId: shortlist.studentId._id,
+      stage: shortlist.stage,
       updatedAt: shortlist.updatedAt
     });
 
     return res.status(201).json({
-      message: "Offer created successfully",
+      message: "Offer created successfully and sent for admin approval",
       offer,
-      shortlist
+      shortlist,
+      note: "Offer will be sent to student once admin approves it"
     });
   } catch (err) {
     logger.error("createOffer error:", err);
@@ -241,26 +303,31 @@ export const createOffer = async (req, res) => {
 /**
  * Add walk-in student to company
  * POST /api/poc/companies/:companyId/walkin
- * Body: { email, name, phoneNumber }
+ * Body: { email, name, phoneNo }
  */
 export const addWalkInStudent = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { rollNumber, email, name, phoneNumber } = req.body;
-    const pocId = req.user._id;
+    const { email, name, phoneNo } = req.body;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
-    if (!rollNumber || !rollNumber.trim()) {
-      return res.status(400).json({ message: "Roll number is required" });
-    }
     if (!email || !email.trim()) {
       return res.status(400).json({ message: "Email is required" });
     }
 
-    // Verify POC is assigned to this company
-    const company = await Company.findOne({ 
-      _id: companyId, 
-      pocs: pocId 
-    });
+    // Admins can add students to any company, POCs only their assigned companies
+    let company;
+    
+    if (userRole === 'admin') {
+      company = await Company.findById(companyId);
+    } else {
+      // Verify POC is assigned to this company
+      company = await Company.findOne({ 
+        _id: companyId, 
+        POCs: userId 
+      });
+    }
 
     if (!company) {
       return res.status(403).json({ 
@@ -268,28 +335,49 @@ export const addWalkInStudent = async (req, res) => {
       });
     }
 
-    const rollNumberUpper = rollNumber.trim().toUpperCase();
     const emailLower = email.trim().toLowerCase();
 
-    // Find or create user by roll number
-    let user = await User.findOne({ rollNumber: rollNumberUpper });
+    // Find or create user by email
+    let user = await User.findOne({ emailId: emailLower });
     
     if (!user) {
       user = new User({
-        rollNumber: rollNumberUpper,
-        email: emailLower,
+        emailId: emailLower,
         name: name?.trim() || emailLower.split('@')[0],
-        phoneNumber: phoneNumber?.trim() || "",
+        phoneNo: phoneNo?.trim() || "",
         role: "student",
         isAllowed: true
       });
       await user.save();
+
+      // Create Student document
+      const student = new Student({
+        userId: user._id,
+        isPlaced: false,
+        shortlistedCompanies: [],
+        waitlistedCompanies: [],
+        placedCompany: null
+      });
+      await student.save();
+    } else {
+      // Ensure Student document exists
+      let student = await Student.findOne({ userId: user._id });
+      if (!student) {
+        student = new Student({
+          userId: user._id,
+          isPlaced: false,
+          shortlistedCompanies: [],
+          waitlistedCompanies: [],
+          placedCompany: null
+        });
+        await student.save();
+      }
     }
 
     // Check if already shortlisted
     const existing = await Shortlist.findOne({ 
-      student: user._id, 
-      company: companyId 
+      studentId: user._id, 
+      companyId: companyId 
     });
 
     if (existing) {
@@ -300,24 +388,40 @@ export const addWalkInStudent = async (req, res) => {
 
     // Create shortlist entry as walk-in
     const shortlist = new Shortlist({
-      student: user._id,
-      company: companyId,
-      currentStage: Stage.SHORTLISTED,
-      remarks: "Walk-in candidate",
-      updatedByPocId: pocId
+      studentId: user._id,
+      companyId: companyId,
+      studentEmail: user.emailId,
+      companyName: company.name,
+      status: Status.SHORTLISTED,
+      stage: null,
+      interviewStatus: null,
+      isOffered: false
     });
 
     await shortlist.save();
-    await shortlist.populate('student', 'name email rollNumber phoneNumber');
+    await shortlist.populate('studentId', 'name emailId phoneNo');
 
-    logger.info(`POC ${req.user.email} added walk-in ${user.email} to ${company.name}`);
+    // Update Student document
+    const student = await Student.findOne({ userId: user._id });
+    if (!student.shortlistedCompanies.includes(company._id)) {
+      student.shortlistedCompanies.push(company._id);
+      await student.save();
+    }
+
+    // Update Company document
+    if (!company.shortlistedStudents.includes(user._id)) {
+      company.shortlistedStudents.push(user._id);
+      await company.save();
+    }
+
+    logger.info(`POC ${req.user.emailId} added walk-in ${user.emailId} to ${company.name}`);
 
     // Emit socket event for real-time update
     emitStudentAdded(companyId, {
       shortlistId: shortlist._id,
       companyId: companyId,
-      student: shortlist.student._id,
-      stage: shortlist.currentStage
+      student: shortlist.studentId._id,
+      status: shortlist.status
     });
 
     return res.status(201).json({
@@ -337,13 +441,21 @@ export const addWalkInStudent = async (req, res) => {
 export const markProcessCompleted = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const pocId = req.user._id;
+    const userId = req.user._id;
+    const userRole = req.user.role;
 
-    // Verify POC is assigned to this company
-    const company = await Company.findOne({ 
-      _id: companyId, 
-      pocs: pocId 
-    });
+    // Admins can mark any company as completed, POCs only their assigned companies
+    let company;
+    
+    if (userRole === 'admin') {
+      company = await Company.findById(companyId);
+    } else {
+      // Verify POC is assigned to this company
+      company = await Company.findOne({ 
+        _id: companyId, 
+        POCs: userId 
+      });
+    }
 
     if (!company) {
       return res.status(403).json({ 
@@ -356,16 +468,16 @@ export const markProcessCompleted = async (req, res) => {
     await company.save();
 
     // Get all shortlisted students for this company
-    const shortlists = await Shortlist.find({ company: companyId })
-      .populate('student', '_id');
+    const shortlists = await Shortlist.find({ companyId: companyId })
+      .populate('studentId', '_id');
 
     // Remove company from each student's shortlistedCompanies array
-    const studentIds = shortlists.map(s => s.student._id);
+    const studentIds = shortlists.map(s => s.studentId._id);
     
     // This will be handled on the frontend by filtering out completed companies
     // We're just marking the company as completed here
 
-    logger.info(`POC ${req.user.email} marked ${company.name} as process completed`);
+    logger.info(`POC ${req.user.emailId} marked ${company.name} as process completed`);
 
     return res.json({
       message: "Company interview process marked as completed",
