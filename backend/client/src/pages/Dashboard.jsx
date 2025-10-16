@@ -50,7 +50,7 @@ export default function Dashboard() {
 
             <div className="p-4 bg-slate-50 rounded-lg">
               <div className="text-xs text-slate-500">Email</div>
-              <div className="text-lg font-medium text-slate-800">{user.email}</div>
+              <div className="text-lg font-medium text-slate-800">{user.emailId}</div>
             </div>
 
             <div className="p-4 bg-slate-50 rounded-lg">
@@ -65,10 +65,6 @@ export default function Dashboard() {
               <div className="flex justify-between py-2 border-b">
                 <div>Joined</div>
                 <div>{user.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
-              </div>
-              <div className="flex justify-between py-2 border-b">
-                <div>Blocked</div>
-                <div>{user.isBlocked ? "Yes" : "No"}</div>
               </div>
             </div>
           </div>
