@@ -19,7 +19,7 @@ export default function Login() {
     setErr(null);
     setLoading(true);
     try {
-      const res = await api.post("/auth/login", { email, password });
+      const res = await api.post("/auth/login", { emailId: email, password });
       const { token } = res.data;
       if (!token) throw new Error("No token returned");
       localStorage.setItem("jwt_token", token);
