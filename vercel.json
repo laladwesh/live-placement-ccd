@@ -23,8 +23,16 @@
       "dest": "backend/src/server.js"
     },
     {
-      "src": "/(.*)",
+      "src": "/static/(.*)",
+      "dest": "backend/client/build/static/$1"
+    },
+    {
+      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
       "dest": "backend/client/build/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "backend/client/build/index.html"
     }
   ],
   "env": {
