@@ -5,9 +5,9 @@ import { authMiddleware, permit } from "../middleware/auth.middleware.js";
 
 const router = express.Router();
 
-// All routes require authentication and student role (or admin/superadmin)
+// All routes require authentication and student role (or admin)
 router.use(authMiddleware);
-router.use(permit("student", "admin", "superadmin"));
+router.use(permit("student", "admin"));
 
 // GET /api/student/shortlists - Get all shortlists for logged-in student
 router.get("/shortlists", studentController.getMyShortlists);
