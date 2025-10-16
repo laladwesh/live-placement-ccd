@@ -149,3 +149,20 @@ export function emitStudentRemoved(companyId, studentId) {
     logger.info(`Emitted student removed for company ${companyId}`);
   }
 }
+
+/**
+ * Emit offer approved event (admin approved, sent to student)
+ * @param {string} studentId - Student ID
+ * @param {object} data - Offer data
+ */
+export function emitOfferApproved(studentId, data) {
+  if (io) {
+    // Emit to student's personal room
+    io.to(`student:${studentId}`).emit("offer:approved", data);
+    
+    // Emit to admin room for confirmation
+    io.to("admin").emit("offer:approved", data);
+    
+    logger.info(`Emitted offer approved for student ${studentId}`);
+  }
+}
