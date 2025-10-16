@@ -29,21 +29,21 @@ const main = async () => {
 
     await connectDB(MONGO_URI);
 
-    console.log("🗑️  Cleaning database...\n");
+    // console.log("🗑️  Cleaning database...\n");
 
     // Delete ALL data from all collections
-    await User.deleteMany({});
-    await Student.deleteMany({});
-    await Company.deleteMany({});
-    await Shortlist.deleteMany({});
-    await Offer.deleteMany({});
+    // await User.deleteMany({});
+    // await Student.deleteMany({});
+    // await Company.deleteMany({});
+    // await Shortlist.deleteMany({});
+    // await Offer.deleteMany({});
 
-    console.log("✅ Database cleaned successfully!");
-    console.log("   - Users: 0");
-    console.log("   - Students: 0");
-    console.log("   - Companies: 0");
-    console.log("   - Shortlists: 0");
-    console.log("   - Offers: 0\n");
+    // console.log("✅ Database cleaned successfully!");
+    // console.log("   - Users: 0");
+    // console.log("   - Students: 0");
+    // console.log("   - Companies: 0");
+    // console.log("   - Shortlists: 0");
+    // console.log("   - Offers: 0\n");
 
     // Create only ONE admin
     const admin = new User({
@@ -58,21 +58,21 @@ const main = async () => {
     await admin.save();
 
     console.log("✅ Admin account created!\n");
-    console.log("═══════════════════════════════════════════════════");
-    console.log("   ADMIN LOGIN");
-    console.log("═══════════════════════════════════════════════════");
-    console.log("   Email: guptaavinash302@gmail.com");
-    console.log("   Login: Use 'Sign in with Google' button");
-    console.log("═══════════════════════════════════════════════════\n");
+    // console.log("═══════════════════════════════════════════════════");
+    // console.log("   ADMIN LOGIN");
+    // console.log("═══════════════════════════════════════════════════");
+    // console.log("   Email: guptaavinash302@gmail.com");
+    // console.log("   Login: Use 'Sign in with Google' button");
+    // console.log("═══════════════════════════════════════════════════\n");
     
-    console.log("📋 Next Steps:");
-    console.log("   1. Start backend: cd backend && npm run dev");
-    console.log("   2. Start frontend: cd backend/client && npm start");
-    console.log("   3. Login as admin with Google OAuth");
-    console.log("   4. Add Companies via Admin Panel");
-    console.log("   5. Add POCs via Admin Panel");
-    console.log("   6. Upload Students via CSV in Admin Panel");
-    console.log("   7. Assign POCs to Companies\n");
+    // console.log("📋 Next Steps:");
+    // console.log("   1. Start backend: cd backend && npm run dev");
+    // console.log("   2. Start frontend: cd backend/client && npm start");
+    // console.log("   3. Login as admin with Google OAuth");
+    // console.log("   4. Add Companies via Admin Panel");
+    // console.log("   5. Add POCs via Admin Panel");
+    // console.log("   6. Upload Students via CSV in Admin Panel");
+    // console.log("   7. Assign POCs to Companies\n");
 
     process.exit(0);
   } catch (err) {
