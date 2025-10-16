@@ -7,7 +7,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   const [creatingOffer, setCreatingOffer] = useState(false);
 
   const isPlaced = shortlist.student?.isPlaced;
-  const isBlocked = shortlist.student?.isBlocked;
+  // const isBlocked = shortlist.student?.isBlocked;
   const currentStage = shortlist.currentStage;
 
   const handleStageChange = async (newStage) => {
