@@ -7,6 +7,7 @@ import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
 import helmet from "helmet";
+import morgan from "morgan";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createProxyMiddleware } from "http-proxy-middleware";
@@ -35,6 +36,9 @@ await connectDB(MONGO_URI);
 
 // Initialize Socket.IO
 initializeSocket(server);
+
+// Morgan logger for development
+app.use(morgan('dev'));
 
 // basic middleware
 app.use(helmet());
