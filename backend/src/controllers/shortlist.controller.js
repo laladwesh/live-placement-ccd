@@ -4,7 +4,8 @@ import csv from "csv-parser";
 import { Readable } from "stream";
 import Company from "../models/company.model.js";
 import User from "../models/user.model.js";
-import Shortlist, { Stage } from "../models/shortlist.model.js";
+import Student from "../models/student.model.js";
+import Shortlist, { Status, Stage } from "../models/shortlist.model.js";
 import { logger } from "../utils/logger.js";
 import { emitStudentAdded, emitStudentRemoved } from "../config/socket.js";
 
@@ -24,11 +25,16 @@ const upload = multer({
 /**
  * Upload CSV to add students to company shortlist
  * POST /api/admin/companies/:companyId/shortlist/upload
- * CSV Format: rollNumber,email,name,phoneNumber,status (status: shortlisted or waitlisted)
+ * CSV Format: email,status (status: shortlisted or waitlisted)
+ * Note: Students must already exist in database (uploaded via student master CSV first)
  */
 export const uploadShortlistCSV = async (req, res) => {
   try {
     const { companyId } = req.params;
+
+    console.log("📤 COMPANY SHORTLIST CSV UPLOAD:");
+    console.log("   Company ID:", companyId);
+    console.log("   Admin:", req.user?.emailId);
 
     if (!req.file) {
       return res.status(400).json({ message: "No CSV file uploaded" });
@@ -53,27 +59,26 @@ export const uploadShortlistCSV = async (req, res) => {
         .pipe(csv())
         .on('data', (row) => {
           lineNumber++;
-          // Validate row - rollNumber is now required
-          if (!row.rollNumber || !row.rollNumber.trim()) {
-            errors.push({ line: lineNumber, error: "Missing roll number" });
-            return;
-          }
-          if (!row.email || !row.email.trim()) {
+          // Support both 'email' and 'emailId' column names
+          const emailValue = row.email || row.emailId;
+          
+          // Validate row - email is required
+          if (!emailValue || !emailValue.trim()) {
             errors.push({ line: lineNumber, error: "Missing email" });
             return;
           }
 
           results.push({
-            rollNumber: row.rollNumber.trim().toUpperCase(),
-            email: row.email.trim().toLowerCase(),
-            name: row.name?.trim() || "",
-            phoneNumber: row.phoneNumber?.trim() || "",
-            status: row.status?.trim().toLowerCase() || "shortlisted"
+            email: emailValue.trim().toLowerCase(),
+            status: row.status?.trim().toLowerCase() || "shortlisted",
+            lineNumber
           });
         })
         .on('end', resolve)
         .on('error', reject);
     });
+
+    console.log(`   📊 Parsed ${results.length} rows from CSV`);
 
     if (results.length === 0) {
       return res.status(400).json({ 
@@ -86,62 +91,99 @@ export const uploadShortlistCSV = async (req, res) => {
     const added = [];
     const updated = [];
     const failed = [];
+    const notFound = [];
 
     for (const entry of results) {
       try {
-        // Find or create user by roll number (unique identifier)
-        let user = await User.findOne({ rollNumber: entry.rollNumber });
+        // Find user - student MUST exist in database already
+        const user = await User.findOne({ emailId: entry.email });
         
         if (!user) {
-          // Create new student user
-          user = new User({
-            rollNumber: entry.rollNumber,
-            email: entry.email,
-            name: entry.name || entry.email.split('@')[0],
-            phoneNumber: entry.phoneNumber,
-            role: "student",
-            isAllowed: true
+          notFound.push({ 
+            email: entry.email, 
+            line: entry.lineNumber,
+            error: "Student not found in database. Upload students first." 
           });
-          await user.save();
-        } else {
-          // Update existing user info if provided
-          if (entry.email && user.email !== entry.email) user.email = entry.email;
-          if (entry.name && !user.name) user.name = entry.name;
-          if (entry.phoneNumber && !user.phoneNumber) user.phoneNumber = entry.phoneNumber;
-          await user.save();
+          continue;
+        }
+
+        // Verify user is a student
+        if (user.role !== "student") {
+          failed.push({ 
+            email: entry.email, 
+            line: entry.lineNumber,
+            error: `User exists but is not a student (role: ${user.role})` 
+          });
+          continue;
+        }
+
+        // Ensure Student document exists
+        let student = await Student.findOne({ userId: user._id });
+        if (!student) {
+          student = new Student({
+            userId: user._id,
+            isPlaced: false,
+            shortlistedCompanies: [],
+            waitlistedCompanies: [],
+            placedCompany: null
+          });
+          await student.save();
         }
 
         // Check if shortlist entry already exists
         let shortlist = await Shortlist.findOne({ 
-          student: user._id, 
-          company: company._id 
+          studentId: user._id, 
+          companyId: company._id 
         });
+
+        const isShortlisted = entry.status === "shortlisted";
 
         if (shortlist) {
           // Update existing shortlist
-          shortlist.currentStage = entry.status === "waitlisted" ? "WAITLISTED" : Stage.SHORTLISTED;
-          shortlist.updatedByPocId = req.user._id;
-          shortlist.updatedAt = new Date();
+          shortlist.status = isShortlisted ? Status.SHORTLISTED : Status.WAITLISTED;
+          shortlist.studentEmail = user.emailId;
+          shortlist.companyName = company.name;
           await shortlist.save();
-          updated.push({ rollNumber: entry.rollNumber, email: entry.email, name: user.name });
+          updated.push({ email: entry.email, name: user.name });
         } else {
           // Create new shortlist entry
           shortlist = new Shortlist({
-            student: user._id,
-            company: company._id,
-            currentStage: entry.status === "waitlisted" ? "WAITLISTED" : Stage.SHORTLISTED,
-            updatedByPocId: req.user._id
+            studentId: user._id,
+            companyId: company._id,
+            studentEmail: user.emailId,
+            companyName: company.name,
+            status: isShortlisted ? Status.SHORTLISTED : Status.WAITLISTED,
+            stage: null,
+            interviewStatus: null,
+            isOffered: false
           });
           await shortlist.save();
-          added.push({ rollNumber: entry.rollNumber, email: entry.email, name: user.name });
+          added.push({ email: entry.email, name: user.name });
+
+          // Update Student document
+          const student = await Student.findOne({ userId: user._id });
+          if (isShortlisted && !student.shortlistedCompanies.includes(company._id)) {
+            student.shortlistedCompanies.push(company._id);
+          } else if (!isShortlisted && !student.waitlistedCompanies.includes(company._id)) {
+            student.waitlistedCompanies.push(company._id);
+          }
+          await student.save();
+
+          // Update Company document
+          if (isShortlisted && !company.shortlistedStudents.includes(user._id)) {
+            company.shortlistedStudents.push(user._id);
+          } else if (!isShortlisted && !company.waitlistedStudents.includes(user._id)) {
+            company.waitlistedStudents.push(user._id);
+          }
+          await company.save();
         }
       } catch (err) {
-        logger.error(`Error processing ${entry.rollNumber} (${entry.email}):`, err);
-        failed.push({ rollNumber: entry.rollNumber, email: entry.email, error: err.message });
+        logger.error(`Error processing ${entry.email}:`, err);
+        failed.push({ email: entry.email, error: err.message });
       }
     }
 
-    logger.info(`CSV upload complete for ${company.name}: ${added.length} added, ${updated.length} updated, ${failed.length} failed`);
+    logger.info(`CSV upload complete for ${company.name}: ${added.length} added, ${updated.length} updated, ${failed.length} failed, ${notFound.length} not found`);
 
     // Emit socket event for bulk student addition
     if (added.length > 0 || updated.length > 0) {
@@ -158,10 +200,16 @@ export const uploadShortlistCSV = async (req, res) => {
         total: results.length,
         added: added.length,
         updated: updated.length,
-        failed: failed.length
+        failed: failed.length,
+        notFound: notFound.length
       },
-      details: { added, updated, failed },
-      csvErrors: errors
+      details: {
+        added,
+        updated,
+        failed,
+        notFound,
+        errors
+      }
     });
 
   } catch (err) {
@@ -173,16 +221,13 @@ export const uploadShortlistCSV = async (req, res) => {
 /**
  * Add single student to company shortlist manually
  * POST /api/admin/companies/:companyId/shortlist
- * Body: { rollNumber, email, name, phoneNumber, status }
+ * Body: { email, name, phoneNo, status }
  */
 export const addStudentToShortlist = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { rollNumber, email, name, phoneNumber, status } = req.body;
+    const { email, name, phoneNo, status } = req.body;
 
-    if (!rollNumber || !rollNumber.trim()) {
-      return res.status(400).json({ message: "Roll number is required" });
-    }
     if (!email || !email.trim()) {
       return res.status(400).json({ message: "Email is required" });
     }
@@ -192,71 +237,109 @@ export const addStudentToShortlist = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    const rollNumberUpper = rollNumber.trim().toUpperCase();
     const emailLower = email.trim().toLowerCase();
 
-    // Find or create user by roll number
-    let user = await User.findOne({ rollNumber: rollNumberUpper });
+    // Find or create user by email
+    let user = await User.findOne({ emailId: emailLower });
     
     if (!user) {
       user = new User({
-        rollNumber: rollNumberUpper,
-        email: emailLower,
+        emailId: emailLower,
         name: name?.trim() || emailLower.split('@')[0],
-        phoneNumber: phoneNumber?.trim() || "",
+        phoneNo: phoneNo?.trim() || "",
         role: "student",
         isAllowed: true
       });
       await user.save();
+
+      // Create Student document
+      const student = new Student({
+        userId: user._id,
+        isPlaced: false,
+        shortlistedCompanies: [],
+        waitlistedCompanies: [],
+        placedCompany: null
+      });
+      await student.save();
     } else {
       // Update user info if provided and not already set
       let updated = false;
-      if (email && emailLower !== user.email) {
-        user.email = emailLower;
-        updated = true;
-      }
       if (name && name.trim() && !user.name) {
         user.name = name.trim();
         updated = true;
       }
-      if (phoneNumber && phoneNumber.trim() && !user.phoneNumber) {
-        user.phoneNumber = phoneNumber.trim();
+      if (phoneNo && phoneNo.trim() && !user.phoneNo) {
+        user.phoneNo = phoneNo.trim();
         updated = true;
       }
       if (updated) await user.save();
+
+      // Ensure Student document exists
+      let student = await Student.findOne({ userId: user._id });
+      if (!student) {
+        student = new Student({
+          userId: user._id,
+          isPlaced: false,
+          shortlistedCompanies: [],
+          waitlistedCompanies: [],
+          placedCompany: null
+        });
+        await student.save();
+      }
     }
 
     // Check if already shortlisted
     const existing = await Shortlist.findOne({ 
-      student: user._id, 
-      company: company._id 
+      studentId: user._id, 
+      companyId: company._id 
     });
 
     if (existing) {
       return res.status(400).json({ 
-        message: "Student is already shortlisted for this company" 
+        message: "Student is already in the shortlist for this company" 
       });
     }
 
+    const isShortlisted = status === "waitlisted" ? false : true;
+
     // Create shortlist entry
     const shortlist = new Shortlist({
-      student: user._id,
-      company: company._id,
-      currentStage: status === "waitlisted" ? "WAITLISTED" : Stage.SHORTLISTED,
-      updatedByPocId: req.user._id
+      studentId: user._id,
+      companyId: company._id,
+      studentEmail: user.emailId,
+      companyName: company.name,
+      status: isShortlisted ? Status.SHORTLISTED : Status.WAITLISTED,
+      isOffered: false
     });
 
     await shortlist.save();
-    await shortlist.populate('student', 'name email rollNumber phoneNumber');
+    await shortlist.populate('studentId', 'name emailId phoneNo');
 
-    logger.info(`Student ${user.rollNumber} (${user.email}) added to ${company.name} by ${req.user.email}`);
+    // Update Student document
+    const student = await Student.findOne({ userId: user._id });
+    if (isShortlisted && !student.shortlistedCompanies.includes(company._id)) {
+      student.shortlistedCompanies.push(company._id);
+    } else if (!isShortlisted && !student.waitlistedCompanies.includes(company._id)) {
+      student.waitlistedCompanies.push(company._id);
+    }
+    await student.save();
+
+    // Update Company document
+    if (isShortlisted && !company.shortlistedStudents.includes(user._id)) {
+      company.shortlistedStudents.push(user._id);
+    } else if (!isShortlisted && !company.waitlistedStudents.includes(user._id)) {
+      company.waitlistedStudents.push(user._id);
+    }
+    await company.save();
+
+    logger.info(`Student ${user.emailId} added to ${company.name} by ${req.user.emailId}`);
 
     // Emit socket event for real-time update
     emitStudentAdded(company._id.toString(), {
       shortlistId: shortlist._id,
       companyId: company._id,
       student: user._id,
-      stage: shortlist.currentStage
+      status: shortlist.status
     });
 
     return res.status(201).json({
@@ -283,24 +366,65 @@ export const getCompanyShortlist = async (req, res) => {
       return res.status(404).json({ message: "Company not found" });
     }
 
-    const shortlists = await Shortlist.find({ company: companyId })
-      .populate('student', 'name email rollNumber phoneNumber isPlaced isBlocked')
-      .populate('updatedByPocId', 'name email')
+    const shortlists = await Shortlist.find({ companyId: companyId })
+      .populate('studentId', 'name emailId phoneNo')
       .sort({ createdAt: -1 });
+
+    // Get Student documents to check placement status
+    const studentIds = shortlists.map(s => s.studentId._id);
+    const students = await Student.find({ userId: { $in: studentIds } });
+    const studentMap = new Map(students.map(s => [s.userId.toString(), s]));
+
+    // Enrich shortlists with placement status and format for frontend
+    const enrichedShortlists = shortlists.map(s => {
+      const studentDoc = studentMap.get(s.studentId._id.toString());
+      
+      // Determine currentStage based on isOffered, stage, or status
+      let currentStage;
+      if (s.isOffered) {
+        currentStage = "OFFERED";
+      } else if (s.stage) {
+        currentStage = s.stage; // R1, R2, R3, R4, or REJECTED
+      } else {
+        currentStage = s.status.toUpperCase(); // SHORTLISTED or WAITLISTED
+      }
+
+      return {
+        _id: s._id,
+        companyId: s.companyId,
+        companyName: s.companyName,
+        status: s.status,
+        stage: s.stage,
+        currentStage: currentStage,
+        interviewStatus: s.interviewStatus,
+        isOffered: s.isOffered,
+        createdAt: s.createdAt,
+        updatedAt: s.updatedAt,
+        student: {
+          _id: s.studentId._id,
+          name: s.studentId.name,
+          email: s.studentId.emailId,
+          phoneNumber: s.studentId.phoneNo,
+          rollNumber: studentDoc?.rollNumber,
+          isPlaced: studentDoc?.isPlaced || false,
+          isBlocked: studentDoc?.isBlocked || false
+        }
+      };
+    });
 
     const stats = {
       total: shortlists.length,
-      shortlisted: shortlists.filter(s => s.currentStage === Stage.SHORTLISTED).length,
-      waitlisted: shortlists.filter(s => s.currentStage === "WAITLISTED").length,
-      inProgress: shortlists.filter(s => ["R1", "R2", "R3"].includes(s.currentStage)).length,
-      offered: shortlists.filter(s => s.currentStage === Stage.OFFERED).length,
-      rejected: shortlists.filter(s => s.currentStage === Stage.REJECTED).length,
-      placed: shortlists.filter(s => s.student?.isPlaced).length
+      shortlisted: enrichedShortlists.filter(s => s.currentStage === "SHORTLISTED").length,
+      waitlisted: enrichedShortlists.filter(s => s.currentStage === "WAITLISTED").length,
+      inProgress: enrichedShortlists.filter(s => s.stage && [Stage.R1, Stage.R2, Stage.R3, Stage.R4].includes(s.stage)).length,
+      offered: enrichedShortlists.filter(s => s.isOffered).length,
+      rejected: enrichedShortlists.filter(s => s.stage === "REJECTED").length,
+      placed: students.filter(s => s.isPlaced).length
     };
 
     return res.json({
       company,
-      shortlists,
+      shortlists: enrichedShortlists,
       stats
     });
 
@@ -320,18 +444,49 @@ export const removeStudentFromShortlist = async (req, res) => {
 
     const shortlist = await Shortlist.findOne({ 
       _id: shortlistId, 
-      company: companyId 
+      companyId: companyId 
     });
 
     if (!shortlist) {
       return res.status(404).json({ message: "Shortlist entry not found" });
     }
 
-    const studentId = shortlist.student.toString();
+    const studentId = shortlist.studentId.toString();
+    const isShortlisted = shortlist.status === Status.SHORTLISTED;
 
     await shortlist.deleteOne();
 
-    logger.info(`Shortlist entry ${shortlistId} deleted by ${req.user.email}`);
+    // Update Student document
+    const student = await Student.findOne({ userId: studentId });
+    if (student) {
+      if (isShortlisted) {
+        student.shortlistedCompanies = student.shortlistedCompanies.filter(
+          id => id.toString() !== companyId
+        );
+      } else {
+        student.waitlistedCompanies = student.waitlistedCompanies.filter(
+          id => id.toString() !== companyId
+        );
+      }
+      await student.save();
+    }
+
+    // Update Company document
+    const company = await Company.findById(companyId);
+    if (company) {
+      if (isShortlisted) {
+        company.shortlistedStudents = company.shortlistedStudents.filter(
+          id => id.toString() !== studentId
+        );
+      } else {
+        company.waitlistedStudents = company.waitlistedStudents.filter(
+          id => id.toString() !== studentId
+        );
+      }
+      await company.save();
+    }
+
+    logger.info(`Shortlist entry ${shortlistId} deleted by ${req.user.emailId}`);
 
     // Emit socket event for real-time update
     emitStudentRemoved(companyId, studentId);
