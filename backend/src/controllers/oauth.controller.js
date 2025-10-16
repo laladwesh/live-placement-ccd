@@ -98,7 +98,7 @@ export const oauthCallback = async (req, res) => {
     try {
       user = await User.findOne({ "providers.providerId": providerId, "providers.provider": provider });
       if (!user) {
-        user = await User.findOne({ email });
+        user = await User.findOne({ emailId: email });
       }
     } catch (dbErr) {
       logger.error("DB lookup error during oauthCallback", dbErr);
