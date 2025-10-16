@@ -3,12 +3,12 @@ import mongoose from "mongoose";
 
 const CompanySchema = new mongoose.Schema({
   name: { type: String, required: true, unique: true, trim: true },
+  POCs: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Array of POC user IDs
   venue: { type: String, trim: true },
-  description: { type: String },
-  maxRounds: { type: Number, default: 4 },
-  isProcessCompleted: { type: Boolean, default: false }, // Mark when interview process is done
-  pocs: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Array of POC user IDs
-  createdAt: { type: Date, default: Date.now },
+  shortlistedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
+  waitlistedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
+  placedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
+  isProcessCompleted: { type: Boolean, default: false }
 }, {
   timestamps: true
 });
