@@ -8,7 +8,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
     venue: company.venue || "",
     description: company.description || "",
     maxRounds: company.maxRounds || 4,
-    pocIds: company.pocs?.map(p => p._id) || [],
+    pocIds: company.POCs?.map(p => p._id) || [],
     newPocs: [] // Add state for creating new POCs
   });
   const [pocs, setPocs] = useState([]);
@@ -22,7 +22,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
   const fetchPOCs = async () => {
     try {
       const res = await api.get("/admin/pocs");
-      setPocs(res.data.pocs || []);
+      setPocs(res.data.POCs || []);
     } catch (err) {
       console.error("Error fetching POCs:", err);
     }
@@ -46,7 +46,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
   const handleAddNewPOC = () => {
     setFormData(prev => ({
       ...prev,
-      newPocs: [...prev.newPocs, { name: "", email: "", phoneNumber: "" }]
+      newPocs: [...prev.newPocs, { name: "", emailId: "", phoneNo: "" }]
     }));
   };
 
@@ -200,8 +200,8 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
                   />
                   <input
                     type="email"
-                    name="email"
-                    value={poc.email}
+                    name="emailId"
+                    value={poc.emailId}
                     onChange={(e) => handleNewPOCChange(index, e)}
                     placeholder="POC Email"
                     required
@@ -210,8 +210,8 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
                 </div>
                 <input
                   type="text"
-                  name="phoneNumber"
-                  value={poc.phoneNumber}
+                  name="phoneNo"
+                  value={poc.phoneNo}
                   onChange={(e) => handleNewPOCChange(index, e)}
                   placeholder="Phone Number"
                   className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -243,7 +243,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
                     />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-slate-900">{poc.name}</div>
-                      <div className="text-xs text-slate-500">{poc.email}</div>
+                      <div className="text-xs text-slate-500">{poc.emailId}</div>
                     </div>
                     <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">
                       {poc.role}
