@@ -87,7 +87,7 @@ export default function StudentDashboard() {
       setUser(res.data.user);
       
       // Redirect if not a student
-      if (res.data.user.role !== "student" && res.data.user.role !== "admin" && res.data.user.role !== "superadmin") {
+      if (res.data.user.role !== "student" && res.data.user.role !== "admin") {
         navigate("/dashboard");
       }
     } catch (err) {
@@ -110,10 +110,10 @@ export default function StudentDashboard() {
   };
 
   const filteredShortlists = shortlists.filter((shortlist) => {
-    const matchesSearch = shortlist.company?.name
+    const matchesSearch = shortlist.companyId?.name
       ?.toLowerCase()
       .includes(searchTerm.toLowerCase());
-    const matchesFilter = filterStage === "ALL" || shortlist.currentStage === filterStage;
+    const matchesFilter = filterStage === "ALL" || shortlist.stage === filterStage;
     return matchesSearch && matchesFilter;
   });
 
@@ -147,16 +147,6 @@ export default function StudentDashboard() {
             <div>
               <h3 className="font-semibold text-green-800">Congratulations! You are placed!</h3>
               <p className="text-sm text-green-700">You cannot participate in further placements.</p>
-            </div>
-          </div>
-        )}
-
-        {user?.isBlocked && !user?.isPlaced && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
-            <span className="text-3xl">🚫</span>
-            <div>
-              <h3 className="font-semibold text-red-800">Your account is blocked</h3>
-              <p className="text-sm text-red-700">Please contact the placement cell for more information.</p>
             </div>
           </div>
         )}
