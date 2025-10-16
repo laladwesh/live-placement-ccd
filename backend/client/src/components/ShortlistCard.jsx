@@ -19,6 +19,9 @@ export default function ShortlistCard({ shortlist }) {
     return colors[stage] || "bg-gray-100 text-gray-800 border-gray-200";
   };
 
+  // Check if shortlist is offered
+  const stage = shortlist.isOffered ? "OFFERED" : shortlist.stage;
+
   const getStageIcon = (stage) => {
     const icons = {
       SHORTLISTED: "📋",
@@ -56,19 +59,19 @@ export default function ShortlistCard({ shortlist }) {
       <div className="flex items-start justify-between mb-4">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-lg flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-            {shortlist.company?.name?.charAt(0).toUpperCase()}
+            {shortlist.companyId?.name?.charAt(0).toUpperCase()}
           </div>
           <div>
             <h3 className="font-semibold text-lg text-slate-900">
-              {shortlist.company?.name}
+              {shortlist.companyId?.name}
             </h3>
             <p className="text-sm text-slate-500">
-              {shortlist.company?.jobRole || "Software Engineer"}
+              {shortlist.companyId?.jobRole || "Software Engineer"}
             </p>
           </div>
         </div>
-        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStageColor(shortlist.currentStage)}`}>
-          {getStageIcon(shortlist.currentStage)} {shortlist.currentStage}
+        <span className={`px-3 py-1 text-xs font-medium rounded-full border ${getStageColor(stage)}`}>
+          {getStageIcon(stage)} {stage}
         </span>
       </div>
 
@@ -76,18 +79,18 @@ export default function ShortlistCard({ shortlist }) {
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2 text-slate-600">
           <span className="font-medium">💰 CTC:</span>
-          <span>{formatCTC(shortlist.company?.ctc)}</span>
+          <span>{formatCTC(shortlist.companyId?.ctc)}</span>
         </div>
-        {shortlist.company?.location && (
+        {shortlist.companyId?.location && (
           <div className="flex items-center gap-2 text-slate-600">
             <span className="font-medium">📍 Location:</span>
-            <span>{shortlist.company.location}</span>
+            <span>{shortlist.companyId.location}</span>
           </div>
         )}
-        {shortlist.company?.visitDate && (
+        {shortlist.companyId?.visitDate && (
           <div className="flex items-center gap-2 text-slate-600">
             <span className="font-medium">📅 Visit Date:</span>
-            <span>{formatDate(shortlist.company.visitDate)}</span>
+            <span>{formatDate(shortlist.companyId.visitDate)}</span>
           </div>
         )}
       </div>
