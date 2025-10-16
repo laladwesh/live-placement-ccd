@@ -150,18 +150,18 @@ export default function POCCompanyStudents() {
   const filteredShortlists = shortlists.filter(item => {
     const matchesSearch = 
       item.student?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.student?.rollNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesFilter = 
       filterStage === "all" ||
       (filterStage === "shortlisted" && item.currentStage === "SHORTLISTED") ||
       (filterStage === "waitlisted" && item.currentStage === "WAITLISTED") ||
-      (filterStage === "r1" && item.currentStage === "R1") ||
-      (filterStage === "r2" && item.currentStage === "R2") ||
-      (filterStage === "r3" && item.currentStage === "R3") ||
-      (filterStage === "offered" && item.currentStage === "OFFERED") ||
-      (filterStage === "rejected" && item.currentStage === "REJECTED") ||
+      (filterStage === "r1" && item.stage === "R1") ||
+      (filterStage === "r2" && item.stage === "R2") ||
+      (filterStage === "r3" && item.stage === "R3") ||
+      (filterStage === "r4" && item.stage === "R4") ||
+      (filterStage === "offered" && item.isOffered) ||
+      (filterStage === "rejected" && item.stage === "REJECTED") ||
       (filterStage === "placed" && item.student?.isPlaced);
     
     return matchesSearch && matchesFilter;
