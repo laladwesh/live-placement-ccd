@@ -11,18 +11,17 @@ export default function AdminStudents() {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [user, setUser] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
   useEffect(() => {
     checkAuth();
     fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const checkAuth = async () => {
     try {
       const res = await api.get("/users/me");
-      setUser(res.data.user);
       
       if (res.data.user.role !== "admin") {
         navigate("/dashboard");

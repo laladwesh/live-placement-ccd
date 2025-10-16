@@ -1,5 +1,5 @@
 // src/components/UpdateToast.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 
 export default function UpdateToast({ message, show, onClose }) {
   useEffect(() => {

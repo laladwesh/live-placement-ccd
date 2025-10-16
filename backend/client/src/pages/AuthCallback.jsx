@@ -11,7 +11,6 @@ export default function AuthCallback() {
       const hash = window.location.hash || "";
       const params = new URLSearchParams(hash.replace(/^#/, ""));
       const token = params.get("token");
-      const provider = params.get("provider");
 
       if (!token) {
         // nothing to do — redirect to login

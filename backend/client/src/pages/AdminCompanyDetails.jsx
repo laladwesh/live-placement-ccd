@@ -8,7 +8,7 @@ import EditCompanyModal from "../components/EditCompanyModal"; // Assuming this 
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminCompanyDetails() {
-  const { socket, connected } = useSocket();
+  const { socket } = useSocket();
   const [user, setUser] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);

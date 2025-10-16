@@ -18,6 +18,7 @@ export default function AdminOffersDashboard() {
   useEffect(() => {
     fetchUser();
     fetchOffers();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Socket listener for real-time updates
