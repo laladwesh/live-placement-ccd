@@ -1,18 +1,7 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "backend/client/package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "build"
-      }
-    },
-    {
-      "src": "backend/src/server.js",
-      "use": "@vercel/node"
-    }
-  ],
+  "buildCommand": "cd backend && npm install && cd client && npm install && npm run build",
+  "outputDirectory": "backend/client/build",
   "routes": [
     {
       "src": "/api/(.*)",
@@ -23,19 +12,16 @@
       "dest": "backend/src/server.js"
     },
     {
-      "src": "/static/(.*)",
-      "dest": "backend/client/build/static/$1"
-    },
-    {
-      "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot))",
-      "dest": "backend/client/build/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
-      "dest": "backend/client/build/index.html"
+      "dest": "/index.html"
     }
   ],
-  "env": {
-    "NODE_ENV": "production"
+  "functions": {
+    "backend/src/server.js": {
+      "runtime": "nodejs18.x"
+    }
   }
 }
