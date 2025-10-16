@@ -14,7 +14,7 @@ const router = express.Router();
 
 // All routes require authentication and POC/admin role
 router.use(authMiddleware);
-router.use(permit("poc", "admin", "superadmin"));
+router.use(permit("poc", "admin"));
 
 // Get POC's assigned companies
 router.get("/companies", getPOCCompanies);
