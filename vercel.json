@@ -24,15 +24,15 @@
     },
     {
       "src": "/static/(.*)",
-      "dest": "backend/client/build/static/$1"
+      "dest": "/static/$1"
     },
     {
       "src": "/(.*\\.(js|css|json|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
-      "dest": "backend/client/build/$1"
+      "dest": "/$1"
     },
     {
       "src": "/(.*)",
-      "dest": "backend/client/build/index.html"
+      "dest": "/index.html"
     }
   ]
 }
