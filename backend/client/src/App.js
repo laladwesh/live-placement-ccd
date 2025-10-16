@@ -5,6 +5,8 @@ import OAuthCallback from "./pages/OAuthCallback";
 import Dashboard from "./pages/Dashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminCompanyDetails from "./pages/AdminCompanyDetails";
+import AdminOffersDashboard from "./pages/AdminOffersDashboard";
+import AdminStudents from "./pages/AdminStudents";
 import CompanyDetails from "./pages/CompanyDetails";
 import POCDashboard from "./pages/POCDashboard";
 import POCCompanyStudents from "./pages/POCCompanyStudents";
@@ -29,6 +31,21 @@ function App() {
             <AdminDashboard />
           </PrivateRoute>
         } />
+        <Route path="/admin/offers" element={
+          <PrivateRoute>
+            <AdminOffersDashboard />
+          </PrivateRoute>
+        } />
+        <Route path="/admin/students" element={
+          <PrivateRoute>
+            <AdminStudents />
+          </PrivateRoute>
+        } />
+        <Route path="/admin/companies/:companyId" element={
+          <PrivateRoute>
+            <CompanyDetails />
+          </PrivateRoute>
+        } />
         <Route path="/admin/company" element={
           <PrivateRoute>
             <AdminCompanyDetails />
@@ -45,6 +62,11 @@ function App() {
           </PrivateRoute>
         } />
         <Route path="/poc/company/:companyId" element={
+          <PrivateRoute>
+            <POCCompanyStudents />
+          </PrivateRoute>
+        } />
+        <Route path="/poc/companies/:companyId/students" element={
           <PrivateRoute>
             <POCCompanyStudents />
           </PrivateRoute>
