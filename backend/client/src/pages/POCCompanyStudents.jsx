@@ -11,7 +11,7 @@ import { useSocket } from "../context/SocketContext";
 export default function POCCompanyStudents() {
   const { companyId } = useParams();
   const navigate = useNavigate();
-  const { socket, connected } = useSocket();
+  const { socket } = useSocket();
   const [user, setUser] = useState(null);
   const [company, setCompany] = useState(null);
   const [shortlists, setShortlists] = useState([]);
@@ -31,6 +31,7 @@ export default function POCCompanyStudents() {
     if (user) {
       fetchCompanyStudents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, companyId]);
 
   // Socket.IO listeners - Silent background updates

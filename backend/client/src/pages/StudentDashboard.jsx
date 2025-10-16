@@ -8,7 +8,7 @@ import { useSocket } from "../context/SocketContext";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
-  const { socket, connected } = useSocket();
+  const { socket } = useSocket();
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState({
@@ -26,6 +26,7 @@ export default function StudentDashboard() {
   useEffect(() => {
     fetchUser();
     fetchShortlists();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Socket.IO listeners - Silent background updates

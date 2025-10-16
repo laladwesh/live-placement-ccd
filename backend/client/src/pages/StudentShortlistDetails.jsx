@@ -15,6 +15,7 @@ export default function StudentShortlistDetails() {
   useEffect(() => {
     fetchUser();
     fetchDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shortlistId]);
 
   const fetchUser = async () => {
@@ -212,7 +213,6 @@ export default function StudentShortlistDetails() {
                 {stageTimeline.map((step, index) => {
                   const isPast = index < currentStageIndex;
                   const isCurrent = step.stage === shortlist.stage;
-                  const isFuture = index > currentStageIndex;
 
                   return (
                     <div key={step.stage} className="flex flex-col items-center">
