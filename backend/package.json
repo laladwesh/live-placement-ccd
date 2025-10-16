@@ -9,7 +9,9 @@
     "dev": "nodemon src/server.js",
     "client:start": "cd client && npm start",
     "dev:all": "concurrently \"npm run dev\" \"npm run client:start\"",
-    "client:build": "cd client && npm run build"
+    "client:build": "cd client && npm run build",
+    "build": "npm run client:build",
+    "vercel-build": "npm run client:build"
   },
   "dependencies": {
     "axios": "^1.12.2",
