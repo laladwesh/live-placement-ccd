@@ -4,10 +4,9 @@ import api from "../api/axios";
 
 export default function AddWalkInModal({ companyId, onClose, onAdded }) {
   const [formData, setFormData] = useState({
-    rollNumber: "",
     email: "",
     name: "",
-    phoneNumber: "",
+    phoneNo: "",
     remarks: ""
   });
   const [loading, setLoading] = useState(false);
@@ -33,9 +32,9 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
 
     try {
       await api.post(`/poc/companies/${companyId}/walkin`, {
-        email: formData.email.trim(),
+        emailId: formData.email.trim(),
         name: formData.name.trim(),
-        phoneNumber: formData.phoneNumber.trim() || undefined,
+        phoneNo: formData.phoneNo.trim() || undefined,
         remarks: formData.remarks.trim() || undefined
       });
       // Don't call onAdded() - let socket handle the refresh
@@ -65,22 +64,6 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Roll Number */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Roll Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="rollNumber"
-              value={formData.rollNumber}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="210101001"
-              required
-            />
-          </div>
-
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
@@ -120,8 +103,8 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
             </label>
             <input
               type="tel"
-              name="phoneNumber"
-              value={formData.phoneNumber}
+              name="phoneNo"
+              value={formData.phoneNo}
               onChange={handleChange}
               className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="+91-9876543210"
