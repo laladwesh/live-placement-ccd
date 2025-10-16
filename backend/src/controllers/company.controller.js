@@ -13,6 +13,10 @@ import { emitCompanyUpdate } from "../config/socket.js";
  */
 export const createCompany = async (req, res) => {
   try {
+    console.log("📦 CREATE COMPANY REQUEST:");
+    console.log("   User:", req.user.emailId, "| Role:", req.user.role);
+    console.log("   Body:", JSON.stringify(req.body, null, 2));
+    
     const { name, venue, description, maxRounds, pocIds = [], newPocs = [] } = req.body;
 
     if (!name || !name.trim()) {
@@ -29,25 +33,25 @@ export const createCompany = async (req, res) => {
     const newPocIds = [];
     if (Array.isArray(newPocs) && newPocs.length > 0) {
       for (const pocData of newPocs) {
-        if (!pocData.email || !pocData.name || !pocData.phoneNumber) {
-          return res.status(400).json({ message: "New POCs must have a name, email, and phone number." });
+        if (!pocData.emailId || !pocData.name || !pocData.phoneNo) {
+          return res.status(400).json({ message: "New POCs must have a name, emailId, and phoneNo." });
         }
-        const existingUser = await User.findOne({ email: pocData.email });
+        const existingUser = await User.findOne({ emailId: pocData.emailId });
         if (existingUser) {
-          return res.status(400).json({ message: `A user with email ${pocData.email} already exists.` });
+          return res.status(400).json({ message: `A user with email ${pocData.emailId} already exists.` });
         }
 
         // Create a user without a password, ready for OAuth login
         const newUser = new User({
           name: pocData.name,
-          email: pocData.email,
-          phoneNumber: pocData.phoneNumber,
+          emailId: pocData.emailId,
+          phoneNo: pocData.phoneNo,
           role: "poc",
           isAllowed: true, // New POCs are allowed by default
         });
         await newUser.save();
         newPocIds.push(newUser._id);
-        logger.info(`New POC user created for OAuth login: ${newUser.email}`);
+        logger.info(`New POC user created for OAuth login: ${newUser.emailId}`);
       }
     }
 
@@ -71,15 +75,16 @@ export const createCompany = async (req, res) => {
     const company = new Company({
       name: name.trim(),
       venue: venue?.trim() || "",
-      description: description?.trim() || "",
-      maxRounds: maxRounds || 4,
-      pocs: allPocIds
+      POCs: allPocIds,
+      shortlistedStudents: [],
+      waitlistedStudents: [],
+      placedStudents: []
     });
 
     await company.save();
     
     // Populate POC details for response
-    await company.populate('pocs', 'name email phoneNumber');
+    await company.populate('POCs', 'name emailId phoneNo');
 
     logger.info(`Company created: ${company.name} by admin ${req.user.email}`);
 
@@ -103,7 +108,7 @@ export const createCompany = async (req, res) => {
 export const getAllCompanies = async (req, res) => {
   try {
     const companies = await Company.find()
-      .populate('pocs', 'name email phoneNumber')
+      .populate('POCs', 'name emailId phoneNo')
       .sort({ createdAt: -1 });
 
     return res.json({ companies });
@@ -122,7 +127,7 @@ export const getCompanyById = async (req, res) => {
     const { id } = req.params;
 
     const company = await Company.findById(id)
-      .populate('pocs', 'name email phoneNumber');
+      .populate('POCs', 'name emailId phoneNo');
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -164,8 +169,6 @@ export const updateCompany = async (req, res) => {
     }
 
     if (venue !== undefined) company.venue = venue.trim();
-    if (description !== undefined) company.description = description.trim();
-    if (maxRounds !== undefined) company.maxRounds = maxRounds;
 
     // Update POCs if provided
     if (pocIds !== undefined && Array.isArray(pocIds)) {
@@ -180,14 +183,14 @@ export const updateCompany = async (req, res) => {
             message: "One or more POC IDs are invalid" 
           });
         }
-        company.pocs = pocs.map(p => p._id);
+        company.POCs = pocs.map(p => p._id);
       } else {
-        company.pocs = [];
+        company.POCs = [];
       }
     }
 
     await company.save();
-    await company.populate('pocs', 'name email phoneNumber');
+    await company.populate('POCs', 'name emailId phoneNo');
 
     logger.info(`Company updated: ${company.name} by admin ${req.user.email}`);
 
@@ -243,7 +246,7 @@ export const getAllPOCs = async (req, res) => {
       role: { $in: ["poc", "admin"] },
       isAllowed: true
     })
-    .select('name email phoneNumber role')
+    .select('name emailId phoneNo role')
     .sort({ name: 1 });
 
     return res.json({ pocs });
