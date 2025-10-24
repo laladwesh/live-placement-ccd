@@ -1,11 +1,12 @@
 // src/pages/POCCompanyStudents.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import StudentInterviewRow from "../components/StudentInterviewRow";
 import AddWalkInModal from "../components/AddWalkInModal";
-import UpdateToast from "../components/UpdateToast";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
 
 export default function POCCompanyStudents() {
@@ -20,8 +21,7 @@ export default function POCCompanyStudents() {
   const [showWalkInModal, setShowWalkInModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStage, setFilterStage] = useState("all");
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   useEffect(() => {
     fetchUser();
@@ -44,8 +44,9 @@ export default function POCCompanyStudents() {
     // Silent refresh function - no loading screen
     const silentRefresh = async (message) => {
       try {
-        setToastMessage(message);
-        setShowToast(true);
+        if (message) {
+          toast.success(message);
+        }
         const res = await api.get(`/poc/companies/${companyId}/students`);
         setCompany(res.data.company);
         setShortlists(res.data.shortlists || []);
@@ -110,7 +111,7 @@ export default function POCCompanyStudents() {
     } catch (err) {
       console.error("Error fetching company students:", err);
       if (err.response?.status === 403) {
-        alert("You are not assigned to this company");
+        toast.error("You are not assigned to this company");
         navigate("/poc");
       }
     } finally {
@@ -132,19 +133,14 @@ export default function POCCompanyStudents() {
   };
 
   const handleMarkProcessComplete = async () => {
-    if (!window.confirm(`Are you sure you want to mark the interview process for "${company?.name}" as completed? This will hide the company from all students' dashboards.`)) {
-      return;
-    }
-
     try {
       await api.post(`/poc/companies/${companyId}/complete`);
-      setToastMessage("Interview process marked as completed");
-      setShowToast(true);
+      toast.success("Interview process marked as completed");
       // Refresh to show updated status
       fetchCompanyStudents();
     } catch (err) {
       console.error("Error marking process complete:", err);
-      alert(err.response?.data?.message || "Failed to mark process as complete");
+      toast.error(err.response?.data?.message || "Failed to mark process as complete");
     }
   };
 
@@ -236,7 +232,7 @@ export default function POCCompanyStudents() {
                 
                 {!company?.isProcessCompleted && (
                   <button
-                    onClick={handleMarkProcessComplete}
+                    onClick={() => setShowCompleteConfirm(true)}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -375,11 +371,16 @@ export default function POCCompanyStudents() {
         />
       )}
 
-      {/* Update Toast */}
-      <UpdateToast 
-        message={toastMessage}
-        show={showToast}
-        onClose={() => setShowToast(false)}
+      {/* Confirm Process Complete Dialog */}
+      <ConfirmDialog
+        isOpen={showCompleteConfirm}
+        onClose={() => setShowCompleteConfirm(false)}
+        onConfirm={handleMarkProcessComplete}
+        title="Mark Process Complete"
+        message={`Are you sure you want to mark the interview process for "${company?.name}" as completed? This will hide the company from all students' dashboards.`}
+        confirmText="Mark Complete"
+        confirmColor="purple"
+        icon="warning"
       />
     </div>
   );
