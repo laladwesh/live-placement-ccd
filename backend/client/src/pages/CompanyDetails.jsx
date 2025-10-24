@@ -1,10 +1,12 @@
 // src/pages/CompanyDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import AddStudentModal from "../components/AddStudentModal";
 import UploadCSVModal from "../components/UploadCSVModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
 
 export default function CompanyDetails() {
@@ -20,6 +22,11 @@ export default function CompanyDetails() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    studentId: null,
+    studentName: ""
+  });
 
   useEffect(() => {
     fetchUser();
@@ -92,7 +99,7 @@ export default function CompanyDetails() {
     } catch (err) {
       console.error("Error fetching company details:", err);
       if (err.response?.status === 404) {
-        alert("Company not found");
+        toast.error("Company not found");
         navigate("/admin");
       }
     } finally {
@@ -111,16 +118,13 @@ export default function CompanyDetails() {
   };
 
   const handleRemoveStudent = async (shortlistId) => {
-    if (!window.confirm("Are you sure you want to remove this student from the shortlist?")) {
-      return;
-    }
-
     try {
       await api.delete(`/admin/companies/${companyId}/shortlist/${shortlistId}`);
+      toast.success("Student removed from shortlist");
       // Don't call fetchCompanyDetails() - let socket handle the refresh
     } catch (err) {
       console.error("Error removing student:", err);
-      alert(err.response?.data?.message || "Failed to remove student");
+      toast.error(err.response?.data?.message || "Failed to remove student");
     }
   };
 
@@ -367,7 +371,11 @@ export default function CompanyDetails() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => handleRemoveStudent(item._id)}
+                        onClick={() => setConfirmDialog({
+                          isOpen: true,
+                          studentId: item._id,
+                          studentName: item.student?.name
+                        })}
                         className="text-red-600 hover:text-red-900"
                       >
                         Remove
@@ -397,6 +405,18 @@ export default function CompanyDetails() {
           onSuccess={handleCSVUploaded}
         />
       )}
+
+      {/* Confirm Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen}
+        onClose={() => setConfirmDialog({ isOpen: false, studentId: null, studentName: "" })}
+        onConfirm={() => handleRemoveStudent(confirmDialog.studentId)}
+        title="Remove Student"
+        message={`Are you sure you want to remove ${confirmDialog.studentName} from the shortlist?`}
+        confirmText="Remove"
+        confirmColor="red"
+        icon="danger"
+      />
     </div>
   );
 }
