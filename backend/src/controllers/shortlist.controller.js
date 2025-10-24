@@ -221,12 +221,12 @@ export const uploadShortlistCSV = async (req, res) => {
 /**
  * Add single student to company shortlist manually
  * POST /api/admin/companies/:companyId/shortlist
- * Body: { email, name, phoneNo, status }
+ * Body: { email, status }
  */
 export const addStudentToShortlist = async (req, res) => {
   try {
     const { companyId } = req.params;
-    const { email, name, phoneNo, status } = req.body;
+    const { email, status } = req.body;
 
     if (!email || !email.trim()) {
       return res.status(400).json({ message: "Email is required" });
@@ -239,21 +239,26 @@ export const addStudentToShortlist = async (req, res) => {
 
     const emailLower = email.trim().toLowerCase();
 
-    // Find or create user by email
-    let user = await User.findOne({ emailId: emailLower });
+    // Student MUST already exist in database
+    const user = await User.findOne({ emailId: emailLower });
     
     if (!user) {
-      user = new User({
-        emailId: emailLower,
-        name: name?.trim() || emailLower.split('@')[0],
-        phoneNo: phoneNo?.trim() || "",
-        role: "student",
-        isAllowed: true
+      return res.status(404).json({ 
+        message: "Student not found in database. Please upload master student list first." 
       });
-      await user.save();
+    }
 
-      // Create Student document
-      const student = new Student({
+    // Verify user is a student
+    if (user.role !== "student") {
+      return res.status(400).json({ 
+        message: `User exists but is not a student (role: ${user.role})` 
+      });
+    }
+
+    // Ensure Student document exists
+    let student = await Student.findOne({ userId: user._id });
+    if (!student) {
+      student = new Student({
         userId: user._id,
         isPlaced: false,
         shortlistedCompanies: [],
@@ -261,31 +266,6 @@ export const addStudentToShortlist = async (req, res) => {
         placedCompany: null
       });
       await student.save();
-    } else {
-      // Update user info if provided and not already set
-      let updated = false;
-      if (name && name.trim() && !user.name) {
-        user.name = name.trim();
-        updated = true;
-      }
-      if (phoneNo && phoneNo.trim() && !user.phoneNo) {
-        user.phoneNo = phoneNo.trim();
-        updated = true;
-      }
-      if (updated) await user.save();
-
-      // Ensure Student document exists
-      let student = await Student.findOne({ userId: user._id });
-      if (!student) {
-        student = new Student({
-          userId: user._id,
-          isPlaced: false,
-          shortlistedCompanies: [],
-          waitlistedCompanies: [],
-          placedCompany: null
-        });
-        await student.save();
-      }
     }
 
     // Check if already shortlisted
@@ -316,7 +296,6 @@ export const addStudentToShortlist = async (req, res) => {
     await shortlist.populate('studentId', 'name emailId phoneNo');
 
     // Update Student document
-    const student = await Student.findOne({ userId: user._id });
     if (isShortlisted && !student.shortlistedCompanies.includes(company._id)) {
       student.shortlistedCompanies.push(company._id);
     } else if (!isShortlisted && !student.waitlistedCompanies.includes(company._id)) {
