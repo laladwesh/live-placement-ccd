@@ -4,10 +4,7 @@ import api from "../api/axios";
 
 export default function AddStudentModal({ companyId, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
-    rollNumber: "",
     email: "",
-    name: "",
-    phoneNumber: "",
     status: "shortlisted"
   });
   const [loading, setLoading] = useState(false);
@@ -40,7 +37,7 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-slate-900">Add Student Manually</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Add Student to Shortlist</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition"
@@ -53,26 +50,10 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
-          {/* Roll Number */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Roll Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="rollNumber"
-              value={formData.rollNumber}
-              onChange={handleChange}
-              required
-              placeholder="210101001"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Email <span className="text-red-500">*</span>
+              Student Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
@@ -83,43 +64,15 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
               placeholder="student@iitg.ac.in"
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-          </div>
-
-          {/* Name */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Name
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Student Name"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <p className="text-xs text-slate-500 mt-1">Optional - will be auto-generated from email if not provided</p>
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              name="phoneNumber"
-              value={formData.phoneNumber}
-              onChange={handleChange}
-              placeholder="+91-9876543210"
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
+            <p className="text-xs text-slate-500 mt-1">
+              Student must already be registered in the master student list
+            </p>
           </div>
 
           {/* Status */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Status
+              Status <span className="text-red-500">*</span>
             </label>
             <select
               name="status"
