@@ -1,8 +1,10 @@
 // src/pages/AdminOffersDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminOffersDashboard() {
@@ -14,6 +16,12 @@ export default function AdminOffersDashboard() {
   const [confirmedOffers, setConfirmedOffers] = useState([]);
   const [activeTab, setActiveTab] = useState("pending"); // "pending" or "confirmed"
   const [processing, setProcessing] = useState(null); // offerId being processed
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    type: null, // 'approve' or 'reject'
+    offerId: null,
+    studentName: ''
+  });
 
   useEffect(() => {
     fetchUser();
@@ -74,18 +82,14 @@ export default function AdminOffersDashboard() {
   };
 
   const handleApprove = async (offerId) => {
-    if (!window.confirm("Are you sure you want to approve this offer? It will be sent to the student.")) {
-      return;
-    }
-
     try {
       setProcessing(offerId);
       await api.post(`/admin/offers/${offerId}/approve`);
       await fetchOffers(); // Refresh data
-      alert("Offer approved and sent to student!");
+      toast.success("Offer approved and sent to student!");
     } catch (err) {
       console.error("Error approving offer:", err);
-      alert(err.response?.data?.message || "Failed to approve offer");
+      toast.error(err.response?.data?.message || "Failed to approve offer");
     } finally {
       setProcessing(null);
     }
@@ -99,10 +103,10 @@ export default function AdminOffersDashboard() {
       setProcessing(offerId);
       await api.post(`/admin/offers/${offerId}/reject`, { reason });
       await fetchOffers(); // Refresh data
-      alert("Offer rejected successfully");
+      toast.success("Offer rejected successfully");
     } catch (err) {
       console.error("Error rejecting offer:", err);
-      alert(err.response?.data?.message || "Failed to reject offer");
+      toast.error(err.response?.data?.message || "Failed to reject offer");
     } finally {
       setProcessing(null);
     }
@@ -180,7 +184,12 @@ export default function AdminOffersDashboard() {
       {isPending && (
         <div className="flex gap-2 pt-4 border-t">
           <button
-            onClick={() => handleApprove(offer._id)}
+            onClick={() => setConfirmDialog({
+              isOpen: true,
+              type: 'approve',
+              offerId: offer._id,
+              studentName: offer.studentId?.name
+            })}
             disabled={processing === offer._id}
             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 font-medium"
           >
@@ -290,6 +299,18 @@ export default function AdminOffersDashboard() {
           )
         )}
       </main>
+
+      {/* Confirm Approve Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen && confirmDialog.type === 'approve'}
+        onClose={() => setConfirmDialog({ isOpen: false, type: null, offerId: null, studentName: '' })}
+        onConfirm={() => handleApprove(confirmDialog.offerId)}
+        title="Approve Offer"
+        message={`Are you sure you want to approve this offer for ${confirmDialog.studentName}? It will be sent to the student.`}
+        confirmText="Approve"
+        confirmColor="green"
+        icon="success"
+      />
     </div>
   );
 }
