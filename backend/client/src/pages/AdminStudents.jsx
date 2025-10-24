@@ -1,6 +1,7 @@
 // src/pages/AdminStudents.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import AddStudentToMasterModal from "../components/AddStudentToMasterModal";
 
@@ -48,7 +49,7 @@ export default function AdminStudents() {
     const file = e.target.files[0];
     if (file) {
       if (!file.name.endsWith('.csv')) {
-        alert("Please select a CSV file");
+        toast.error("Please select a CSV file");
         return;
       }
       setSelectedFile(file);
@@ -58,7 +59,7 @@ export default function AdminStudents() {
 
   const handleUpload = async () => {
     if (!selectedFile) {
-      alert("Please select a file first");
+      toast.error("Please select a file first");
       return;
     }
 
