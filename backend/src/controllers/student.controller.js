@@ -15,9 +15,17 @@ export const getMyShortlists = async (req, res) => {
     const studentId = req.user._id;
 
     // Get all shortlists for this student with company details populated
-    const shortlists = await Shortlist.find({ studentId: studentId })
-      .populate("companyId", "name venue isProcessCompleted")
-      .sort({ createdAt: -1 });
+   const shortlists = await Shortlist.find({ studentId })
+  .populate({
+    path: "companyId",
+    select: "name venue isProcessCompleted POCs",
+    populate: {
+      path: "POCs",
+      model: "User",
+      select: "emailId name",
+    },
+  })
+  .sort({ createdAt: -1 });
 
     // Filter out companies where process is completed
     const activeShortlists = shortlists.filter(s => !s.companyId?.isProcessCompleted);

@@ -289,6 +289,9 @@ export default function StudentDashboard() {
             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
               Current Status
             </th>
+            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+              POCs
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-200">
@@ -314,6 +317,14 @@ export default function StudentDashboard() {
                 >
                   {shortlist.stage || "Pending"}
                 </span>
+              </td>
+              <td className="px-6 py-4 text-slate-700">
+                {shortlist.companyId?.POCs?.length > 0 ? (
+                    shortlist.companyId.POCs.map((poc) => (
+                      <span key={poc._id} className="block">
+                        {poc.emailId}
+                      </span>
+                      ))):("—")}
               </td>
             </tr>
           ))}
