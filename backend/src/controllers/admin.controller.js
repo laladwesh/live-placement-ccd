@@ -112,7 +112,10 @@ export const approveOffer = async (req, res) => {
     }
 
     // Check if student is already placed
-    const student = await Student.findOne({ userId: offer.studentId._id });
+    const student = await Student.findOne({ userId: offer.studentId });
+    if(!student){
+      return res.status(404).json({message: "Student not found"});
+    }
     if (student && student.isPlaced) {
       return res.status(400).json({ 
         message: "Student is already placed and cannot receive this offer" 
@@ -124,6 +127,10 @@ export const approveOffer = async (req, res) => {
     offer.approvedBy = adminId;
     offer.approvedAt = new Date();
     await offer.save();
+    // Update Student data as well
+    student.isPlaced = true;
+    student.placedCompany = offer.companyId;
+    await student.save();
 
     logger.info(`Admin ${req.user.emailId} approved offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
 
