@@ -1,6 +1,7 @@
 import bcrypt from "bcryptjs";
 import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
+import Company from "../models/company.model.js";
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
 import Shortlist from "../models/shortlist.model.js";
 import { logger } from "../utils/logger.js";
@@ -150,7 +151,8 @@ export const approveOffer = async (req, res) => {
     }
 
     // Check if student is already placed
-    const student = await Student.findOne({ userId: offer.studentId });
+    // Note: offer.studentId is populated, so we need to use ._id
+    const student = await Student.findOne({ userId: offer.studentId._id });
     if(!student){
       return res.status(404).json({message: "Student not found"});
     }
@@ -167,10 +169,12 @@ export const approveOffer = async (req, res) => {
     offer.offerStatus = "ACCEPTED"; // Mark as accepted since admin approved
     await offer.save();
     
-    // Update Student data as well
+    // Update Student data as well - mark as placed
     student.isPlaced = true;
-    student.placedCompany = offer.companyId;
+    student.placedCompany = offer.companyId._id; // Use _id since companyId is also populated
     await student.save();
+
+    logger.info(`Student ${offer.studentId.emailId} marked as placed at ${offer.companyId.name}`);
 
     // AUTO-REJECT ALL OTHER PENDING OFFERS FOR THIS STUDENT
     const otherPendingOffers = await Offer.find({
@@ -203,6 +207,12 @@ export const approveOffer = async (req, res) => {
           isStudentPlaced: true 
         }
       }
+    );
+
+    // ADD STUDENT TO COMPANY'S PLACED STUDENTS LIST
+    await Company.findByIdAndUpdate(
+      offer.companyId._id,
+      { $addToSet: { placedStudents: offer.studentId._id } } // addToSet prevents duplicates
     );
 
     logger.info(`Admin ${req.user.emailId} approved offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
