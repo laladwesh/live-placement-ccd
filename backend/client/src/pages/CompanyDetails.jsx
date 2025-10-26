@@ -70,11 +70,39 @@ export default function CompanyDetails() {
       silentRefresh();
     });
 
+    // Listen for shortlist updates (stage changes by POC)
+    socket.on("shortlist:update", (data) => {
+      console.log("📊 Shortlist updated:", data);
+      silentRefresh(); // Refresh when POC changes interview stage
+    });
+
+    // Listen for offers created by POC
+    socket.on("offer:created", (data) => {
+      console.log("🎉 Offer created:", data);
+      silentRefresh(); // Refresh to show new offer
+    });
+
+    // Listen for offer approvals
+    socket.on("offer:approved", (data) => {
+      console.log("✅ Offer approved:", data);
+      silentRefresh();
+    });
+
+    // Listen for offer rejections
+    socket.on("offer:rejected", (data) => {
+      console.log("❌ Offer rejected:", data);
+      silentRefresh();
+    });
+
     // Cleanup
     return () => {
       socket.emit("leave:company", companyId);
       socket.off("student:added");
       socket.off("student:removed");
+      socket.off("shortlist:update");
+      socket.off("offer:created");
+      socket.off("offer:approved");
+      socket.off("offer:rejected");
     };
   }, [socket, companyId]);
 
