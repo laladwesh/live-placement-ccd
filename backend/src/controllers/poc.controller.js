@@ -83,6 +83,11 @@ export const getPOCCompanyStudents = async (req, res) => {
         currentStage = s.status.toUpperCase(); // SHORTLISTED or WAITLISTED
       }
 
+      // Check if student is placed at THIS specific company
+      const isPlacedAtThisCompany = studentDoc?.isPlaced && 
+        studentDoc?.placedCompany && 
+        studentDoc.placedCompany.toString() === companyId.toString();
+
       return {
         _id: s._id,
         companyId: s.companyId,
@@ -94,13 +99,15 @@ export const getPOCCompanyStudents = async (req, res) => {
         isOffered: s.isOffered,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
+        isStudentPlaced: s.isStudentPlaced, // Student placed somewhere (this or other company)
+        studentPlacedCompany: s.studentPlacedCompany, // Name of company where placed
         student: {
           _id: s.studentId._id,
           name: s.studentId.name,
           email: s.studentId.emailId,
           phoneNumber: s.studentId.phoneNo,
           rollNumber: studentDoc?.rollNumber,
-          isPlaced: studentDoc?.isPlaced || false,
+          isPlaced: isPlacedAtThisCompany, // TRUE only if placed at THIS company
           isBlocked: studentDoc?.isBlocked || false
         }
       };
