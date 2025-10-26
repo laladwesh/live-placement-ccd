@@ -1,5 +1,5 @@
 // src/pages/Login.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
@@ -12,10 +12,44 @@ export default function Login() {
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(null); // 'azure' | 'google' | null
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Use env var for backend base. If empty, fallback to origin.
   const BACKEND_BASE =
     process.env.REACT_APP_BACKEND_URL || window.location.origin;
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        setCheckingAuth(false);
+        return;
+      }
+
+      try {
+        const res = await api.get("/users/me");
+        const user = res.data.user;
+        
+        // Redirect based on role
+        if (user.role === "admin") {
+          navigate("/admin", { replace: true });
+        } else if (user.role === "poc") {
+          navigate("/poc", { replace: true });
+        } else if (user.role === "student") {
+          navigate("/student", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch (err) {
+        // Token invalid or expired, clear it
+        localStorage.removeItem("jwt_token");
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const submitLocal = async (e) => {
     e.preventDefault();
@@ -26,7 +60,20 @@ export default function Login() {
       const { token } = res.data;
       if (!token) throw new Error("No token returned");
       localStorage.setItem("jwt_token", token);
-      navigate("/dashboard");
+      
+      // Get user info to redirect to appropriate dashboard
+      const userRes = await api.get("/users/me");
+      const user = userRes.data.user;
+      
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else if (user.role === "poc") {
+        navigate("/poc");
+      } else if (user.role === "student") {
+        navigate("/student");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (e) {
       setErr(e.response?.data?.message || e.message || "Login failed");
     } finally {
@@ -45,6 +92,18 @@ export default function Login() {
     // Navigate in same tab so provider can redirect back to backend callback.
     window.location.href = loginUrl;
   };
+
+  // Show loading while checking authentication
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-sm text-slate-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

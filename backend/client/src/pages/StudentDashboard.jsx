@@ -1,6 +1,7 @@
 // src/pages/StudentDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
 //import ShortlistCard from "../components/ShortlistCard";
@@ -73,6 +74,31 @@ export default function StudentDashboard() {
       silentRefresh();
     });
 
+    // Listen for offer approved (confirmed)
+    socket.on("offer:approved", (data) => {
+      console.log(" Offer approved:", data);
+      toast.success(`Congratulations! Your offer from ${data.companyName} has been confirmed! 🎉`, {
+        duration: 6000,
+        icon: '🎊'
+      });
+      silentRefresh();
+    });
+
+    // Listen for offer rejected
+    socket.on("offer:rejected", (data) => {
+      console.log("❌ Offer rejected:", data);
+      toast.error(`Offer from ${data.companyName} was not approved.`, {
+        duration: 5000
+      });
+      silentRefresh();
+    });
+
+    // Listen for offer status updates
+    socket.on("offer:status-update", (data) => {
+      console.log("📊 Offer status updated:", data);
+      silentRefresh();
+    });
+
     // Listen for student added/removed
     socket.on("student:added", (data) => {
       console.log("📌 Student added:", data);
@@ -91,6 +117,9 @@ export default function StudentDashboard() {
       socket.emit("leave:student", user._id);
       socket.off("shortlist:update");
       socket.off("offer:created");
+      socket.off("offer:approved");
+      socket.off("offer:rejected");
+      socket.off("offer:status-update");
       socket.off("student:added");
       socket.off("student:removed");
     };

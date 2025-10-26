@@ -104,6 +104,9 @@ export function emitOfferCreated(companyId, studentId, data) {
     // Emit to student's personal room
     io.to(`student:${studentId}`).emit("offer:created", data);
     
+    // Emit to admin room (for pending offers dashboard)
+    io.to("admin").emit("offer:created", data);
+    
     logger.info(`Emitted offer created for company ${companyId}, student ${studentId}`);
   }
 }
@@ -153,9 +156,10 @@ export function emitStudentRemoved(companyId, studentId) {
 /**
  * Emit offer approved event (admin approved, sent to student)
  * @param {string} studentId - Student ID
+ * @param {string} companyId - Company ID
  * @param {object} data - Offer data
  */
-export function emitOfferApproved(studentId, data) {
+export function emitOfferApproved(studentId, companyId, data) {
   if (io) {
     // Emit to student's personal room
     io.to(`student:${studentId}`).emit("offer:approved", data);
@@ -163,6 +167,53 @@ export function emitOfferApproved(studentId, data) {
     // Emit to admin room for confirmation
     io.to("admin").emit("offer:approved", data);
     
+    // Emit to company room (POCs)
+    io.to(`company:${companyId}`).emit("offer:approved", data);
+    
     logger.info(`Emitted offer approved for student ${studentId}`);
+  }
+}
+
+/**
+ * Emit offer rejected event (admin rejected)
+ * @param {string} studentId - Student ID
+ * @param {string} companyId - Company ID
+ * @param {object} data - Offer data
+ */
+export function emitOfferRejected(studentId, companyId, data) {
+  if (io) {
+    // Emit to student's personal room
+    io.to(`student:${studentId}`).emit("offer:rejected", data);
+    
+    // Emit to admin room
+    io.to("admin").emit("offer:rejected", data);
+    
+    // Emit to company room (POCs)
+    io.to(`company:${companyId}`).emit("offer:rejected", data);
+    
+    logger.info(`Emitted offer rejected for student ${studentId}`);
+  }
+}
+
+/**
+ * Emit offer status update (for real-time updates on all dashboards)
+ * @param {object} data - Offer data with status
+ */
+export function emitOfferStatusUpdate(data) {
+  if (io) {
+    // Emit to admin room (for pending offers dashboard)
+    io.to("admin").emit("offer:status-update", data);
+    
+    // Emit to student's personal room
+    if (data.studentId) {
+      io.to(`student:${data.studentId}`).emit("offer:status-update", data);
+    }
+    
+    // Emit to company room (POCs)
+    if (data.companyId) {
+      io.to(`company:${data.companyId}`).emit("offer:status-update", data);
+    }
+    
+    logger.info(`Emitted offer status update for offer ${data.offerId}`);
   }
 }

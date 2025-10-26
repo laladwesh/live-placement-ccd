@@ -32,7 +32,7 @@ export const authMiddleware = async (req, res, next) => {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
-    console.log("   ✅ User authenticated:", user.emailId, "| Role:", user.role);
+    console.log("    User authenticated:", user.emailId, "| Role:", user.role);
     req.user = user;
     next();
   } catch (err) {
@@ -64,7 +64,7 @@ export const permit = (...allowedRoles) => (req, res, next) => {
       return res.status(403).json({ message: "Forbidden" });
     }
     
-    console.log("   ✅ ALLOWED");
+    console.log("    ALLOWED");
     next();
   } catch (err) {
     console.error("permit error:", err?.message || err);
