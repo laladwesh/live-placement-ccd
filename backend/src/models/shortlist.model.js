@@ -40,7 +40,11 @@ const ShortlistSchema = new mongoose.Schema({
   status: { type: String, enum: Object.values(Status), default: Status.SHORTLISTED },
   stage: { type: String, enum: Object.values(Stage), required: false },
   interviewStatus: { type: String, enum: Object.values(InterviewStatus), required: false },
-  isOffered: { type: Boolean, default: false }
+  isOffered: { type: Boolean, default: false },
+  
+  // Placement tracking fields
+  isStudentPlaced: { type: Boolean, default: false },
+  studentPlacedCompany: { type: String, trim: true } // Name of company where student got placed
 }, {
   timestamps: true
 });
