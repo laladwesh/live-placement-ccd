@@ -27,8 +27,40 @@ export const getMyShortlists = async (req, res) => {
   })
   .sort({ createdAt: -1 });
 
-    // Filter out companies where process is completed
-    const activeShortlists = shortlists.filter(s => !s.companyId?.isProcessCompleted);
+    // Get pending offers for this student to show "CCD Confirmation Pending"
+    const pendingOffers = await Offer.find({
+      studentId: studentId,
+      approvalStatus: "PENDING"  // Only offers awaiting admin approval
+    }).select("companyId");
+    
+    const pendingOfferCompanyIds = new Set(
+      pendingOffers.map(o => o.companyId.toString())
+    );
+
+    // Filter out companies where:
+    // 1. Process is completed
+    // 2. Student is REJECTED
+    const activeShortlists = shortlists.filter(s => {
+      // Remove if process completed
+      if (s.companyId?.isProcessCompleted) return false;
+      
+      // Remove if student is rejected
+      if (s.stage === "REJECTED") return false;
+      
+      return true;
+    });
+
+    // Enrich shortlists with offer status
+    const enrichedShortlists = activeShortlists.map(s => {
+      const shortlistObj = s.toObject();
+      
+      // Check if there's a pending offer for this company
+      if (pendingOfferCompanyIds.has(s.companyId._id.toString())) {
+        shortlistObj.hasPendingOffer = true;
+      }
+      
+      return shortlistObj;
+    });
 
     // Count statistics (only for active shortlists)
     const stats = {
@@ -37,15 +69,15 @@ export const getMyShortlists = async (req, res) => {
       waitlisted: activeShortlists.filter(s => s.status === Status.WAITLISTED).length,
       inInterview: activeShortlists.filter(s => s.stage && [Stage.R1, Stage.R2, Stage.R3, Stage.R4].includes(s.stage)).length,
       offered: activeShortlists.filter(s => s.isOffered).length,
-      rejected: activeShortlists.filter(s => s.interviewStatus === "R").length
+      rejected: 0 // Don't show rejected in stats since we filter them out
     };
 
-    logger.info(`Student ${studentId} fetched ${activeShortlists.length} active shortlists`);
+    logger.info(`Student ${studentId} fetched ${activeShortlists.length} active shortlists (rejected companies hidden)`);
 
     res.json({
       success: true,
       stats,
-      shortlists: activeShortlists
+      shortlists: enrichedShortlists
     });
   } catch (err) {
     logger.error("Error fetching student shortlists:", err);

@@ -199,34 +199,66 @@ export default function StudentDashboard() {
   // Placed Student View - Only show congratulations message
   if (profile?.isPlaced) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-green-50 to-emerald-100">
+      <div className="min-h-screen bg-slate-50">
         <Navbar user={user} />
-        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
-          <div className="bg-white rounded-2xl shadow-2xl p-12 max-w-2xl w-full text-center">
-            <div className="mb-6">
-              <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <span className="text-5xl">🎉</span>
+        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-6">
+          <div className="max-w-2xl w-full">
+            {/* Simple Header */}
+            <div className="text-center mb-8">
+              <div className="mb-4 flex justify-center">
+                <svg className="w-16 h-16 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
               </div>
-              <h1 className="text-4xl font-bold text-slate-900 mb-2">Congratulations!</h1>
-              <p className="text-xl text-slate-600 mb-8">You are successfully placed</p>
-            </div>
-            
-            <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-8 text-white mb-6">
-              <div className="text-5xl mb-4">🏢</div>
-              <h2 className="text-3xl font-bold mb-2">
-                {profile.placedCompany?.name || 'Company Name'}
-              </h2>
-              <p className="text-green-100">Your placement company</p>
+              <h1 className="text-4xl font-bold text-slate-900 mb-2">
+                Congratulations!
+              </h1>
+              <p className="text-lg text-slate-600">
+                You've been placed
+              </p>
             </div>
 
-            <div className="bg-slate-50 rounded-lg p-6">
-              <p className="text-slate-600 mb-2">
-                <span className="font-semibold text-slate-800">Student:</span> {profile.name}
-              </p>
-              <p className="text-slate-600">
-                <span className="font-semibold text-slate-800">Email:</span> {profile.emailId}
-              </p>
+            {/* Company Card */}
+            <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden mb-6">
+              <div className="bg-slate-900 px-8 py-12 text-center text-white">
+                <div className="mb-4 flex justify-center">
+                  <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                </div>
+                <h2 className="text-3xl font-bold">
+                  {profile.placedCompany?.name || 'Company Name'}
+                </h2>
+              </div>
+
+              {/* Student Info */}
+              <div className="p-8 space-y-4">
+                <div className="flex items-center gap-3 pb-4 border-b border-slate-200">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-slate-500">Name</p>
+                    <p className="text-lg font-semibold text-slate-900">{profile.name}</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-center gap-3 pt-2">
+                  <svg className="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                  </svg>
+                  <div>
+                    <p className="text-sm text-slate-500">Email</p>
+                    <p className="text-lg font-semibold text-slate-900">{profile.emailId}</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Footer Message */}
+            <p className="text-center text-slate-500 text-sm">
+              All the best for your new journey ahead
+            </p>
           </div>
         </div>
       </div>
@@ -333,19 +365,36 @@ export default function StudentDashboard() {
                 {shortlist.companyId?.venue || "—"}
               </td>
               <td className="px-6 py-4">
-                <span
-                  className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    shortlist.stage === "OFFERED" || shortlist.stage === "SELECTED"
-                      ? "bg-green-100 text-green-800"
-                      : shortlist.stage === "REJECTED"
-                      ? "bg-red-100 text-red-800"
-                      : shortlist.stage === "WAITLISTED"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-blue-100 text-blue-800"
-                  }`}
-                >
-                  {shortlist.stage || "Pending"}
-                </span>
+                <div className="flex flex-col gap-1">
+                  {/* Main Status Badge */}
+                  <span
+                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      shortlist.stage === "OFFERED" || shortlist.stage === "SELECTED"
+                        ? "bg-green-100 text-green-800"
+                        : shortlist.stage === "REJECTED"
+                        ? "bg-red-100 text-red-800"
+                        : shortlist.stage === "WAITLISTED"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-blue-100 text-blue-800"
+                    }`}
+                  >
+                    {shortlist.stage || "Pending"}
+                  </span>
+                  
+                  {/* CCD Confirmation Pending Badge */}
+                  {shortlist.hasPendingOffer && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
+                      ⏳ CCD Confirmation Pending
+                    </span>
+                  )}
+                  
+                  {/* Offer Confirmed Badge */}
+                  {shortlist.isOffered && !shortlist.hasPendingOffer && (
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300">
+                      ✅ Offer Confirmed
+                    </span>
+                  )}
+                </div>
               </td>
               <td className="px-6 py-4 text-slate-700">
                 {shortlist.companyId?.POCs?.length > 0 ? (
