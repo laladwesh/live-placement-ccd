@@ -113,12 +113,12 @@ export default function Login() {
   }}
     >
       {/* Light overlay */}
-  <div className="absolute inset-0 bg-white/80"></div>
+  <div className="absolute inset-0 bg-white/10"></div>
       <div className="max-w-md w-full bg-white backdrop-blur-lg rounded-2xl shadow-lg p-8">
-        <h2 className="text-2xl font-semibold text-slate-800 mb-2">
-          Welcome back
+        <h2 className="text-2xl font-semibold text-slate-800 mb-2 text-center">
+          Welcome
         </h2>
-        <p className="text-sm text-slate-500 mb-6">
+        <p className="text-sm text-slate-500 mb-6 text-center">
           Sign in to view placement dashboard
         </p>
 
@@ -212,8 +212,8 @@ export default function Login() {
             </div>
           </form>
 
-          <p className="mt-4 text-xs text-slate-500">
-            No public signup — accounts are provisioned by the admin.
+          <p className="mt-4 text-xs text-slate-500 text-center">
+            Facing error while logging? contact : <a  href="mailto: ccd_queries@iitg.ac.in" >ccd_queries@iitg.ac.in</a>
           </p>
         </div>
       </div>
