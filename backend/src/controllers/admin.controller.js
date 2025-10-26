@@ -18,6 +18,11 @@ export const createUser = async (req, res) => {
     const existing = await User.findOne({ emailId });
     if (existing) return res.status(409).json({ message: "Email already exists" });
 
+    if (phoneNo) {
+      const existingPhone = await User.findOne({ phoneNo });
+      if (existingPhone) return res.status(409).json({ message: "Phone number already exists" });
+    }
+
     let passwordHash;
     if (password) {
       const salt = await bcrypt.genSalt(10);
@@ -38,6 +43,12 @@ export const createUser = async (req, res) => {
 
     return res.status(201).json({ message: "User created", user: { id: user._id, emailId: user.emailId } });
   } catch (err) {
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ 
+        success: false,
+        message: err.message
+      });
+    }
     logger.error("createUser error", err);
     return res.status(500).json({ message: "Server error" });
   }

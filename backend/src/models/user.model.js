@@ -4,7 +4,14 @@ import mongoose from "mongoose";
 const UserSchema = new mongoose.Schema({
   name: { type: String, trim: true, required: true },
   emailId: { type: String, lowercase: true, trim: true, required: true, unique: true },
-  phoneNo: { type: String, trim: true },
+  phoneNo: { 
+    type: String, 
+    trim: true,
+    validate: {
+      validator: v => /^\d{10}$/.test(v),
+      message: props => `${props.value} is not a valid 10-digit phone number`
+    }
+  },
   role: { type: String, enum: ["student", "poc", "admin", "official"], default: "student" },
   companyName: { type: String, trim: true }, // For POC role - name of their company
   passwordHash: { type: String }, // only for local login

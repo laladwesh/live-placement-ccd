@@ -150,6 +150,12 @@ export const uploadStudentsCSV = async (req, res) => {
       }
     });
   } catch (err) {
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ 
+        success: false,
+        message: err.message
+      });
+    }
     logger.error("uploadStudentsCSV error:", err);
     return res.status(500).json({ 
       message: "Server error during CSV upload",
@@ -257,6 +263,12 @@ export const addStudentManually = async (req, res) => {
       student: studentDoc
     });
   } catch (err) {
+    if (err.name === "ValidationError") {
+      return res.status(400).json({ 
+        success: false,
+        message: err.message
+      });
+    }
     logger.error("addStudentManually error:", err);
     return res.status(500).json({ 
       message: "Server error",

@@ -1,4 +1,3 @@
-// backend/src/models/student.model.js
 import mongoose from "mongoose";
 
 const StudentSchema = new mongoose.Schema({
@@ -11,6 +10,10 @@ const StudentSchema = new mongoose.Schema({
   rollNumber: {
     type: String,
     trim: true,
+    validate: {
+      validator: v => /^\d{9}$/.test(v),
+      message: props => `${props.value} is not a valid 9-digit roll number`
+    },
     default: ""
   },
   isPlaced: { 
