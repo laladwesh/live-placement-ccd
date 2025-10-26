@@ -70,7 +70,7 @@ export default function POCCompanyStudents() {
 
     // Listen for offer approved by admin
     socket.on("offer:approved", (data) => {
-      console.log("✅ Offer approved by admin:", data);
+      console.log(" Offer approved by admin:", data);
       silentRefresh(`Offer for ${data.studentName} approved by admin`);
     });
 
