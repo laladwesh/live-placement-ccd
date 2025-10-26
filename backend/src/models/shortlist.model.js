@@ -7,13 +7,22 @@ export const Status = {
   WAITLISTED: "waitlisted"
 };
 
-// Stage enum for interview rounds
+// Stage enum for interview rounds (supports up to 4 rounds dynamically)
 export const Stage = {
   R1: "R1",
   R2: "R2",
   R3: "R3",
   R4: "R4",
   REJECTED: "REJECTED"
+};
+
+// Helper function to get valid stages for a company
+export const getValidStages = (maxRounds = 4) => {
+  const stages = [Stage.REJECTED];
+  for (let i = 1; i <= Math.min(maxRounds, 4); i++) {
+    stages.push(`R${i}`);
+  }
+  return stages;
 };
 
 // Interview status enum (color-coded)

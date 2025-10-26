@@ -149,17 +149,26 @@ export default function POCCompanyStudents() {
       item.student?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesFilter = 
-      filterStage === "all" ||
-      (filterStage === "shortlisted" && item.currentStage === "SHORTLISTED") ||
-      (filterStage === "waitlisted" && item.currentStage === "WAITLISTED") ||
-      (filterStage === "r1" && item.stage === "R1") ||
-      (filterStage === "r2" && item.stage === "R2") ||
-      (filterStage === "r3" && item.stage === "R3") ||
-      (filterStage === "r4" && item.stage === "R4") ||
-      (filterStage === "offered" && item.isOffered) ||
-      (filterStage === "rejected" && item.stage === "REJECTED") ||
-      (filterStage === "placed" && item.student?.isPlaced);
+    // Dynamic filter based on stage
+    let matchesFilter = filterStage === "all";
+    
+    if (!matchesFilter) {
+      if (filterStage === "shortlisted") {
+        matchesFilter = item.currentStage === "SHORTLISTED";
+      } else if (filterStage === "waitlisted") {
+        matchesFilter = item.currentStage === "WAITLISTED";
+      } else if (filterStage.startsWith("r")) {
+        // Handle dynamic rounds (r1, r2, r3, r4, etc.)
+        const roundNum = filterStage.substring(1);
+        matchesFilter = item.stage === `R${roundNum}`;
+      } else if (filterStage === "offered") {
+        matchesFilter = item.isOffered;
+      } else if (filterStage === "rejected") {
+        matchesFilter = item.stage === "REJECTED";
+      } else if (filterStage === "placed") {
+        matchesFilter = item.student?.isPlaced;
+      }
+    }
     
     return matchesSearch && matchesFilter;
   });
@@ -269,18 +278,13 @@ export default function POCCompanyStudents() {
                 <div className="text-xs text-yellow-600">Waitlist</div>
                 <div className="text-xl font-bold text-yellow-600">{stats.waitlisted}</div>
               </div>
-              <div className="bg-white rounded-lg shadow p-3">
-                <div className="text-xs text-purple-600">R1</div>
-                <div className="text-xl font-bold text-purple-600">{stats.r1}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-3">
-                <div className="text-xs text-purple-600">R2</div>
-                <div className="text-xl font-bold text-purple-600">{stats.r2}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-3">
-                <div className="text-xs text-purple-600">R3</div>
-                <div className="text-xl font-bold text-purple-600">{stats.r3}</div>
-              </div>
+              {/* Dynamic round stats based on maxRounds */}
+              {Array.from({ length: company?.maxRounds || 4 }, (_, i) => i + 1).map(round => (
+                <div key={`r${round}`} className="bg-white rounded-lg shadow p-3">
+                  <div className="text-xs text-purple-600">R{round}</div>
+                  <div className="text-xl font-bold text-purple-600">{stats[`r${round}`] || 0}</div>
+                </div>
+              ))}
               <div className="bg-white rounded-lg shadow p-3">
                 <div className="text-xs text-green-600">Offered</div>
                 <div className="text-xl font-bold text-green-600">{stats.offered}</div>
@@ -323,9 +327,10 @@ export default function POCCompanyStudents() {
               <option value="all">All Stages</option>
               <option value="shortlisted">Shortlisted</option>
               <option value="waitlisted">Waitlisted</option>
-              <option value="r1">Round 1</option>
-              <option value="r2">Round 2</option>
-              <option value="r3">Round 3</option>
+              {/* Dynamic round options based on maxRounds */}
+              {Array.from({ length: company?.maxRounds || 4 }, (_, i) => i + 1).map(round => (
+                <option key={`r${round}`} value={`r${round}`}>Round {round}</option>
+              ))}
               <option value="offered">Offered</option>
               <option value="rejected">Rejected</option>
               <option value="placed">Placed</option>

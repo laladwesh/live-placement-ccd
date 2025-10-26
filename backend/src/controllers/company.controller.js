@@ -75,6 +75,8 @@ export const createCompany = async (req, res) => {
     const company = new Company({
       name: name.trim(),
       venue: venue?.trim() || "",
+      description: description?.trim() || "",
+      maxRounds: maxRounds ? Number(maxRounds) : 4,
       POCs: allPocIds,
       shortlistedStudents: [],
       waitlistedStudents: [],

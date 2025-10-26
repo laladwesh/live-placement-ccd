@@ -106,19 +106,21 @@ export const getPOCCompanyStudents = async (req, res) => {
       };
     });
 
-    // Calculate stats
+    // Calculate stats based on company's maxRounds
+    const maxRounds = company.maxRounds || 4;
     const stats = {
       total: shortlists.length,
       shortlisted: enrichedShortlists.filter(s => s.currentStage === "SHORTLISTED").length,
       waitlisted: enrichedShortlists.filter(s => s.currentStage === "WAITLISTED").length,
-      r1: enrichedShortlists.filter(s => s.stage === Stage.R1).length,
-      r2: enrichedShortlists.filter(s => s.stage === Stage.R2).length,
-      r3: enrichedShortlists.filter(s => s.stage === Stage.R3).length,
-      r4: enrichedShortlists.filter(s => s.stage === Stage.R4).length,
       offered: enrichedShortlists.filter(s => s.isOffered).length,
       placed: students.filter(s => s.isPlaced).length,
       rejected: enrichedShortlists.filter(s => s.stage === "REJECTED").length
     };
+
+    // Add round stats dynamically based on maxRounds
+    for (let i = 1; i <= maxRounds; i++) {
+      stats[`r${i}`] = enrichedShortlists.filter(s => s.stage === `R${i}`).length;
+    }
 
     return res.json({
       company,
@@ -134,7 +136,7 @@ export const getPOCCompanyStudents = async (req, res) => {
 /**
  * Update student interview stage
  * PATCH /api/poc/shortlist/:shortlistId/stage
- * Body: { stage: "R1" | "R2" | "R3" | "REJECTED" }
+ * Body: { stage: "R1" | "R2" | "R3" | "R4" | "REJECTED" }
  */
 export const updateInterviewStage = async (req, res) => {
   try {
@@ -143,20 +145,28 @@ export const updateInterviewStage = async (req, res) => {
     const userId = req.user._id;
     const userRole = req.user.role;
 
-    // Validate stage
-    const validStages = [Stage.R1, Stage.R2, Stage.R3, Stage.R4, Stage.REJECTED];
-    if (!validStages.includes(stage)) {
-      return res.status(400).json({ 
-        message: "Invalid stage. Must be R1, R2, R3, R4, or REJECTED" 
-      });
-    }
-
     const shortlist = await Shortlist.findById(shortlistId)
       .populate('studentId', 'name emailId')
-      .populate('companyId', 'name POCs');
+      .populate('companyId', 'name POCs maxRounds');
 
     if (!shortlist) {
       return res.status(404).json({ message: "Shortlist entry not found" });
+    }
+
+    // Get company's maxRounds
+    const maxRounds = shortlist.companyId.maxRounds || 4;
+    
+    // Build valid stages based on company's maxRounds
+    const validStages = [Stage.REJECTED];
+    for (let i = 1; i <= maxRounds; i++) {
+      validStages.push(`R${i}`);
+    }
+
+    // Validate stage
+    if (!validStages.includes(stage)) {
+      return res.status(400).json({ 
+        message: `Invalid stage. Must be R1-R${maxRounds} or REJECTED for this company` 
+      });
     }
 
     // Admins can update any company, POCs only their assigned companies
