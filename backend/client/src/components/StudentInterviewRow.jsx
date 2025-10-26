@@ -1,13 +1,16 @@
 // src/components/StudentInterviewRow.jsx
 import React, { useState } from "react";
+import toast from "react-hot-toast";
 import api from "../api/axios";
+import ConfirmDialog from "./ConfirmDialog";
 
 export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdate, onOfferCreated }) {
   const [updating, setUpdating] = useState(false);
   const [creatingOffer, setCreatingOffer] = useState(false);
+  const [showOfferConfirm, setShowOfferConfirm] = useState(false);
 
   const isPlaced = shortlist.student?.isPlaced;
-  const isBlocked = shortlist.student?.isBlocked;
+  // const isBlocked = shortlist.student?.isBlocked;
   const currentStage = shortlist.currentStage;
 
   const handleStageChange = async (newStage) => {
@@ -20,7 +23,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
       // The socket will update all connected clients including this one
     } catch (err) {
       console.error("Error updating stage:", err);
-      alert(err.response?.data?.message || "Failed to update stage");
+      toast.error(err.response?.data?.message || "Failed to update stage");
     } finally {
       setUpdating(false);
     }
@@ -29,18 +32,15 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   const handleCreateOffer = async () => {
     if (isPlaced || creatingOffer) return;
 
-    if (!window.confirm(`Create offer for ${shortlist.student?.name}?`)) {
-      return;
-    }
-
     setCreatingOffer(true);
     try {
       await api.post(`/poc/shortlist/${shortlist._id}/offer`);
+      toast.success(`Offer created for ${shortlist.student?.name}`);
       // Don't call onOfferCreated() - let socket handle the refresh
       // The socket will update all connected clients including this one
     } catch (err) {
       console.error("Error creating offer:", err);
-      alert(err.response?.data?.message || "Failed to create offer");
+      toast.error(err.response?.data?.message || "Failed to create offer");
     } finally {
       setCreatingOffer(false);
     }
@@ -148,7 +148,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               
               {/* Offer Button */}
               <button
-                onClick={handleCreateOffer}
+                onClick={() => setShowOfferConfirm(true)}
                 disabled={creatingOffer || currentStage === "SHORTLISTED" || currentStage === "WAITLISTED"}
                 className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 title={currentStage === "SHORTLISTED" || currentStage === "WAITLISTED" ? "Complete at least one round first" : "Create offer"}
@@ -173,6 +173,18 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
           Note: {shortlist.remarks}
         </div>
       )}
+
+      {/* Confirm Offer Dialog */}
+      <ConfirmDialog
+        isOpen={showOfferConfirm}
+        onClose={() => setShowOfferConfirm(false)}
+        onConfirm={handleCreateOffer}
+        title="Create Offer"
+        message={`Are you sure you want to create an offer for ${shortlist.student?.name}? This will be sent to admin for approval.`}
+        confirmText="Create Offer"
+        confirmColor="green"
+        icon="success"
+      />
     </div>
   );
 }

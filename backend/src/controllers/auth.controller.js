@@ -13,7 +13,7 @@ export const login = async (req, res) => {
     const { email, password } = req.body;
     if (!email || !password) return res.status(400).json({ message: "Missing fields" });
 
-    const user = await User.findOne({ email });
+    const user = await User.findOne({ emailId: email });
     if (!user || !user.passwordHash) return res.status(401).json({ message: "Invalid credentials" });
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
@@ -27,7 +27,7 @@ export const login = async (req, res) => {
     // --- return token in JSON instead of cookie
     return res.json({
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id, name: user.name, emailId: user.emailId, role: user.role }
     });
   } catch (err) {
     logger.error(err);

@@ -8,7 +8,8 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
     venue: "",
     description: "",
     maxRounds: 4,
-    pocIds: []
+    pocIds: [],
+    newPocs: []
   });
   const [pocs, setPocs] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -38,6 +39,29 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
         ? prev.pocIds.filter(id => id !== pocId)
         : [...prev.pocIds, pocId];
       return { ...prev, pocIds };
+    });
+  };
+
+  const handleAddNewPOC = () => {
+    setFormData(prev => ({
+      ...prev,
+      newPocs: [...prev.newPocs, { name: "", emailId: "", phoneNo: "" }]
+    }));
+  };
+
+  const handleNewPOCChange = (index, e) => {
+    const { name, value } = e.target;
+    setFormData(prev => {
+      const newPocs = [...prev.newPocs];
+      newPocs[index][name] = value;
+      return { ...prev, newPocs };
+    });
+  };
+
+  const handleRemoveNewPOC = (index) => {
+    setFormData(prev => {
+      const newPocs = prev.newPocs.filter((_, i) => i !== index);
+      return { ...prev, newPocs };
     });
   };
 
@@ -140,13 +164,69 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
             </select>
           </div>
 
-          {/* Assign POCs */}
+          {/* Create New POCs */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <label className="block text-sm font-medium text-slate-700">
+                Create & Assign New POCs
+              </label>
+              <button
+                type="button"
+                onClick={handleAddNewPOC}
+                className="text-sm font-medium text-blue-600 hover:text-blue-800"
+              >
+                + Add POC
+              </button>
+            </div>
+            {formData.newPocs.map((poc, index) => (
+              <div key={index} className="p-4 border border-slate-200 rounded-lg space-y-3 relative">
+                <button
+                  type="button"
+                  onClick={() => handleRemoveNewPOC(index)}
+                  className="absolute top-2 right-2 text-slate-400 hover:text-red-500"
+                >
+                  <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" /></svg>
+                </button>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <input
+                    type="text"
+                    name="name"
+                    value={poc.name}
+                    onChange={(e) => handleNewPOCChange(index, e)}
+                    placeholder="POC Name"
+                    required
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <input
+                    type="email"
+                    name="emailId"
+                    value={poc.emailId}
+                    onChange={(e) => handleNewPOCChange(index, e)}
+                    placeholder="POC Email"
+                    required
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <input
+                  type="text"
+                  name="phoneNo"
+                  value={poc.phoneNo}
+                  onChange={(e) => handleNewPOCChange(index, e)}
+                  placeholder="Phone Number"
+                  className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+              </div>
+            ))}
+          </div>
+
+          {/* Assign Existing POCs */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Assign POCs
+              Assign Existing POCs
             </label>
             {pocs.length === 0 ? (
-              <p className="text-sm text-slate-500">No POCs available. Create POC users first.</p>
+              <p className="text-sm text-slate-500">No existing POCs available.</p>
             ) : (
               <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
                 {pocs.map(poc => (
@@ -162,16 +242,71 @@ export default function AddCompanyModal({ onClose, onSuccess }) {
                     />
                     <div className="flex-1">
                       <div className="text-sm font-medium text-slate-900">{poc.name}</div>
-                      <div className="text-xs text-slate-500">{poc.email}</div>
+                      <div className="text-xs text-slate-500">{poc.emailId}</div>
                     </div>
-                    <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">
-                      {poc.role}
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                      POC
                     </span>
                   </label>
                 ))}
               </div>
             )}
           </div>
+
+          {/* Selected POCs Summary */}
+          {(formData.pocIds.length > 0 || formData.newPocs.length > 0) && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-sm font-medium text-blue-900 mb-2">
+                Selected POCs ({formData.pocIds.length + formData.newPocs.length})
+              </div>
+              <div className="space-y-2">
+                {/* Existing POCs */}
+                {formData.pocIds.map(pocId => {
+                  const poc = pocs.find(p => p._id === pocId);
+                  return poc ? (
+                    <div key={pocId} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">
+                          {poc.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-slate-900 font-medium">{poc.name}</div>
+                          <div className="text-xs text-slate-600">{poc.emailId}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handlePOCToggle(pocId)}
+                        className="text-red-600 hover:text-red-800"
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : null;
+                })}
+                {/* New POCs */}
+                {formData.newPocs.map((poc, index) => (
+                  <div key={`new-${index}`} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-white text-xs">
+                        {poc.name?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <div className="text-slate-900 font-medium">{poc.name || 'New POC'}</div>
+                        <div className="text-xs text-slate-600">{poc.emailId || 'Pending...'}</div>
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                      New
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Error Message */}
           {error && (

@@ -1,8 +1,9 @@
 // src/controllers/student.controller.js
-import Shortlist from "../models/shortlist.model.js";
+import Shortlist, { Status, Stage } from "../models/shortlist.model.js";
 import Company from "../models/company.model.js";
 import Offer from "../models/offer.model.js";
 import User from "../models/user.model.js";
+import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
 
 /**
@@ -14,21 +15,29 @@ export const getMyShortlists = async (req, res) => {
     const studentId = req.user._id;
 
     // Get all shortlists for this student with company details populated
-    const shortlists = await Shortlist.find({ student: studentId })
-      .populate("company", "name description logo ctc location jobRole visitDate maxRounds status isProcessCompleted")
-      .sort({ createdAt: -1 });
+   const shortlists = await Shortlist.find({ studentId })
+  .populate({
+    path: "companyId",
+    select: "name venue isProcessCompleted POCs",
+    populate: {
+      path: "POCs",
+      model: "User",
+      select: "emailId name phoneNo",
+    },
+  })
+  .sort({ createdAt: -1 });
 
     // Filter out companies where process is completed
-    const activeShortlists = shortlists.filter(s => !s.company?.isProcessCompleted);
+    const activeShortlists = shortlists.filter(s => !s.companyId?.isProcessCompleted);
 
     // Count statistics (only for active shortlists)
     const stats = {
       total: activeShortlists.length,
-      shortlisted: activeShortlists.filter(s => s.currentStage === "SHORTLISTED").length,
-      waitlisted: activeShortlists.filter(s => s.currentStage === "WAITLISTED").length,
-      inInterview: activeShortlists.filter(s => ["R1", "R2", "R3", "R4"].includes(s.currentStage)).length,
-      offered: activeShortlists.filter(s => s.currentStage === "OFFERED").length,
-      rejected: activeShortlists.filter(s => s.currentStage === "REJECTED").length
+      shortlisted: activeShortlists.filter(s => s.status === Status.SHORTLISTED).length,
+      waitlisted: activeShortlists.filter(s => s.status === Status.WAITLISTED).length,
+      inInterview: activeShortlists.filter(s => s.stage && [Stage.R1, Stage.R2, Stage.R3, Stage.R4].includes(s.stage)).length,
+      offered: activeShortlists.filter(s => s.isOffered).length,
+      rejected: activeShortlists.filter(s => s.interviewStatus === "R").length
     };
 
     logger.info(`Student ${studentId} fetched ${activeShortlists.length} active shortlists`);
@@ -59,8 +68,8 @@ export const getShortlistDetails = async (req, res) => {
     // Find the shortlist and verify it belongs to this student
     const shortlist = await Shortlist.findOne({
       _id: shortlistId,
-      student: studentId
-    }).populate("company", "name description logo ctc location jobRole visitDate maxRounds status bond isProcessCompleted");
+      studentId: studentId
+    }).populate("companyId", "name venue isProcessCompleted");
 
     if (!shortlist) {
       return res.status(404).json({
@@ -70,7 +79,7 @@ export const getShortlistDetails = async (req, res) => {
     }
 
     // Don't show details if process is completed
-    if (shortlist.company?.isProcessCompleted) {
+    if (shortlist.companyId?.isProcessCompleted) {
       return res.status(404).json({
         success: false,
         message: "Company interview process is completed"
@@ -79,11 +88,11 @@ export const getShortlistDetails = async (req, res) => {
 
     // Get offer details if the student has been offered
     let offer = null;
-    if (shortlist.currentStage === "OFFERED") {
+    if (shortlist.isOffered) {
       offer = await Offer.findOne({
         student: studentId,
-        company: shortlist.company._id
-      }).populate("acceptedBy", "name email");
+        company: shortlist.companyId._id
+      }).populate("acceptedBy", "name emailId");
     }
 
     logger.info(`Student ${studentId} viewed shortlist details ${shortlistId}`);
@@ -110,13 +119,17 @@ export const getMyOffers = async (req, res) => {
   try {
     const studentId = req.user._id;
 
-    // Get all offers for this student
-    const offers = await Offer.find({ student: studentId })
-      .populate("company", "name logo ctc location jobRole")
-      .populate("acceptedBy", "name email")
-      .sort({ createdAt: -1 });
+    // Get only APPROVED offers (admin has approved them)
+    const offers = await Offer.find({ 
+      studentId: studentId,
+      approvalStatus: "APPROVED"  // Only show admin-approved offers
+    })
+      .populate("companyId", "name venue")
+      .populate("acceptedBy", "name emailId")
+      .populate("approvedBy", "name emailId")
+      .sort({ approvedAt: -1 });
 
-    logger.info(`Student ${studentId} fetched ${offers.length} offers`);
+    logger.info(`Student ${studentId} fetched ${offers.length} approved offers`);
 
     res.json({
       success: true,
@@ -138,22 +151,45 @@ export const getMyOffers = async (req, res) => {
  */
 export const getMyProfile = async (req, res) => {
   try {
-    const studentId = req.user._id;
+    const userId = req.user._id;
 
-    const student = await User.findById(studentId).select("-password");
-
-    if (!student) {
+    // Get user details
+    const user = await User.findById(userId).select("-password");
+    if (!user) {
       return res.status(404).json({
         success: false,
-        message: "Student not found"
+        message: "User not found"
       });
     }
 
-    logger.info(`Student ${studentId} fetched profile`);
+    // Get student-specific data
+    const student = await Student.findOne({ userId })
+      .populate("placedCompany", "name");
+
+    // Get shortlist statistics
+    const totalShortlists = await Shortlist.countDocuments({ studentId: userId });
+    const activeShortlists = await Shortlist.countDocuments({
+      studentId: userId,
+      stage: { $in: [Stage.R1, Stage.R2, Stage.R3, Stage.R4] }
+    });
+
+    logger.info(`Student ${userId} fetched profile`);
 
     res.json({
       success: true,
-      student
+      profile: {
+        _id: user._id,
+        name: user.name,
+        emailId: user.emailId,
+        phoneNo: user.phoneNo,
+        role: user.role,
+        isPlaced: student?.isPlaced || false,
+        placedCompany: student?.placedCompany || null,
+        shortlistedCount: student?.shortlistedCompanies?.length || 0,
+        waitlistedCount: student?.waitlistedCompanies?.length || 0,
+        totalShortlists,
+        activeShortlists
+      }
     });
   } catch (err) {
     logger.error("Error fetching student profile:", err);

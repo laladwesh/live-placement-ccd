@@ -1,11 +1,13 @@
-// src/components/AddStudentModal.jsx
+// src/components/AddStudentToMasterModal.jsx
 import React, { useState } from "react";
 import api from "../api/axios";
 
-export default function AddStudentModal({ companyId, onClose, onSuccess }) {
+export default function AddStudentToMasterModal({ onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     email: "",
-    status: "shortlisted"
+    name: "",
+    rollNumber: "",
+    phoneNo: ""
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -13,6 +15,7 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+    setError(null);
   };
 
   const handleSubmit = async (e) => {
@@ -21,12 +24,14 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      await api.post(`/admin/companies/${companyId}/shortlist`, formData);
-      // Don't call onSuccess() - let socket handle the refresh
-      onClose(); // Just close the modal
+      const res = await api.post("/admin/students", formData);
+      console.log("Student created:", res.data);
+      
+      if (onSuccess) onSuccess();
+      onClose();
     } catch (err) {
-      console.error("Error adding student:", err);
-      setError(err.response?.data?.message || "Failed to add student");
+      console.error("Error creating student:", err);
+      setError(err.response?.data?.message || "Failed to create student");
     } finally {
       setLoading(false);
     }
@@ -37,7 +42,7 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
       <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-slate-900">Add Student to Shortlist</h2>
+          <h2 className="text-xl font-semibold text-slate-900">Add Student Manually</h2>
           <button
             onClick={onClose}
             className="text-slate-400 hover:text-slate-600 transition"
@@ -52,37 +57,72 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Email */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Student Email <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
-              required
               placeholder="student@iitg.ac.in"
+              required
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <p className="text-xs text-slate-500 mt-1">
-              Student must already be registered in the master student list
-            </p>
           </div>
 
-          {/* Status */}
+          {/* Name */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Status <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Full Name <span className="text-red-500">*</span>
             </label>
-            <select
-              name="status"
-              value={formData.status}
+            <input
+              type="text"
+              name="name"
+              value={formData.name}
               onChange={handleChange}
+              placeholder="Student Name"
+              required
               className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="shortlisted">Shortlisted</option>
-              <option value="waitlisted">Waitlisted</option>
-            </select>
+            />
+          </div>
+
+          {/* Roll Number */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Roll Number
+            </label>
+            <input
+              type="text"
+              name="rollNumber"
+              value={formData.rollNumber}
+              onChange={handleChange}
+              placeholder="210101001"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Phone Number */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              Phone Number
+            </label>
+            <input
+              type="tel"
+              name="phoneNo"
+              value={formData.phoneNo}
+              onChange={handleChange}
+              placeholder="9876543210"
+              className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Info */}
+          <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+            <p className="text-sm text-blue-800">
+              <strong>Note:</strong> This adds the student to the master database. 
+              You can later add them to company shortlists.
+            </p>
           </div>
 
           {/* Error Message */}
@@ -106,7 +146,7 @@ export default function AddStudentModal({ companyId, onClose, onSuccess }) {
               disabled={loading}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? "Adding..." : "Add Student"}
+              {loading ? "Creating..." : "Add Student"}
             </button>
           </div>
         </form>

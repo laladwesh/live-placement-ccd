@@ -15,6 +15,7 @@ export default function StudentShortlistDetails() {
   useEffect(() => {
     fetchUser();
     fetchDetails();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shortlistId]);
 
   const fetchUser = async () => {
@@ -97,7 +98,7 @@ export default function StudentShortlistDetails() {
     );
   }
 
-  const company = shortlist.company;
+  const company = shortlist.companyId;
   const stageTimeline = [
     { stage: "SHORTLISTED", label: "Shortlisted", icon: "📋" },
     { stage: "R1", label: "Round 1", icon: "🎯" },
@@ -105,7 +106,7 @@ export default function StudentShortlistDetails() {
     { stage: "R3", label: "Round 3", icon: "🎯" },
   ];
 
-  const currentStageIndex = stageTimeline.findIndex(s => s.stage === shortlist.currentStage);
+  const currentStageIndex = stageTimeline.findIndex(s => s.stage === shortlist.stage);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -135,8 +136,8 @@ export default function StudentShortlistDetails() {
                 <p className="text-slate-600 mt-1">{company?.jobRole || "Software Engineer"}</p>
               </div>
             </div>
-            <span className={`px-4 py-2 text-sm font-medium rounded-full border ${getStageColor(shortlist.currentStage)}`}>
-              {shortlist.currentStage}
+            <span className={`px-4 py-2 text-sm font-medium rounded-full border ${getStageColor(shortlist.stage)}`}>
+              {shortlist.stage}
             </span>
           </div>
 
@@ -195,7 +196,7 @@ export default function StudentShortlistDetails() {
         </div>
 
         {/* Interview Progress Timeline */}
-        {!["REJECTED", "OFFERED"].includes(shortlist.currentStage) && (
+        {!shortlist.isOffered && shortlist.stage !== "REJECTED" && (
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-xl font-bold text-slate-900 mb-6">Interview Progress</h2>
             <div className="relative">
@@ -211,8 +212,7 @@ export default function StudentShortlistDetails() {
               <div className="relative flex justify-between">
                 {stageTimeline.map((step, index) => {
                   const isPast = index < currentStageIndex;
-                  const isCurrent = step.stage === shortlist.currentStage;
-                  const isFuture = index > currentStageIndex;
+                  const isCurrent = step.stage === shortlist.stage;
 
                   return (
                     <div key={step.stage} className="flex flex-col items-center">
@@ -241,7 +241,7 @@ export default function StudentShortlistDetails() {
         )}
 
         {/* Offer Details */}
-        {shortlist.currentStage === "OFFERED" && offer && (
+        {shortlist.isOffered && offer && (
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-sm p-6 mb-6 border border-green-200">
             <div className="flex items-start gap-4">
               <span className="text-5xl">🎉</span>
@@ -274,7 +274,7 @@ export default function StudentShortlistDetails() {
         )}
 
         {/* Rejected Status */}
-        {shortlist.currentStage === "REJECTED" && (
+        {shortlist.stage === "REJECTED" && (
           <div className="bg-red-50 rounded-lg shadow-sm p-6 mb-6 border border-red-200">
             <div className="flex items-start gap-4">
               <span className="text-4xl">❌</span>

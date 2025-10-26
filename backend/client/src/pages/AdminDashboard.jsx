@@ -1,50 +1,41 @@
-// src/pages/AdminDashboard.jsx
-import React, { useEffect, useState } from "react";
+// src/pages/AdminOffersDashboard.jsx
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
-import CompanyCard from "../components/CompanyCard";
-import AddCompanyModal from "../components/AddCompanyModal";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
 
-export default function AdminDashboard() {
-  const { socket, connected } = useSocket();
+export default function AdminOffersDashboard() {
+  const navigate = useNavigate();
+  const { socket } = useSocket();
   const [user, setUser] = useState(null);
-  const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [pendingOffers, setPendingOffers] = useState([]);
+  const [confirmedOffers, setConfirmedOffers] = useState([]);
+  const [activeTab, setActiveTab] = useState("pending");
+  const [processing, setProcessing] = useState(null);
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    type: null,
+    offerId: null,
+    studentName: ''
+  });
 
   useEffect(() => {
     fetchUser();
-    fetchCompanies();
+    fetchOffers();
   }, []);
 
-  // Socket.IO listeners - Silent background updates
   useEffect(() => {
     if (!socket) return;
-
-    // Join admin room
     socket.emit("join:admin");
-
-    // Silent refresh function - no loading screen
-    const silentRefresh = async () => {
-      try {
-        const res = await api.get("/admin/companies");
-        setCompanies(res.data.companies || []);
-      } catch (err) {
-        console.error("Silent refresh error:", err);
-      }
-    };
-
-    // Listen for company updates
-    socket.on("company:update", (data) => {
-      console.log("🏢 Company update received:", data.action, data.data);
-      silentRefresh(); // Silent background refresh
-    });
-
-    // Cleanup
+    socket.on("offer:created", fetchOffers);
+    socket.on("offer:approved", fetchOffers);
     return () => {
-      socket.off("company:update");
+      socket.off("offer:created");
+      socket.off("offer:approved");
     };
   }, [socket]);
 
@@ -52,166 +43,263 @@ export default function AdminDashboard() {
     try {
       const res = await api.get("/users/me");
       setUser(res.data.user);
+      if (res.data.user.role !== "admin") navigate("/dashboard");
     } catch (err) {
-      console.error("whoami error", err);
-      localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
+      navigate("/login");
     }
   };
 
-  const fetchCompanies = async () => {
+  const fetchOffers = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      const res = await api.get("/admin/companies");
-      setCompanies(res.data.companies || []);
+      const [pendingRes, confirmedRes] = await Promise.all([
+        api.get("/admin/offers/pending"),
+        api.get("/admin/offers/confirmed")
+      ]);
+      setPendingOffers(pendingRes.data.offers || []);
+      setConfirmedOffers(confirmedRes.data.offers || []);
+
+      console.log("hello there! all confirmed offers" ,confirmedRes.data.offers);
     } catch (err) {
-      console.error("Error fetching companies:", err);
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleCompanyAdded = () => {
-    setShowAddModal(false);
-    fetchCompanies();
+  const handleApprove = async (offerId) => {
+    try {
+      setProcessing(offerId);
+      await api.post(`/admin/offers/${offerId}/approve`);
+      await fetchOffers();
+      toast.success("Offer approved and sent to student!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to approve offer");
+    } finally {
+      setProcessing(null);
+    }
   };
 
-  const handleCompanyUpdated = () => {
-    fetchCompanies();
+  const handleReject = async (offerId) => {
+    const reason = window.prompt("Enter reason for rejection (optional):");
+    if (reason === null) return;
+    try {
+      setProcessing(offerId);
+      await api.post(`/admin/offers/${offerId}/reject`, { reason });
+      await fetchOffers();
+      toast.success("Offer rejected successfully");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to reject offer");
+    } finally {
+      setProcessing(null);
+    }
   };
 
-  const handleCompanyDeleted = () => {
-    fetchCompanies();
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    return new Date(date).toLocaleString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   };
 
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  if (!user) {
-    return (
-      <div className="min-h-screen">
-        <Navbar user={null} />
-        <div className="max-w-7xl mx-auto p-6">Loading...</div>
-      </div>
-    );
-  }
-
-  // Check if user is admin
-  if (user.role !== "admin" && user.role !== "superadmin") {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            Access Denied: Admin privileges required
-          </div>
+  const OfferCard = ({ offer, isPending }) => (
+    <div className="bg-white flex flex-col border border-slate-200 rounded-lg p-5 hover:shadow-md transition gap-4">
+      {/* Student Info Row */}
+      <div className="flex flex-col sm:flex-row justify-center gap-12 items-center">
+        <div className="flex-1">
+          <span className="font-medium">Name:</span> {offer.studentId?.name}
+        </div>
+        <div className="flex-1">
+          <span className="font-medium">Email:</span> {offer.studentId?.emailId}
+        </div>
+        <div className="flex-1">
+          <span className="font-medium">Contact:</span> {offer.studentId?.phoneNo}
+        </div>
+        <div className="flex-1">
+          <span className="font-medium">Company:</span> <span className="text-blue-700 font-semibold">{offer.companyId?.name}</span>
         </div>
       </div>
-    );
-  }
-
-  return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-      
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+  
+      {/* Pending Approval Buttons */}
+{isPending && (
+  <div className="flex flex-row gap-2 text-sm text-slate-600 mt-2">
+    <button
+      onClick={() =>
+        setConfirmDialog({
+          isOpen: true,
+          type: "approve",
+          offerId: offer._id,
+          studentName: offer.studentId?.name,
+        })
+      }
+      disabled={processing === offer._id}
+      className="px-3 py-1 bg-green-600 text-white rounded-md hover:bg-green-700 transition disabled:opacity-50 font-medium"
+    >
+      {processing === offer._id ? "Processing..." : "✓ Approve"}
+    </button>
+    <button
+      onClick={() => handleReject(offer._id)}
+      disabled={processing === offer._id}
+      className="px-3 py-1 bg-red-600 text-white rounded-md hover:bg-red-700 transition disabled:opacity-50 font-medium"
+    >
+      {processing === offer._id ? "Processing..." : "✕ Reject"}
+    </button>
+  </div>
+)}
+  
+      {/* Approved by & Remarks Row */}
+      {!isPending && (offer.approvedBy || offer.remarks) && (
+        <div className="flex flex-col gap-2 text-sm text-slate-600">
+          {offer.approvedBy && (
             <div>
-              <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
-              <p className="text-slate-600 mt-1">Manage companies and placement process</p>
+              <span className="font-medium">Approved by:</span> {offer.approvedBy.name}
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Company
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">Total Companies</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">{companies.length}</div>
+          )}
+          {offer.remarks && (
+            <div>
+              <span className="font-medium">Remarks:</span> {offer.remarks}
             </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">With POCs</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">
-                {companies.filter(c => c.pocs && c.pocs.length > 0).length}
-              </div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">Pending Offers</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">0</div>
-            </div>
-            <div className="bg-white rounded-lg shadow p-4">
-              <div className="text-sm text-slate-500">Confirmed Offers</div>
-              <div className="text-2xl font-bold text-slate-900 mt-1">0</div>
-            </div>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search companies..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <svg
-              className="w-5 h-5 absolute left-3 top-2.5 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
+          )}
         </div>
-
-        {/* Companies Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="text-slate-600 mt-4">Loading companies...</p>
-          </div>
-        ) : filteredCompanies.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <svg className="w-16 h-16 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <p className="text-slate-600 mt-4">
-              {searchTerm ? "No companies match your search" : "No companies yet. Add your first company!"}
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCompanies.map(company => (
-              <CompanyCard
-                key={company._id}
-                company={company}
-                onUpdate={handleCompanyUpdated}
-                onDelete={handleCompanyDeleted}
-              />
-            ))}
-          </div>
-        )}
-      </main>
-
-      {/* Add Company Modal */}
-      {showAddModal && (
-        <AddCompanyModal
-          onClose={() => setShowAddModal(false)}
-          onSuccess={handleCompanyAdded}
-        />
       )}
     </div>
+  );
+  
+  
+
+  return (
+    <>
+      <Navbar user={user} />
+
+      {/* Section 1: Red background with 3 boxes */}
+      <div className="w-full bg-slat-50 py-6 flex justify-center shadow-lg">
+        <div className="max-w-7xl w-full px-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <button
+              onClick={() => navigate("/admin/students")}
+              className="p-6 bg-white border-2 rounded-lg hover:border-blue-300 hover:shadow-md transition text-left"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Student Management</h3>
+              <p className="text-sm text-slate-600">Upload students via CSV</p>
+            </button>
+
+            <button
+              onClick={() => navigate("/admin/company")}
+              className="p-6 bg-white border-2 rounded-lg hover:border-blue-300 hover:shadow-md transition text-left"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Company Management</h3>
+              <p className="text-sm text-slate-600">Manage companies & upload shortlists</p>
+            </button>
+
+            {/* <button
+              onClick={() => navigate("/admin/offers")}
+              className="p-6 bg-white border-2 rounded-lg hover:border-blue-300 hover:shadow-md transition text-left"
+            >
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">Offer Management</h3>
+              <p className="text-sm text-slate-600">Review & approve pending offers</p>
+            </button> */}
+          </div>
+        </div>
+      </div>
+
+      {/* Section 2: Blue background containing the Offer Management dashboard */}
+      <div className="w-full  bg-white">
+        <main className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 bg-white">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-slate-900">Offer Management</h1>
+            <p className="text-slate-600 mt-2">Review and approve offers created by POCs</p>
+          </div>
+
+          {/* Tabs */}
+          <div className="bg-white rounded-lg shadow-sm mb-6">
+            <div className="flex border-b">
+              <button
+                onClick={() => setActiveTab("pending")}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition ${
+                  activeTab === "pending"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span>Pending Approval</span>
+                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
+                    {pendingOffers.length}
+                  </span>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab("confirmed")}
+                className={`flex-1 px-6 py-4 text-sm font-medium transition ${
+                  activeTab === "confirmed"
+                    ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+                }`}
+              >
+                <div className="flex items-center justify-center gap-2">
+                  <span>Confirmed Offers</span>
+                  <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
+                    {confirmedOffers.length}
+                  </span>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* Content */}
+{loading ? (
+  <div className="text-center py-12">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+    <p className="text-slate-600 mt-4">Loading offers...</p>
+  </div>
+) : activeTab === "pending" ? (
+  pendingOffers.length === 0 ? (
+    <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+      <h3 className="text-xl font-semibold text-slate-900 mb-2">No Pending Offers</h3>
+      <p className="text-slate-600">All offers have been reviewed!</p>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-4 py-4">
+      {pendingOffers.map((offer) => (
+        <OfferCard key={offer._id} offer={offer} isPending={true} />
+      ))}
+    </div>
+  )
+) : confirmedOffers.length === 0 ? (
+  <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+    <h3 className="text-xl font-semibold text-slate-900 mb-2">No Confirmed Offers</h3>
+    <p className="text-slate-600">No offers have been approved yet</p>
+  </div>
+) : (
+  <div className="flex flex-col gap-4 py-4">
+  {confirmedOffers.map((offer) => (
+      <div key={offer._id} className="w-[100%]">
+          <OfferCard offer={offer} isPending={false}/>
+      </div>
+  ))}
+</div>
+
+
+)}
+
+        </main>
+      </div>
+
+      {/* Confirm Approve Dialog */}
+      <ConfirmDialog
+        isOpen={confirmDialog.isOpen && confirmDialog.type === "approve"}
+        onClose={() => setConfirmDialog({ isOpen: false, type: null, offerId: null, studentName: "" })}
+        onConfirm={() => handleApprove(confirmDialog.offerId)}
+        title="Approve Offer"
+        message={`Are you sure you want to approve this offer for ${confirmDialog.studentName}? It will be sent to the student.`}
+        confirmText="Approve"
+        confirmColor="green"
+        icon="success"
+      />
+    </>
   );
 }

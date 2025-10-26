@@ -1,17 +1,18 @@
 // src/pages/POCCompanyStudents.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import StudentInterviewRow from "../components/StudentInterviewRow";
 import AddWalkInModal from "../components/AddWalkInModal";
-import UpdateToast from "../components/UpdateToast";
+import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
 
 export default function POCCompanyStudents() {
   const { companyId } = useParams();
   const navigate = useNavigate();
-  const { socket, connected } = useSocket();
+  const { socket } = useSocket();
   const [user, setUser] = useState(null);
   const [company, setCompany] = useState(null);
   const [shortlists, setShortlists] = useState([]);
@@ -20,8 +21,7 @@ export default function POCCompanyStudents() {
   const [showWalkInModal, setShowWalkInModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStage, setFilterStage] = useState("all");
-  const [showToast, setShowToast] = useState(false);
-  const [toastMessage, setToastMessage] = useState("");
+  const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
 
   useEffect(() => {
     fetchUser();
@@ -31,6 +31,7 @@ export default function POCCompanyStudents() {
     if (user) {
       fetchCompanyStudents();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, companyId]);
 
   // Socket.IO listeners - Silent background updates
@@ -43,8 +44,9 @@ export default function POCCompanyStudents() {
     // Silent refresh function - no loading screen
     const silentRefresh = async (message) => {
       try {
-        setToastMessage(message);
-        setShowToast(true);
+        if (message) {
+          toast.success(message);
+        }
         const res = await api.get(`/poc/companies/${companyId}/students`);
         setCompany(res.data.company);
         setShortlists(res.data.shortlists || []);
@@ -109,7 +111,7 @@ export default function POCCompanyStudents() {
     } catch (err) {
       console.error("Error fetching company students:", err);
       if (err.response?.status === 403) {
-        alert("You are not assigned to this company");
+        toast.error("You are not assigned to this company");
         navigate("/poc");
       }
     } finally {
@@ -131,38 +133,42 @@ export default function POCCompanyStudents() {
   };
 
   const handleMarkProcessComplete = async () => {
-    if (!window.confirm(`Are you sure you want to mark the interview process for "${company?.name}" as completed? This will hide the company from all students' dashboards.`)) {
-      return;
-    }
-
     try {
       await api.post(`/poc/companies/${companyId}/complete`);
-      setToastMessage("Interview process marked as completed");
-      setShowToast(true);
+      toast.success("Interview process marked as completed");
       // Refresh to show updated status
       fetchCompanyStudents();
     } catch (err) {
       console.error("Error marking process complete:", err);
-      alert(err.response?.data?.message || "Failed to mark process as complete");
+      toast.error(err.response?.data?.message || "Failed to mark process as complete");
     }
   };
 
   const filteredShortlists = shortlists.filter(item => {
     const matchesSearch = 
       item.student?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.student?.rollNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesFilter = 
-      filterStage === "all" ||
-      (filterStage === "shortlisted" && item.currentStage === "SHORTLISTED") ||
-      (filterStage === "waitlisted" && item.currentStage === "WAITLISTED") ||
-      (filterStage === "r1" && item.currentStage === "R1") ||
-      (filterStage === "r2" && item.currentStage === "R2") ||
-      (filterStage === "r3" && item.currentStage === "R3") ||
-      (filterStage === "offered" && item.currentStage === "OFFERED") ||
-      (filterStage === "rejected" && item.currentStage === "REJECTED") ||
-      (filterStage === "placed" && item.student?.isPlaced);
+    // Dynamic filter based on stage
+    let matchesFilter = filterStage === "all";
+    
+    if (!matchesFilter) {
+      if (filterStage === "shortlisted") {
+        matchesFilter = item.currentStage === "SHORTLISTED";
+      } else if (filterStage === "waitlisted") {
+        matchesFilter = item.currentStage === "WAITLISTED";
+      } else if (filterStage.startsWith("r")) {
+        // Handle dynamic rounds (r1, r2, r3, r4, etc.)
+        const roundNum = filterStage.substring(1);
+        matchesFilter = item.stage === `R${roundNum}`;
+      } else if (filterStage === "offered") {
+        matchesFilter = item.isOffered;
+      } else if (filterStage === "rejected") {
+        matchesFilter = item.stage === "REJECTED";
+      } else if (filterStage === "placed") {
+        matchesFilter = item.student?.isPlaced;
+      }
+    }
     
     return matchesSearch && matchesFilter;
   });
@@ -235,7 +241,7 @@ export default function POCCompanyStudents() {
                 
                 {!company?.isProcessCompleted && (
                   <button
-                    onClick={handleMarkProcessComplete}
+                    onClick={() => setShowCompleteConfirm(true)}
                     className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition flex items-center gap-2"
                   >
                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -272,18 +278,13 @@ export default function POCCompanyStudents() {
                 <div className="text-xs text-yellow-600">Waitlist</div>
                 <div className="text-xl font-bold text-yellow-600">{stats.waitlisted}</div>
               </div>
-              <div className="bg-white rounded-lg shadow p-3">
-                <div className="text-xs text-purple-600">R1</div>
-                <div className="text-xl font-bold text-purple-600">{stats.r1}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-3">
-                <div className="text-xs text-purple-600">R2</div>
-                <div className="text-xl font-bold text-purple-600">{stats.r2}</div>
-              </div>
-              <div className="bg-white rounded-lg shadow p-3">
-                <div className="text-xs text-purple-600">R3</div>
-                <div className="text-xl font-bold text-purple-600">{stats.r3}</div>
-              </div>
+              {/* Dynamic round stats based on maxRounds */}
+              {Array.from({ length: company?.maxRounds || 4 }, (_, i) => i + 1).map(round => (
+                <div key={`r${round}`} className="bg-white rounded-lg shadow p-3">
+                  <div className="text-xs text-purple-600">R{round}</div>
+                  <div className="text-xl font-bold text-purple-600">{stats[`r${round}`] || 0}</div>
+                </div>
+              ))}
               <div className="bg-white rounded-lg shadow p-3">
                 <div className="text-xs text-green-600">Offered</div>
                 <div className="text-xl font-bold text-green-600">{stats.offered}</div>
@@ -326,9 +327,10 @@ export default function POCCompanyStudents() {
               <option value="all">All Stages</option>
               <option value="shortlisted">Shortlisted</option>
               <option value="waitlisted">Waitlisted</option>
-              <option value="r1">Round 1</option>
-              <option value="r2">Round 2</option>
-              <option value="r3">Round 3</option>
+              {/* Dynamic round options based on maxRounds */}
+              {Array.from({ length: company?.maxRounds || 4 }, (_, i) => i + 1).map(round => (
+                <option key={`r${round}`} value={`r${round}`}>Round {round}</option>
+              ))}
               <option value="offered">Offered</option>
               <option value="rejected">Rejected</option>
               <option value="placed">Placed</option>
@@ -374,11 +376,16 @@ export default function POCCompanyStudents() {
         />
       )}
 
-      {/* Update Toast */}
-      <UpdateToast 
-        message={toastMessage}
-        show={showToast}
-        onClose={() => setShowToast(false)}
+      {/* Confirm Process Complete Dialog */}
+      <ConfirmDialog
+        isOpen={showCompleteConfirm}
+        onClose={() => setShowCompleteConfirm(false)}
+        onConfirm={handleMarkProcessComplete}
+        title="Mark Process Complete"
+        message={`Are you sure you want to mark the interview process for "${company?.name}" as completed? This will hide the company from all students' dashboards.`}
+        confirmText="Mark Complete"
+        confirmColor="purple"
+        icon="warning"
       />
     </div>
   );

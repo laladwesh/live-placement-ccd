@@ -1,17 +1,23 @@
 // backend/src/controllers/company.controller.js
 import Company from "../models/company.model.js";
 import User from "../models/user.model.js";
+import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { logger } from "../utils/logger.js";
 import { emitCompanyUpdate } from "../config/socket.js";
 
 /**
  * Create a new company
  * POST /api/admin/companies
- * Body: { name, venue, description, maxRounds, pocIds }
+ * Body: { name, venue, description, maxRounds, pocIds, newPocs }
  */
 export const createCompany = async (req, res) => {
   try {
-    const { name, venue, description, maxRounds, pocIds } = req.body;
+    console.log("📦 CREATE COMPANY REQUEST:");
+    console.log("   User:", req.user.emailId, "| Role:", req.user.role);
+    console.log("   Body:", JSON.stringify(req.body, null, 2));
+    
+    const { name, venue, description, maxRounds, pocIds = [], newPocs = [] } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Company name is required" });
@@ -23,8 +29,33 @@ export const createCompany = async (req, res) => {
       return res.status(400).json({ message: "Company with this name already exists" });
     }
 
+    // 1. Create new POC users if provided
+    const newPocIds = [];
+    if (Array.isArray(newPocs) && newPocs.length > 0) {
+      for (const pocData of newPocs) {
+        if (!pocData.emailId || !pocData.name || !pocData.phoneNo) {
+          return res.status(400).json({ message: "New POCs must have a name, emailId, and phoneNo." });
+        }
+        const existingUser = await User.findOne({ emailId: pocData.emailId });
+        if (existingUser) {
+          return res.status(400).json({ message: `A user with email ${pocData.emailId} already exists.` });
+        }
+
+        // Create a user without a password, ready for OAuth login
+        const newUser = new User({
+          name: pocData.name,
+          emailId: pocData.emailId,
+          phoneNo: pocData.phoneNo,
+          role: "poc",
+          isAllowed: true, // New POCs are allowed by default
+        });
+        await newUser.save();
+        newPocIds.push(newUser._id);
+        logger.info(`New POC user created for OAuth login: ${newUser.emailId}`);
+      }
+    }
+
     // Validate POCs if provided
-    let validPocIds = [];
     if (pocIds && Array.isArray(pocIds) && pocIds.length > 0) {
       const pocs = await User.find({ 
         _id: { $in: pocIds },
@@ -36,21 +67,26 @@ export const createCompany = async (req, res) => {
           message: "One or more POC IDs are invalid or users don't have POC/admin role" 
         });
       }
-      validPocIds = pocs.map(p => p._id);
     }
+
+    // Combine existing and newly created POCs, ensuring no duplicates
+    const allPocIds = [...new Set([...pocIds, ...newPocIds.map(id => id.toString())])];
 
     const company = new Company({
       name: name.trim(),
       venue: venue?.trim() || "",
       description: description?.trim() || "",
-      maxRounds: maxRounds || 4,
-      pocs: validPocIds
+      maxRounds: maxRounds ? Number(maxRounds) : 4,
+      POCs: allPocIds,
+      shortlistedStudents: [],
+      waitlistedStudents: [],
+      placedStudents: []
     });
 
     await company.save();
     
     // Populate POC details for response
-    await company.populate('pocs', 'name email phoneNumber');
+    await company.populate('POCs', 'name emailId phoneNo');
 
     logger.info(`Company created: ${company.name} by admin ${req.user.email}`);
 
@@ -74,7 +110,7 @@ export const createCompany = async (req, res) => {
 export const getAllCompanies = async (req, res) => {
   try {
     const companies = await Company.find()
-      .populate('pocs', 'name email phoneNumber')
+      .populate('POCs', 'name emailId phoneNo')
       .sort({ createdAt: -1 });
 
     return res.json({ companies });
@@ -93,7 +129,7 @@ export const getCompanyById = async (req, res) => {
     const { id } = req.params;
 
     const company = await Company.findById(id)
-      .populate('pocs', 'name email phoneNumber');
+      .populate('POCs', 'name emailId phoneNo');
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -109,12 +145,12 @@ export const getCompanyById = async (req, res) => {
 /**
  * Update company
  * PATCH /api/admin/companies/:id
- * Body: { name, venue, description, maxRounds, pocIds }
+ * Body: { name, venue, description, maxRounds, pocIds, newPocs }
  */
 export const updateCompany = async (req, res) => {
   try {
     const { id } = req.params;
-    const { name, venue, description, maxRounds, pocIds } = req.body;
+    const { name, venue, description, maxRounds, pocIds, newPocs } = req.body;
 
     const company = await Company.findById(id);
     if (!company) {
@@ -136,29 +172,68 @@ export const updateCompany = async (req, res) => {
 
     if (venue !== undefined) company.venue = venue.trim();
     if (description !== undefined) company.description = description.trim();
-    if (maxRounds !== undefined) company.maxRounds = maxRounds;
+    if (maxRounds !== undefined) company.maxRounds = Number(maxRounds);
+
+    // Create new POCs if provided
+    let createdPocIds = [];
+    if (newPocs && Array.isArray(newPocs) && newPocs.length > 0) {
+      for (const newPoc of newPocs) {
+        const { name: pocName, emailId, phoneNo } = newPoc;
+        
+        if (!pocName || !emailId) {
+          return res.status(400).json({ 
+            message: "POC name and email are required" 
+          });
+        }
+
+        // Check if POC with this email already exists
+        const existingPoc = await User.findOne({ emailId: emailId.trim() });
+        if (existingPoc) {
+          // If POC exists, add to the list
+          createdPocIds.push(existingPoc._id);
+        } else {
+          // Create new POC user
+          const poc = new User({
+            name: pocName.trim(),
+            emailId: emailId.trim(),
+            phoneNo: phoneNo?.trim() || "",
+            role: "poc"
+          });
+          await poc.save();
+          createdPocIds.push(poc._id);
+          logger.info(`New POC created: ${poc.name} (${poc.emailId})`);
+        }
+      }
+    }
 
     // Update POCs if provided
     if (pocIds !== undefined && Array.isArray(pocIds)) {
-      if (pocIds.length > 0) {
+      // Combine existing POC IDs with newly created POC IDs
+      const allPocIds = [...pocIds, ...createdPocIds];
+      
+      if (allPocIds.length > 0) {
         const pocs = await User.find({ 
-          _id: { $in: pocIds },
+          _id: { $in: allPocIds },
           role: { $in: ["poc", "admin"] }
         });
         
-        if (pocs.length !== pocIds.length) {
+        if (pocs.length !== allPocIds.length) {
           return res.status(400).json({ 
             message: "One or more POC IDs are invalid" 
           });
         }
-        company.pocs = pocs.map(p => p._id);
+        company.POCs = pocs.map(p => p._id);
       } else {
-        company.pocs = [];
+        company.POCs = [];
       }
+    } else if (createdPocIds.length > 0) {
+      // Only new POCs were provided, add them to existing POCs
+      const existingPocIds = company.POCs || [];
+      company.POCs = [...existingPocIds, ...createdPocIds];
     }
 
     await company.save();
-    await company.populate('pocs', 'name email phoneNumber');
+    await company.populate('POCs', 'name emailId phoneNo');
 
     logger.info(`Company updated: ${company.name} by admin ${req.user.email}`);
 
@@ -205,16 +280,16 @@ export const deleteCompany = async (req, res) => {
 };
 
 /**
- * Get all POCs (users with role poc or admin)
+ * Get all POCs (users with role poc only, not admin)
  * GET /api/admin/pocs
  */
 export const getAllPOCs = async (req, res) => {
   try {
     const pocs = await User.find({ 
-      role: { $in: ["poc", "admin"] },
+      role: "poc",
       isAllowed: true
     })
-    .select('name email phoneNumber role')
+    .select('name emailId phoneNo role')
     .sort({ name: 1 });
 
     return res.json({ pocs });

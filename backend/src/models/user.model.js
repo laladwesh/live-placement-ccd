@@ -2,18 +2,20 @@
 import mongoose from "mongoose";
 
 const UserSchema = new mongoose.Schema({
-  name: { type: String, trim: true },
-  email: { type: String, lowercase: true, trim: true, required: true, unique: true },
-  rollNumber: { type: String, trim: true, unique: true, sparse: true }, // Student roll number (unique identifier)
-  phoneNumber: { type: String, trim: true },
-  role: { type: String, enum: ["student", "poc", "admin", "superadmin", "official"], default: "student" },
-  // convenience booleans (your UI can use role or these)
-  isPoc: { type: Boolean, default: false },
-  isAdmin: { type: Boolean, default: false },
-  isPlaced: { type: Boolean, default: false },
+  name: { type: String, trim: true, required: true },
+  emailId: { type: String, lowercase: true, trim: true, required: true, unique: true },
+  phoneNo: { 
+    type: String, 
+    trim: true,
+    validate: {
+      validator: v => /^\d{10}$/.test(v),
+      message: props => `${props.value} is not a valid 10-digit phone number`
+    }
+  },
+  role: { type: String, enum: ["student", "poc", "admin", "official"], default: "student" },
+  companyName: { type: String, trim: true }, // For POC role - name of their company
   passwordHash: { type: String }, // only for local login
   isAllowed: { type: Boolean, default: false }, // pre-authorized for oauth
-  isBlocked: { type: Boolean, default: false }, // blocked from other interviews after selection
   providers: [
     {
       provider: { type: String },
@@ -25,8 +27,7 @@ const UserSchema = new mongoose.Schema({
 });
 
 // Quick indexes
-UserSchema.index({ email: 1 });
-UserSchema.index({ rollNumber: 1 });
+UserSchema.index({ emailId: 1 });
 UserSchema.index({ role: 1 });
 
 export default mongoose.model("User", UserSchema);

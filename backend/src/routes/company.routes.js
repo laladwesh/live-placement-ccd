@@ -21,7 +21,7 @@ const router = express.Router();
 
 // All routes require authentication and admin role
 router.use(authMiddleware);
-router.use(permit("admin", "superadmin"));
+router.use(permit("admin"));
 
 // Company CRUD
 router.post("/companies", createCompany);
