@@ -4,7 +4,7 @@ import Student from "../models/student.model.js";
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
 import Shortlist from "../models/shortlist.model.js";
 import { logger } from "../utils/logger.js";
-import { emitOfferApproved } from "../config/socket.js";
+import { emitOfferApproved, emitOfferRejected, emitOfferStatusUpdate } from "../config/socket.js";
 
 /**
  * Create a user record used by admin.
@@ -145,15 +145,28 @@ export const approveOffer = async (req, res) => {
 
     logger.info(`Admin ${req.user.emailId} approved offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
 
-    // Emit socket event to notify student
-    if (typeof emitOfferApproved === 'function') {
-      emitOfferApproved(offer.studentId._id.toString(), {
+    // Emit socket events to notify all relevant parties
+    emitOfferApproved(
+      offer.studentId._id.toString(),
+      offer.companyId._id.toString(),
+      {
         offerId: offer._id,
         companyId: offer.companyId._id,
         companyName: offer.companyId.name,
-        studentId: offer.studentId._id
-      });
-    }
+        studentId: offer.studentId._id,
+        studentName: offer.studentId.name,
+        approvalStatus: ApprovalStatus.APPROVED
+      }
+    );
+
+    // Also emit status update for real-time dashboard refresh
+    emitOfferStatusUpdate({
+      offerId: offer._id,
+      studentId: offer.studentId._id.toString(),
+      companyId: offer.companyId._id.toString(),
+      approvalStatus: ApprovalStatus.APPROVED,
+      action: 'approved'
+    });
 
     return res.json({
       success: true,
@@ -201,6 +214,30 @@ export const rejectOffer = async (req, res) => {
     );
 
     logger.info(`Admin ${req.user.emailId} rejected offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
+
+    // Emit socket events to notify all relevant parties
+    emitOfferRejected(
+      offer.studentId._id.toString(),
+      offer.companyId._id.toString(),
+      {
+        offerId: offer._id,
+        companyId: offer.companyId._id,
+        companyName: offer.companyId.name,
+        studentId: offer.studentId._id,
+        studentName: offer.studentId.name,
+        approvalStatus: ApprovalStatus.REJECTED,
+        reason
+      }
+    );
+
+    // Also emit status update for real-time dashboard refresh
+    emitOfferStatusUpdate({
+      offerId: offer._id,
+      studentId: offer.studentId._id.toString(),
+      companyId: offer.companyId._id.toString(),
+      approvalStatus: ApprovalStatus.REJECTED,
+      action: 'rejected'
+    });
 
     return res.json({
       success: true,
