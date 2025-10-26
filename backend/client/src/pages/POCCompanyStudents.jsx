@@ -68,6 +68,24 @@ export default function POCCompanyStudents() {
       silentRefresh("New offer created");
     });
 
+    // Listen for offer approved by admin
+    socket.on("offer:approved", (data) => {
+      console.log("✅ Offer approved by admin:", data);
+      silentRefresh(`Offer for ${data.studentName} approved by admin`);
+    });
+
+    // Listen for offer rejected by admin
+    socket.on("offer:rejected", (data) => {
+      console.log("❌ Offer rejected by admin:", data);
+      silentRefresh(`Offer for ${data.studentName} rejected by admin`);
+    });
+
+    // Listen for offer status updates
+    socket.on("offer:status-update", (data) => {
+      console.log("📊 Offer status updated:", data);
+      silentRefresh();
+    });
+
     // Listen for students added
     socket.on("student:added", (data) => {
       console.log("📌 Student added:", data);
@@ -85,6 +103,9 @@ export default function POCCompanyStudents() {
       socket.emit("leave:company", companyId);
       socket.off("shortlist:update");
       socket.off("offer:created");
+      socket.off("offer:approved");
+      socket.off("offer:rejected");
+      socket.off("offer:status-update");
       socket.off("student:added");
       socket.off("student:removed");
     };
