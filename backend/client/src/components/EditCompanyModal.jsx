@@ -1,5 +1,6 @@
 // src/components/EditCompanyModal.jsx
 import React, { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import api from "../api/axios";
 
 export default function EditCompanyModal({ company, onClose, onSuccess }) {
@@ -13,7 +14,6 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
   });
   const [pocs, setPocs] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchPOCs();
@@ -25,6 +25,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
       setPocs(res.data.POCs || []);
     } catch (err) {
       console.error("Error fetching POCs:", err);
+      toast.error("Failed to load POCs");
     }
   };
 
@@ -68,16 +69,16 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
 
     try {
       await api.patch(`/admin/companies/${company._id}`, formData);
+      toast.success("Company updated successfully!");
       // Don't call onSuccess() - let socket handle the refresh
       onClose(); // Just close the modal
     } catch (err) {
       console.error("Error updating company:", err);
-      setError(err.response?.data?.message || "Failed to update company");
+      toast.error(err.response?.data?.message || "Failed to update company");
     } finally {
       setLoading(false);
     }
@@ -224,10 +225,10 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
           {/* Assign POCs */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
-              Assign POCs
+              Assign Existing POCs
             </label>
             {pocs.length === 0 ? (
-              <p className="text-sm text-slate-500">No POCs available. Create POC users first.</p>
+              <p className="text-sm text-slate-500">No existing POCs available.</p>
             ) : (
               <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
                 {pocs.map(poc => (
@@ -245,8 +246,8 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
                       <div className="text-sm font-medium text-slate-900">{poc.name}</div>
                       <div className="text-xs text-slate-500">{poc.emailId}</div>
                     </div>
-                    <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded">
-                      {poc.role}
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                      POC
                     </span>
                   </label>
                 ))}
@@ -254,10 +255,58 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-              {error}
+          {/* Selected POCs Summary */}
+          {(formData.pocIds.length > 0 || formData.newPocs.length > 0) && (
+            <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="text-sm font-medium text-blue-900 mb-2">
+                Assigned POCs ({formData.pocIds.length + formData.newPocs.length})
+              </div>
+              <div className="space-y-2">
+                {/* Existing POCs */}
+                {formData.pocIds.map(pocId => {
+                  const poc = pocs.find(p => p._id === pocId) || company.POCs?.find(p => p._id === pocId);
+                  return poc ? (
+                    <div key={pocId} className="flex items-center justify-between text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center text-white text-xs">
+                          {poc.name?.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                          <div className="text-slate-900 font-medium">{poc.name}</div>
+                          <div className="text-xs text-slate-600">{poc.emailId}</div>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handlePOCToggle(pocId)}
+                        className="text-red-600 hover:text-red-800"
+                        title="Remove"
+                      >
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  ) : null;
+                })}
+                {/* New POCs */}
+                {formData.newPocs.map((poc, index) => (
+                  <div key={`new-${index}`} className="flex items-center justify-between text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-6 h-6 bg-green-600 rounded-full flex items-center justify-center text-white text-xs">
+                        {poc.name?.charAt(0).toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <div className="text-slate-900 font-medium">{poc.name || 'New POC'}</div>
+                        <div className="text-xs text-slate-600">{poc.emailId || 'Pending...'}</div>
+                      </div>
+                    </div>
+                    <span className="text-xs px-2 py-1 bg-green-100 text-green-700 rounded">
+                      New
+                    </span>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
