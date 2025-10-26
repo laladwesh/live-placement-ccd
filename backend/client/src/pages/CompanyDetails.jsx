@@ -84,7 +84,7 @@ export default function CompanyDetails() {
 
     // Listen for offer approvals
     socket.on("offer:approved", (data) => {
-      console.log("✅ Offer approved:", data);
+      console.log(" Offer approved:", data);
       silentRefresh();
     });
 

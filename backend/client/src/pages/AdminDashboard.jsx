@@ -53,7 +53,7 @@ export default function AdminDashboard() {
 
     // Listen for offer approved events
     socket.on("offer:approved", (data) => {
-      console.log("✅ Offer approved:", data);
+      console.log(" Offer approved:", data);
       fetchOffers(); // Refresh offers list
     });
 
@@ -474,7 +474,9 @@ export default function AdminDashboard() {
         ) : activeTab === "pending" ? (
           groupedPendingOffers.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4">✅</div>
+              <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
               <h3 className="text-xl font-semibold text-slate-900 mb-2">
                 {searchTerm ? "No students found" : "No Pending Offers"}
               </h3>

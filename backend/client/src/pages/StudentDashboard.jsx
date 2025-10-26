@@ -76,7 +76,7 @@ export default function StudentDashboard() {
 
     // Listen for offer approved (confirmed)
     socket.on("offer:approved", (data) => {
-      console.log("✅ Offer approved:", data);
+      console.log(" Offer approved:", data);
       toast.success(`Congratulations! Your offer from ${data.companyName} has been confirmed! 🎉`, {
         duration: 6000,
         icon: '🎊'
