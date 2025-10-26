@@ -65,10 +65,22 @@ export const getPendingOffers = async (req, res) => {
       .populate('companyId', 'name venue')
       .sort({ createdAt: -1 });
 
+    // Enrich with rollNumber from Student model
+    const enrichedOffers = await Promise.all(
+      pendingOffers.map(async (offer) => {
+        const student = await Student.findOne({ userId: offer.studentId._id });
+        const offerObj = offer.toObject();
+        if (student) {
+          offerObj.studentId.rollNumber = student.rollNumber;
+        }
+        return offerObj;
+      })
+    );
+
     return res.json({
       success: true,
-      count: pendingOffers.length,
-      offers: pendingOffers
+      count: enrichedOffers.length,
+      offers: enrichedOffers
     });
   } catch (err) {
     logger.error("getPendingOffers error", err);
@@ -77,21 +89,36 @@ export const getPendingOffers = async (req, res) => {
 };
 
 /**
- * Get all approved/confirmed offers
+ * Get all approved/confirmed offers (includes auto-rejected ones)
  * GET /api/admin/offers/confirmed
  */
 export const getConfirmedOffers = async (req, res) => {
   try {
-    const confirmedOffers = await Offer.find({ approvalStatus: ApprovalStatus.APPROVED })
+    // Get all non-pending offers (APPROVED and REJECTED)
+    const confirmedOffers = await Offer.find({ 
+      approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] }
+    })
       .populate('studentId', 'name emailId phoneNo')
       .populate('companyId', 'name venue')
       .populate('approvedBy', 'name emailId')
-      .sort({ approvedAt: -1 });
+      .sort({ approvedAt: -1, createdAt: -1 });
+
+    // Enrich with rollNumber from Student model
+    const enrichedOffers = await Promise.all(
+      confirmedOffers.map(async (offer) => {
+        const student = await Student.findOne({ userId: offer.studentId._id });
+        const offerObj = offer.toObject();
+        if (student) {
+          offerObj.studentId.rollNumber = student.rollNumber;
+        }
+        return offerObj;
+      })
+    );
 
     return res.json({
       success: true,
-      count: confirmedOffers.length,
-      offers: confirmedOffers
+      count: enrichedOffers.length,
+      offers: enrichedOffers
     });
   } catch (err) {
     logger.error("getConfirmedOffers error", err);
@@ -137,13 +164,49 @@ export const approveOffer = async (req, res) => {
     offer.approvalStatus = ApprovalStatus.APPROVED;
     offer.approvedBy = adminId;
     offer.approvedAt = new Date();
+    offer.offerStatus = "ACCEPTED"; // Mark as accepted since admin approved
     await offer.save();
+    
     // Update Student data as well
     student.isPlaced = true;
     student.placedCompany = offer.companyId;
     await student.save();
 
+    // AUTO-REJECT ALL OTHER PENDING OFFERS FOR THIS STUDENT
+    const otherPendingOffers = await Offer.find({
+      studentId: offer.studentId._id,
+      _id: { $ne: offer._id }, // Exclude the approved offer
+      approvalStatus: ApprovalStatus.PENDING
+    }).populate('companyId', 'name');
+
+    // Reject all other pending offers
+    for (const otherOffer of otherPendingOffers) {
+      otherOffer.approvalStatus = ApprovalStatus.REJECTED;
+      otherOffer.remarks = `${otherOffer.remarks || ''}\nAuto-rejected: Student placed at ${offer.companyId.name}`;
+      await otherOffer.save();
+
+      // Update shortlist to remove offered flag
+      await Shortlist.findOneAndUpdate(
+        { studentId: offer.studentId._id, companyId: otherOffer.companyId._id },
+        { isOffered: false }
+      );
+
+      logger.info(`Auto-rejected offer from ${otherOffer.companyId.name} for ${offer.studentId.emailId} (placed at ${offer.companyId.name})`);
+    }
+
+    // UPDATE ALL SHORTLISTS FOR THIS STUDENT (mark as placed)
+    await Shortlist.updateMany(
+      { studentId: offer.studentId._id },
+      { 
+        $set: { 
+          studentPlacedCompany: offer.companyId.name,
+          isStudentPlaced: true 
+        }
+      }
+    );
+
     logger.info(`Admin ${req.user.emailId} approved offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
+    logger.info(`Auto-rejected ${otherPendingOffers.length} other pending offers for this student`);
 
     // Emit socket events to notify all relevant parties
     emitOfferApproved(
