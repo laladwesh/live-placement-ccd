@@ -2,6 +2,8 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar({ user }) {
+  console.log("navbar user is: ", user);
+
   const navigate = useNavigate();
 
   const logout = () => {
@@ -25,35 +27,38 @@ export default function Navbar({ user }) {
               <>
                 {(user.role === "admin" || user.role === "superadmin") && (
                   <Link
-                    to="/admin"
-                    className="px-3 py-1 rounded-md bg-blue-500 text-white text-sm hover:bg-blue-600"
-                  >
-                    Admin Dashboard
-                  </Link>
+                  to="/admin"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                >
+                  Admin Dashboard
+                </Link>
+                
                 )}
-                {(user.role === "poc" || user.role === "admin" || user.role === "superadmin") && (
+                {(user.role === "poc" || user.role === "superadmin") && (
                   <Link
-                    to="/poc"
-                    className="px-3 py-1 rounded-md bg-purple-500 text-white text-sm hover:bg-purple-600"
-                  >
-                    POC Dashboard
-                  </Link>
+                  to="/poc"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                >
+                  POC Dashboard
+                </Link>
+                
                 )}
-                {(user.role === "student" || user.role === "admin" || user.role === "superadmin") && (
+                {(user.role === "student" || user.role === "superadmin") && (
                   <Link
-                    to="/student"
-                    className="px-3 py-1 rounded-md bg-emerald-500 text-white text-sm hover:bg-emerald-600"
-                  >
-                    My Dashboard
-                  </Link>
+                  to="/student"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                >
+                  Student Dashboard
+                </Link>
+                
                 )}
-                <div className="text-sm text-slate-600">
+                <div className="hidden sm:block text-sm text-slate-600">
                   <div className="font-medium">{user.name}</div>
                   <div className="text-xs">{user.role}</div>
                 </div>
                 <button
                   onClick={logout}
-                  className="px-3 py-1 rounded-md bg-red-500 text-white text-sm hover:bg-red-600"
+                  className="h-10 w-20 px-3 py-1 rounded-full bg-red-500 text-white text-sm hover:bg-red-600"
                 >
                   Sign out
                 </button>
