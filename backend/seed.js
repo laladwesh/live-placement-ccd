@@ -47,8 +47,8 @@ const main = async () => {
 
     // Create only ONE admin
     const admin = new User({
-      name: "Avinash Gupta",
-      emailId: "guptaavinash302@gmail.com",
+      name: "UNP",
+      emailId: "01unp01@gmail.com",
       role: "admin",
       isAllowed: true,
       phoneNo: "",

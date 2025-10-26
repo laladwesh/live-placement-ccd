@@ -22,7 +22,7 @@ export const getMyShortlists = async (req, res) => {
     populate: {
       path: "POCs",
       model: "User",
-      select: "emailId name",
+      select: "emailId name phoneNo",
     },
   })
   .sort({ createdAt: -1 });

@@ -322,7 +322,7 @@ export default function StudentDashboard() {
                 {shortlist.companyId?.POCs?.length > 0 ? (
                     shortlist.companyId.POCs.map((poc) => (
                       <span key={poc._id} className="block">
-                        {poc.emailId}
+                        {poc.name} : {poc.phoneNo}
                       </span>
                       ))):("—")}
               </td>
