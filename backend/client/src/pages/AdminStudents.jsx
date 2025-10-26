@@ -4,9 +4,11 @@ import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 import AddStudentToMasterModal from "../components/AddStudentToMasterModal";
+import Navbar from "../components/Navbar";
 
 export default function AdminStudents() {
   const navigate = useNavigate();
+  const [user, setUser] = useState(null);
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -14,9 +16,22 @@ export default function AdminStudents() {
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
 
+  const fetchUser = async () => {
+    try {
+      const res = await api.get("/users/me");
+      setUser(res.data.user);
+    } catch (err) {
+      console.error("whoami error", err);
+      localStorage.removeItem("jwt_token");
+      window.location.href = "/login";
+    }
+  };
+
+
   useEffect(() => {
     checkAuth();
     fetchStudents();
+    fetchUser();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -112,8 +127,13 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
   };
 
   return (
+<>
+    <Navbar user={user} />
+    
     <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-7xl mx-auto">
+
+      <div className="max-w-7xl mx-auto px-8">
+        
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-slate-900">Student Management</h1>
@@ -126,7 +146,7 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
             <h2 className="text-xl font-semibold text-slate-900">Upload Students CSV</h2>
             <button
               onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2"
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition flex items-center gap-2"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -148,7 +168,7 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
               <button
                 onClick={handleUpload}
                 disabled={!selectedFile || uploading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
               >
                 {uploading ? "Uploading..." : "Upload CSV"}
               </button>
@@ -162,9 +182,9 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
               >
                 📥 Download Sample CSV Format
               </button>
-              <span className="text-sm text-slate-500">
+              {/* <span className="text-sm text-slate-500">
                 (Format: email,name,rollNumber,phoneNo)
-              </span>
+              </span> */}
             </div>
 
             {/* Upload Result */}
@@ -287,5 +307,7 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
         />
       )}
     </div>
+
+  </>
   );
 }

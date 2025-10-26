@@ -33,16 +33,21 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar user={user} />
-      <main className="max-w-4xl mx-auto py-8 px-4">
-        <div className="bg-white shadow rounded-lg p-6">
+      <main className="max-w-5xl mx-auto py-8 px-4">
+        <div className="bg-white shadow rounded-lg p-6 w-[100%]">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-semibold text-slate-800">Dashboard</h1>
-              <p className="text-sm text-slate-500 mt-1">Welcome — here's a quick summary of your account</p>
-            </div>
+          <div>
+            <h1 className="text-2xl font-semibold text-slate-800">
+              {user.role === "admin"
+                ? "Admin Details"
+                : user.role === "poc"
+                ? "POC Details"
+                : "Student Details"}
+            </h1>
+          </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4  w-[100%]">
             <div className="p-4 bg-slate-50 rounded-lg">
               <div className="text-xs text-slate-500">Name</div>
               <div className="text-lg font-medium text-slate-800">{user.name}</div>
@@ -59,7 +64,7 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <h3 className="text-sm font-medium text-slate-700">Account details</h3>
             <div className="mt-3 text-sm text-slate-600">
               <div className="flex justify-between py-2 border-b">
@@ -67,7 +72,7 @@ export default function Dashboard() {
                 <div>{user.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
               </div>
             </div>
-          </div>
+          </div> */}
 
         </div>
       </main>

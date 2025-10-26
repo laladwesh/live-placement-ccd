@@ -136,7 +136,7 @@ export default function AdminCompanyDetails() {
           <div className="flex items-center justify-between mb-4">
             <div>
               <h1 className="text-3xl font-bold text-slate-900">Company Management</h1>
-              <p className="text-slate-600 mt-1">View, add, and manage all companies.</p>
+              {/* <p className="text-slate-600 mt-1">View, add, and manage all companies.</p> */}
             </div>
             <button
               onClick={() => setShowAddModal(true)}
@@ -150,7 +150,7 @@ export default function AdminCompanyDetails() {
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+          {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
             <div className="bg-white rounded-lg shadow p-4">
               <div className="text-sm text-slate-500">Total Companies</div>
               <div className="text-2xl font-bold text-slate-900 mt-1">{companies.length}</div>
@@ -169,7 +169,7 @@ export default function AdminCompanyDetails() {
               <div className="text-sm text-slate-500">Confirmed Offers</div>
               <div className="text-2xl font-bold text-slate-900 mt-1">0</div>
             </div>
-          </div>
+          </div> */}
 
           {/* Search */}
           <div className="relative">
