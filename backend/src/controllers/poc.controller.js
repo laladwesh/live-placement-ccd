@@ -5,7 +5,7 @@ import Offer, { OfferStatus } from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
-import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded } from "../config/socket.js";
+import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate } from "../config/socket.js";
 
 /**
  * Get POC's assigned companies
@@ -288,6 +288,17 @@ export const createOffer = async (req, res) => {
       studentId: offer.studentId._id,
       companyName: offer.companyId.name,
       approvalStatus: "PENDING"
+    });
+
+    // Emit status update for admin dashboard
+    emitOfferStatusUpdate({
+      offerId: offer._id,
+      studentId: offer.studentId._id.toString(),
+      companyId: offer.companyId._id.toString(),
+      studentName: offer.studentId.name,
+      companyName: offer.companyId.name,
+      approvalStatus: "PENDING",
+      action: 'created'
     });
 
     emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
