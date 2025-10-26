@@ -35,17 +35,36 @@ export default function AdminOffersDashboard() {
 
     socket.emit("join:admin");
 
-    socket.on("offer:created", () => {
-      fetchOffers(); // Refresh when new offer created
+    // Listen for new offers created by POCs
+    socket.on("offer:created", (data) => {
+      console.log("🎉 New offer created:", data);
+      toast.success(`New offer pending approval: ${data.companyName}`);
+      fetchOffers(); // Refresh offers list
     });
 
-    socket.on("offer:approved", () => {
-      fetchOffers(); // Refresh when offer approved
+    // Listen for offer status updates
+    socket.on("offer:status-update", (data) => {
+      console.log("📊 Offer status updated:", data);
+      fetchOffers(); // Refresh offers list
+    });
+
+    // Listen for offer approved events
+    socket.on("offer:approved", (data) => {
+      console.log("✅ Offer approved:", data);
+      fetchOffers(); // Refresh offers list
+    });
+
+    // Listen for offer rejected events
+    socket.on("offer:rejected", (data) => {
+      console.log("❌ Offer rejected:", data);
+      fetchOffers(); // Refresh offers list
     });
 
     return () => {
       socket.off("offer:created");
+      socket.off("offer:status-update");
       socket.off("offer:approved");
+      socket.off("offer:rejected");
     };
   }, [socket]);
 
