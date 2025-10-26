@@ -10,6 +10,8 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   const [showOfferConfirm, setShowOfferConfirm] = useState(false);
 
   const isPlaced = shortlist.student?.isPlaced;
+  const isPlacedElsewhere = shortlist.isStudentPlaced && !isPlaced; // Placed in another company
+  const placedCompanyName = shortlist.studentPlacedCompany;
   // const isBlocked = shortlist.student?.isBlocked;
   const currentStage = shortlist.currentStage;
 
@@ -71,7 +73,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   };
 
   return (
-    <div className={`p-4 ${isPlaced ? 'bg-gray-50' : 'hover:bg-slate-50'}`}>
+    <div className={`p-4 ${isPlaced || isPlacedElsewhere ? 'bg-gray-50' : 'hover:bg-slate-50'}`}>
       <div className="flex items-center gap-4">
         {/* Student Info */}
         <div className="flex-1 min-w-0">
@@ -89,6 +91,11 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               <div className="text-sm text-slate-500 truncate">
                 {shortlist.student?.email}
               </div>
+              {isPlacedElsewhere && placedCompanyName && (
+                <div className="text-xs text-orange-600 font-medium mt-1">
+                  🏢 Placed at {placedCompanyName}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -101,7 +108,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
         </div>
 
         {/* Round Buttons */}
-        {!isPlaced && !["OFFERED", "REJECTED"].includes(currentStage) && (
+        {!isPlaced && !isPlacedElsewhere && !["OFFERED", "REJECTED"].includes(currentStage) && (
           <div className="flex gap-2 flex-shrink-0">
             {[...Array(maxRounds)].map((_, index) => {
               const round = index + 1;
@@ -124,7 +131,11 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
         <div className="flex gap-2 flex-shrink-0">
           {isPlaced ? (
             <div className="px-4 py-2 bg-emerald-100 text-emerald-800 text-sm font-medium rounded">
-              Already Placed
+              Placed Here
+            </div>
+          ) : isPlacedElsewhere ? (
+            <div className="px-4 py-2 bg-orange-100 text-orange-800 text-sm font-medium rounded">
+              Placed at {placedCompanyName}
             </div>
           ) : currentStage === "OFFERED" ? (
             <div className="px-4 py-2 bg-green-100 text-green-800 text-sm font-medium rounded">
