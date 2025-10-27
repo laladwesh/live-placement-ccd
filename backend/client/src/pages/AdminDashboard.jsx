@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import ConfirmDialog from "../components/ConfirmDialog";
+import InputModal from "../components/InputModal";
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminDashboard() {
@@ -24,6 +25,10 @@ export default function AdminDashboard() {
     offerId: null,
     studentName: '',
     companyName: ''
+  });
+  const [rejectReasonModal, setRejectReasonModal] = useState({
+    isOpen: false,
+    offerId: null
   });
 
   useEffect(() => {
@@ -118,13 +123,7 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleReject = async (offerId, reason = null) => {
-    if (!reason) {
-      const inputReason = window.prompt("Enter reason for rejection (optional):");
-      if (inputReason === null) return; // User cancelled
-      reason = inputReason;
-    }
-
+  const handleReject = async (offerId, reason = '') => {
     try {
       setProcessing(offerId);
       await api.post(`/admin/offers/${offerId}/reject`, { reason });
@@ -135,7 +134,12 @@ export default function AdminDashboard() {
       toast.error(err.response?.data?.message || "Failed to reject offer");
     } finally {
       setProcessing(null);
+      setRejectReasonModal({ isOpen: false, offerId: null });
     }
+  };
+
+  const openRejectReasonModal = (offerId) => {
+    setRejectReasonModal({ isOpen: true, offerId });
   };
 
   // Group offers by student
@@ -281,7 +285,7 @@ export default function AdminDashboard() {
                   {processing === offers[0]._id ? "..." : "✓ Approve"}
                 </button>
                 <button
-                  onClick={() => handleReject(offers[0]._id)}
+                  onClick={() => openRejectReasonModal(offers[0]._id)}
                   disabled={processing === offers[0]._id}
                   className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
                 >
@@ -344,7 +348,7 @@ export default function AdminDashboard() {
                     {processing === offer._id ? "..." : "Approve"}
                   </button>
                   <button
-                    onClick={() => handleReject(offer._id)}
+                    onClick={() => openRejectReasonModal(offer._id)}
                     disabled={processing === offer._id}
                     className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
                   >
@@ -596,6 +600,16 @@ export default function AdminDashboard() {
         confirmText="Approve Offer"
         confirmColor="green"
         icon="success"
+      />
+
+      {/* Reject Reason Input Modal */}
+      <InputModal
+        isOpen={rejectReasonModal.isOpen}
+        onClose={() => setRejectReasonModal({ isOpen: false, offerId: null })}
+        onSubmit={(reason) => handleReject(rejectReasonModal.offerId, reason)}
+        title="Reject Offer"
+        label="Reason for Rejection (Optional)"
+        placeholder="Enter a reason for rejecting this offer..."
       />
     </div>
   );
