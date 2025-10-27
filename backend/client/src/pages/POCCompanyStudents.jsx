@@ -129,10 +129,17 @@ export default function POCCompanyStudents() {
       setCompany(res.data.company);
       setShortlists(res.data.shortlists || []);
       setStats(res.data.stats || {});
+      
+      // If POC (not admin) and process is completed, redirect
+      if (res.data.company?.isProcessCompleted && user?.role === 'poc') {
+        toast.error("This company's interview process has been completed");
+        navigate("/poc");
+        return;
+      }
     } catch (err) {
       console.error("Error fetching company students:", err);
       if (err.response?.status === 403) {
-        toast.error("You are not assigned to this company");
+        toast.error(err.response?.data?.message || "You are not assigned to this company");
         navigate("/poc");
       }
     } finally {
@@ -157,8 +164,16 @@ export default function POCCompanyStudents() {
     try {
       await api.post(`/poc/companies/${companyId}/complete`);
       toast.success("Interview process marked as completed");
-      // Refresh to show updated status
-      fetchCompanyStudents();
+      
+      // If POC (not admin), redirect to /poc page
+      if (user?.role === 'poc') {
+        setTimeout(() => {
+          navigate("/poc");
+        }, 1000); // Small delay to show the toast
+      } else {
+        // Admin can stay and refresh
+        fetchCompanyStudents();
+      }
     } catch (err) {
       console.error("Error marking process complete:", err);
       toast.error(err.response?.data?.message || "Failed to mark process as complete");
@@ -405,7 +420,7 @@ export default function POCCompanyStudents() {
         title="Mark Process Complete"
         message={`Are you sure you want to mark the interview process for "${company?.name}" as completed? This will hide the company from all students' dashboards.`}
         confirmText="Mark Complete"
-        confirmColor="purple"
+        // confirmColor="purple"
         icon="warning"
       />
     </div>
