@@ -2,25 +2,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import EditCompanyModal from "./EditCompanyModal";
+import ConfirmDialog from "./ConfirmDialog";
+import AlertModal from "./AlertModal";
 import api from "../api/axios";
 
 export default function CompanyCard({ company, onUpdate, onDelete }) {
   const navigate = useNavigate();
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
 
   const handleDelete = async () => {
-    if (!window.confirm(`Are you sure you want to delete "${company.name}"?`)) {
-      return;
-    }
-
+    setShowDeleteConfirm(false);
     try {
       setDeleting(true);
       await api.delete(`/admin/companies/${company._id}`);
       // Don't call onDelete() - let socket handle the refresh
     } catch (err) {
       console.error("Error deleting company:", err);
-      alert(err.response?.data?.message || "Failed to delete company");
+      setErrorAlert({
+        show: true,
+        message: err.response?.data?.message || "Failed to delete company"
+      });
     } finally {
       setDeleting(false);
     }
@@ -54,7 +58,7 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
               </svg>
             </button>
             <button
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={deleting}
               className="text-slate-400 hover:text-red-600 transition disabled:opacity-50"
               title="Delete"
@@ -143,6 +147,26 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
           }}
         />
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDelete}
+        title="Delete Company"
+        message={`Are you sure you want to delete "${company.name}"? This action cannot be undone.`}
+        confirmText="Delete"
+        confirmButtonClass="bg-red-600 hover:bg-red-700 focus:ring-red-500"
+      />
+
+      {/* Error Alert */}
+      <AlertModal
+        isOpen={errorAlert.show}
+        onClose={() => setErrorAlert({ show: false, message: '' })}
+        title="Error"
+        message={errorAlert.message}
+        type="error"
+      />
     </>
   );
 }
