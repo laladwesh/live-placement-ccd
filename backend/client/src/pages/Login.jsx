@@ -1,7 +1,9 @@
 // src/pages/Login.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
+import { FcGoogle } from "react-icons/fc";
+import { SiMicrosoft } from "react-icons/si";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -10,9 +12,44 @@ export default function Login() {
   const [err, setErr] = useState(null);
   const [loading, setLoading] = useState(false);
   const [oauthLoading, setOauthLoading] = useState(null); // 'azure' | 'google' | null
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   // Use env var for backend base. If empty, fallback to origin.
-  const BACKEND_BASE = process.env.REACT_APP_BACKEND_URL || window.location.origin;
+  const BACKEND_BASE =
+    process.env.REACT_APP_BACKEND_URL || window.location.origin;
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const checkAuth = async () => {
+      const token = localStorage.getItem("jwt_token");
+      if (!token) {
+        setCheckingAuth(false);
+        return;
+      }
+
+      try {
+        const res = await api.get("/users/me");
+        const user = res.data.user;
+        
+        // Redirect based on role
+        if (user.role === "admin") {
+          navigate("/admin", { replace: true });
+        } else if (user.role === "poc") {
+          navigate("/poc", { replace: true });
+        } else if (user.role === "student") {
+          navigate("/student", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
+      } catch (err) {
+        // Token invalid or expired, clear it
+        localStorage.removeItem("jwt_token");
+        setCheckingAuth(false);
+      }
+    };
+
+    checkAuth();
+  }, [navigate]);
 
   const submitLocal = async (e) => {
     e.preventDefault();
@@ -23,7 +60,20 @@ export default function Login() {
       const { token } = res.data;
       if (!token) throw new Error("No token returned");
       localStorage.setItem("jwt_token", token);
-      navigate("/dashboard");
+      
+      // Get user info to redirect to appropriate dashboard
+      const userRes = await api.get("/users/me");
+      const user = userRes.data.user;
+      
+      if (user.role === "admin") {
+        navigate("/admin");
+      } else if (user.role === "poc") {
+        navigate("/poc");
+      } else if (user.role === "student") {
+        navigate("/student");
+      } else {
+        navigate("/dashboard");
+      }
     } catch (e) {
       setErr(e.response?.data?.message || e.message || "Login failed");
     } finally {
@@ -43,39 +93,79 @@ export default function Login() {
     window.location.href = loginUrl;
   };
 
+  // Show loading while checking authentication
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <p className="mt-2 text-sm text-slate-600">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full bg-white rounded-2xl shadow-lg p-8">
-        <h2 className="text-2xl font-semibold text-slate-800 mb-2">Welcome back</h2>
-        <p className="text-sm text-slate-500 mb-6">Sign in to view placement dashboard</p>
+    <div
+  className="relative min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
+  style={{
+    backgroundImage: "url('/iitg2.jpeg')",
+  }}
+    >
+      {/* Light overlay */}
+  <div className="absolute inset-0 bg-white/10"></div>
+      <div className="max-w-md w-full bg-white backdrop-blur-lg rounded-2xl shadow-lg p-8">
+        <h2 className="text-2xl font-semibold text-slate-800 mb-2 text-center">
+          Welcome
+        </h2>
+        <p className="text-sm text-slate-500 mb-6 text-center">
+          Sign in to view placement dashboard
+        </p>
 
         <div className="space-y-3">
+          {/* Microsoft Button */}
           <button
             onClick={() => oauthLogin("azure")}
-            className="w-full inline-flex justify-center items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 hover:shadow-sm"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-slate-200 hover:shadow-sm transition disabled:opacity-50"
             disabled={!!oauthLoading}
           >
             {oauthLoading === "azure" ? (
-              <span className="text-sm font-medium text-slate-700">Redirecting to Microsoft…</span>
+              <span className="text-sm font-medium text-slate-700">
+                Redirecting to Microsoft…
+              </span>
             ) : (
               <>
-                <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7z" fill="#196DFF"/></svg>
-                <span className="text-sm font-medium text-slate-700">Sign in with Microsoft</span>
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 23 23"
+                  className="w-5 h-5"
+                >
+                  <rect x="1" y="1" width="9" height="9" fill="#f25022" />
+                  <rect x="13" y="1" width="9" height="9" fill="#7fba00" />
+                  <rect x="1" y="13" width="9" height="9" fill="#00a4ef" />
+                  <rect x="13" y="13" width="9" height="9" fill="#ffb900" />
+                </svg>
+                <span className="text-sm font-medium text-slate-700">
+                  Sign in with Microsoft
+                </span>
               </>
             )}
           </button>
 
+          {/* Google Button */}
           <button
             onClick={() => oauthLogin("google")}
-            className="w-full inline-flex justify-center items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 hover:shadow-sm"
+            className="w-full flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-slate-200 hover:shadow-sm transition disabled:opacity-50"
             disabled={!!oauthLoading}
           >
             {oauthLoading === "google" ? (
-              <span className="text-sm font-medium text-slate-700">Redirecting to Google…</span>
+              "Redirecting to Google…"
             ) : (
               <>
-                <svg viewBox="0 0 24 24" className="w-5 h-5"><path d="M12 11v2h6.4c-.3 1.4-1.2 2.6-2.6 3.4v2.8h4.2C20.6 19.3 22 16 22 12c0-.8-.1-1.6-.3-2.4H12z" fill="#EA4335"/><path d="M6 8.6L4 6.8 2.2 8.6C3 10 4.6 11 6.6 11.7L8 10.5C7 10 6 9 6 8.6z" fill="#34A853"/></svg>
-                <span className="text-sm font-medium text-slate-700">Sign in with Google</span>
+                <FcGoogle className="w-5 h-5" />
+                <span className="text-sm font-medium text-slate-700">
+                  Sign in with Google
+                </span>
               </>
             )}
           </button>
@@ -84,7 +174,9 @@ export default function Login() {
         <div className="mt-6 border-t pt-6">
           <form onSubmit={submitLocal} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700">Email</label>
+              <label className="block text-sm font-medium text-slate-700">
+                Email
+              </label>
               <input
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -95,7 +187,9 @@ export default function Login() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700">Password</label>
+              <label className="block text-sm font-medium text-slate-700">
+                Password
+              </label>
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -118,8 +212,8 @@ export default function Login() {
             </div>
           </form>
 
-          <p className="mt-4 text-xs text-slate-500">
-            No public signup — accounts are provisioned by the admin.
+          <p className="mt-4 text-xs text-slate-500 text-center">
+            Facing error while logging? contact : <a  href="mailto: ccd_queries@iitg.ac.in" >ccd_queries@iitg.ac.in</a>
           </p>
         </div>
       </div>

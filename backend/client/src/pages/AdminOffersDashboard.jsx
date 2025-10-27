@@ -16,11 +16,14 @@ export default function AdminOffersDashboard() {
   const [confirmedOffers, setConfirmedOffers] = useState([]);
   const [activeTab, setActiveTab] = useState("pending"); // "pending" or "confirmed"
   const [processing, setProcessing] = useState(null); // offerId being processed
+  const [expandedStudent, setExpandedStudent] = useState(null); // Track expanded student rows
+  const [searchTerm, setSearchTerm] = useState(""); // Search filter
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     type: null, // 'approve' or 'reject'
     offerId: null,
-    studentName: ''
+    studentName: '',
+    companyName: ''
   });
 
   useEffect(() => {
@@ -35,17 +38,36 @@ export default function AdminOffersDashboard() {
 
     socket.emit("join:admin");
 
-    socket.on("offer:created", () => {
-      fetchOffers(); // Refresh when new offer created
+    // Listen for new offers created by POCs
+    socket.on("offer:created", (data) => {
+      console.log("🎉 New offer created:", data);
+      toast.success(`New offer pending approval: ${data.companyName}`);
+      fetchOffers(); // Refresh offers list
     });
 
-    socket.on("offer:approved", () => {
-      fetchOffers(); // Refresh when offer approved
+    // Listen for offer status updates
+    socket.on("offer:status-update", (data) => {
+      console.log("📊 Offer status updated:", data);
+      fetchOffers(); // Refresh offers list
+    });
+
+    // Listen for offer approved events
+    socket.on("offer:approved", (data) => {
+      console.log(" Offer approved:", data);
+      fetchOffers(); // Refresh offers list
+    });
+
+    // Listen for offer rejected events
+    socket.on("offer:rejected", (data) => {
+      console.log("❌ Offer rejected:", data);
+      fetchOffers(); // Refresh offers list
     });
 
     return () => {
       socket.off("offer:created");
+      socket.off("offer:status-update");
       socket.off("offer:approved");
+      socket.off("offer:rejected");
     };
   }, [socket]);
 
@@ -81,23 +103,27 @@ export default function AdminOffersDashboard() {
     }
   };
 
-  const handleApprove = async (offerId) => {
+  const handleApprove = async (offerId, studentId) => {
     try {
       setProcessing(offerId);
       await api.post(`/admin/offers/${offerId}/approve`);
       await fetchOffers(); // Refresh data
-      toast.success("Offer approved and sent to student!");
+      toast.success("Offer approved! Other offers auto-rejected and marked as placed.");
     } catch (err) {
       console.error("Error approving offer:", err);
       toast.error(err.response?.data?.message || "Failed to approve offer");
     } finally {
       setProcessing(null);
+      setConfirmDialog({ isOpen: false, type: null, offerId: null, studentName: '', companyName: '' });
     }
   };
 
-  const handleReject = async (offerId) => {
-    const reason = window.prompt("Enter reason for rejection (optional):");
-    if (reason === null) return; // User cancelled
+  const handleReject = async (offerId, reason = null) => {
+    if (!reason) {
+      const inputReason = window.prompt("Enter reason for rejection (optional):");
+      if (inputReason === null) return; // User cancelled
+      reason = inputReason;
+    }
 
     try {
       setProcessing(offerId);
@@ -112,6 +138,43 @@ export default function AdminOffersDashboard() {
     }
   };
 
+  // Group offers by student
+  const groupOffersByStudent = (offers) => {
+    const grouped = {};
+    offers.forEach(offer => {
+      const studentId = offer.studentId?._id;
+      if (!studentId) return;
+      
+      if (!grouped[studentId]) {
+        grouped[studentId] = {
+          student: offer.studentId,
+          offers: []
+        };
+      }
+      grouped[studentId].offers.push(offer);
+    });
+    return Object.values(grouped);
+  };
+
+  // Filter by search term
+  const filterBySearch = (studentGroups) => {
+    if (!searchTerm.trim()) return studentGroups;
+    
+    const lowerSearch = searchTerm.toLowerCase();
+    return studentGroups.filter(group => {
+      const student = group.student;
+      return (
+        student?.name?.toLowerCase().includes(lowerSearch) ||
+        student?.emailId?.toLowerCase().includes(lowerSearch) ||
+        student?.phoneNo?.toLowerCase().includes(lowerSearch) ||
+        student?.rollNumber?.toLowerCase().includes(lowerSearch)
+      );
+    });
+  };
+
+  const groupedPendingOffers = filterBySearch(groupOffersByStudent(pendingOffers));
+  const groupedConfirmedOffers = filterBySearch(groupOffersByStudent(confirmedOffers));
+
   const formatDate = (date) => {
     if (!date) return "N/A";
     return new Date(date).toLocaleString("en-IN", {
@@ -123,89 +186,182 @@ export default function AdminOffersDashboard() {
     });
   };
 
-  const OfferCard = ({ offer, isPending }) => (
-    <div className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-md transition">
-      {/* Student & Company Info */}
-      <div className="flex items-start justify-between mb-4">
-        <div>
-          <h3 className="font-semibold text-lg text-slate-900">{offer.studentId?.name}</h3>
-          <p className="text-sm text-slate-500">{offer.studentId?.emailId}</p>
-          <p className="text-sm text-slate-500">{offer.studentId?.phoneNo}</p>
-        </div>
-        <div className="text-right">
-          <div className="font-semibold text-blue-700">{offer.companyId?.name}</div>
-          <div className="text-xs text-slate-500">{offer.companyId?.venue}</div>
-        </div>
-      </div>
+  // Table Row Component for Student with Multiple Offers
+  const StudentOfferRow = ({ studentData, isPending, index }) => {
+    const { student, offers } = studentData;
+    const isExpanded = expandedStudent === student._id;
+    const hasMultipleOffers = offers.length > 1;
+    
+    // Find if student is placed (in confirmed offers)
+    const placedOffer = !isPending ? offers.find(o => o.offerStatus === "ACCEPTED") : null;
 
-      {/* Timestamps */}
-      <div className="space-y-1 text-sm text-slate-600 mb-4">
-        <div className="flex justify-between">
-          <span>Created:</span>
-          <span className="font-medium">{formatDate(offer.createdAt)}</span>
-        </div>
-        {!isPending && offer.approvedAt && (
-          <div className="flex justify-between">
-            <span>Approved:</span>
-            <span className="font-medium">{formatDate(offer.approvedAt)}</span>
-          </div>
-        )}
-        {!isPending && offer.approvedBy && (
-          <div className="flex justify-between">
-            <span>Approved by:</span>
-            <span className="font-medium">{offer.approvedBy.name}</span>
-          </div>
-        )}
-      </div>
+    return (
+      <>
+        {/* Main Row */}
+        <tr className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50 transition`}>
+          {/* S.No */}
+          <td className="px-4 py-3 text-sm text-slate-900 font-medium border-b border-slate-200">
+            {index + 1}
+          </td>
+          
+          {/* Student Info */}
+          <td className="px-4 py-3 border-b border-slate-200">
+            <div className="font-medium text-slate-900">{student?.name}</div>
+            {student?.rollNumber && (
+              <div className="text-xs text-slate-600 font-mono">{student.rollNumber}</div>
+            )}
+            <div className="text-xs text-slate-500">{student?.emailId}</div>
+            <div className="text-xs text-slate-500">{student?.phoneNo}</div>
+          </td>
 
-      {/* Remarks */}
-      {offer.remarks && (
-        <div className="text-sm text-slate-600 bg-slate-50 p-3 rounded mb-4">
-          <span className="font-medium">Remarks:</span> {offer.remarks}
-        </div>
-      )}
+          {/* Companies - Show dropdown if multiple */}
+          <td className="px-4 py-3 border-b border-slate-200">
+            {hasMultipleOffers ? (
+              <div className="relative">
+                <button
+                  onClick={() => setExpandedStudent(isExpanded ? null : student._id)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition text-sm font-medium"
+                >
+                  <span>{offers.length} Companies</span>
+                  <svg 
+                    className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                    fill="none" 
+                    stroke="currentColor" 
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div>
+                <div className="font-medium text-blue-700">{offers[0]?.companyId?.name}</div>
+                <div className="text-xs text-slate-500">{offers[0]?.companyId?.venue}</div>
+              </div>
+            )}
+          </td>
 
-      {/* Student Response Status */}
-      {!isPending && (
-        <div className="mb-4">
-          <span className={`inline-block px-3 py-1 text-sm rounded-full ${
-            offer.offerStatus === "ACCEPTED" 
-              ? "bg-green-100 text-green-800"
-              : offer.offerStatus === "DECLINED"
-              ? "bg-red-100 text-red-800"
-              : "bg-yellow-100 text-yellow-800"
-          }`}>
-            Student: {offer.offerStatus}
-          </span>
-        </div>
-      )}
+          {/* Status */}
+          <td className="px-4 py-3 border-b border-slate-200">
+            {placedOffer ? (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                ✓ Placed at {placedOffer.companyId?.name}
+              </span>
+            ) : hasMultipleOffers ? (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                {isPending ? 'Multiple Pending' : 'Multiple Offers'}
+              </span>
+            ) : (
+              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                {isPending ? 'Pending' : offers[0]?.offerStatus || 'Pending'}
+              </span>
+            )}
+          </td>
 
-      {/* Actions */}
-      {isPending && (
-        <div className="flex gap-2 pt-4 border-t">
-          <button
-            onClick={() => setConfirmDialog({
-              isOpen: true,
-              type: 'approve',
-              offerId: offer._id,
-              studentName: offer.studentId?.name
-            })}
-            disabled={processing === offer._id}
-            className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition disabled:opacity-50 font-medium"
-          >
-            {processing === offer._id ? "Processing..." : "✓ Approve"}
-          </button>
-          <button
-            onClick={() => handleReject(offer._id)}
-            disabled={processing === offer._id}
-            className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 font-medium"
-          >
-            {processing === offer._id ? "Processing..." : "✕ Reject"}
-          </button>
-        </div>
-      )}
-    </div>
-  );
+          {/* Created Date */}
+          <td className="px-4 py-3 text-sm text-slate-600 border-b border-slate-200">
+            {formatDate(offers[0]?.createdAt)}
+          </td>
+
+          {/* Actions */}
+          <td className="px-4 py-3 border-b border-slate-200">
+            {!hasMultipleOffers && isPending ? (
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setConfirmDialog({
+                    isOpen: true,
+                    type: 'approve',
+                    offerId: offers[0]._id,
+                    studentName: student?.name,
+                    companyName: offers[0]?.companyId?.name
+                  })}
+                  disabled={processing === offers[0]._id}
+                  className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
+                >
+                  {processing === offers[0]._id ? "..." : "✓ Approve"}
+                </button>
+                <button
+                  onClick={() => handleReject(offers[0]._id)}
+                  disabled={processing === offers[0]._id}
+                  className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
+                >
+                  {processing === offers[0]._id ? "..." : "✕ Reject"}
+                </button>
+              </div>
+            ) : hasMultipleOffers ? (
+              <span className="text-xs text-slate-500">Expand to manage →</span>
+            ) : placedOffer ? (
+              <span className="text-xs text-green-600 font-medium">Completed</span>
+            ) : (
+              <span className="text-xs text-slate-500">—</span>
+            )}
+          </td>
+        </tr>
+
+        {/* Expanded Rows for Multiple Offers */}
+        {isExpanded && hasMultipleOffers && offers.map((offer, offerIndex) => (
+          <tr key={offer._id} className="bg-blue-50 border-l-4 border-blue-400">
+            <td className="px-4 py-2 text-xs text-slate-500 border-b border-slate-200"></td>
+            <td className="px-4 py-2 text-xs text-slate-500 border-b border-slate-200">
+              └─ Offer {offerIndex + 1}
+            </td>
+            <td className="px-4 py-2 border-b border-slate-200">
+              <div className="font-medium text-blue-700 text-sm">{offer.companyId?.name}</div>
+              <div className="text-xs text-slate-500">{offer.companyId?.venue}</div>
+            </td>
+            <td className="px-4 py-2 border-b border-slate-200">
+              {!isPending && offer._id === placedOffer?._id ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                  ✓ ACCEPTED
+                </span>
+              ) : !isPending && placedOffer ? (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-200 text-slate-600">
+                  Auto-rejected
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                  Pending
+                </span>
+              )}
+            </td>
+            <td className="px-4 py-2 text-xs text-slate-600 border-b border-slate-200">
+              {formatDate(offer.createdAt)}
+            </td>
+            <td className="px-4 py-2 border-b border-slate-200">
+              {isPending ? (
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setConfirmDialog({
+                      isOpen: true,
+                      type: 'approve',
+                      offerId: offer._id,
+                      studentName: student?.name,
+                      companyName: offer.companyId?.name
+                    })}
+                    disabled={processing === offer._id}
+                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
+                  >
+                    {processing === offer._id ? "..." : "Approve"}
+                  </button>
+                  <button
+                    onClick={() => handleReject(offer._id)}
+                    disabled={processing === offer._id}
+                    className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
+                  >
+                    {processing === offer._id ? "..." : "Reject"}
+                  </button>
+                </div>
+              ) : offer._id !== placedOffer?._id && placedOffer ? (
+                <span className="text-xs text-slate-500">Placed at {placedOffer.companyId?.name}</span>
+              ) : (
+                <span className="text-xs text-green-600">—</span>
+              )}
+            </td>
+          </tr>
+        ))}
+      </>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -241,7 +397,7 @@ export default function AdminOffersDashboard() {
               <div className="flex items-center justify-center gap-2">
                 <span>Pending Approval</span>
                 <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
-                  {pendingOffers.length}
+                  {groupedPendingOffers.length} {groupedPendingOffers.length === 1 ? 'Student' : 'Students'}
                 </span>
               </div>
             </button>
@@ -256,45 +412,162 @@ export default function AdminOffersDashboard() {
               <div className="flex items-center justify-center gap-2">
                 <span>Confirmed Offers</span>
                 <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                  {confirmedOffers.length}
+                  {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'Student' : 'Students'}
                 </span>
               </div>
             </button>
           </div>
         </div>
 
-        {/* Content */}
+        {/* Search Bar */}
+        <div className="mb-6">
+          <div className="relative">
+            <input
+              type="text"
+              placeholder="Search by name, email, phone, or roll number..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-3 pl-11 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+            <svg
+              className="w-5 h-5 absolute left-3 top-3.5 text-slate-400"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Content - Table Layout */}
         {loading ? (
-          <div className="text-center py-12">
+          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
             <p className="text-slate-600 mt-4">Loading offers...</p>
           </div>
         ) : activeTab === "pending" ? (
-          pendingOffers.length === 0 ? (
+          groupedPendingOffers.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4">✅</div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">No Pending Offers</h3>
-              <p className="text-slate-600">All offers have been reviewed!</p>
+              <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                {searchTerm ? "No students found" : "No Pending Offers"}
+              </h3>
+              <p className="text-slate-600">
+                {searchTerm ? "Try adjusting your search" : "All offers have been reviewed!"}
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {pendingOffers.map((offer) => (
-                <OfferCard key={offer._id} offer={offer} isPending={true} />
-              ))}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        S.No
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Student Details
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Created
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupedPendingOffers.map((studentData, index) => (
+                      <StudentOfferRow 
+                        key={studentData.student._id} 
+                        studentData={studentData} 
+                        isPending={true}
+                        index={index}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
+                Showing {groupedPendingOffers.length} {groupedPendingOffers.length === 1 ? 'student' : 'students'}
+                {searchTerm && ` matching "${searchTerm}"`}
+              </div>
             </div>
           )
         ) : (
-          confirmedOffers.length === 0 ? (
+          groupedConfirmedOffers.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4">📭</div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">No Confirmed Offers</h3>
-              <p className="text-slate-600">No offers have been approved yet</p>
+              <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+              </svg>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                {searchTerm ? "No students found" : "No Confirmed Offers"}
+              </h3>
+              <p className="text-slate-600">
+                {searchTerm ? "Try adjusting your search" : "No offers have been approved yet"}
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {confirmedOffers.map((offer) => (
-                <OfferCard key={offer._id} offer={offer} isPending={false} />
-              ))}
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        S.No
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Student Details
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Placed At
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Details
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupedConfirmedOffers.map((studentData, index) => (
+                      <StudentOfferRow 
+                        key={studentData.student._id} 
+                        studentData={studentData} 
+                        isPending={false}
+                        index={index}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
+                Showing {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'student' : 'students'}
+                {searchTerm && ` matching "${searchTerm}"`}
+              </div>
             </div>
           )
         )}
@@ -303,11 +576,11 @@ export default function AdminOffersDashboard() {
       {/* Confirm Approve Dialog */}
       <ConfirmDialog
         isOpen={confirmDialog.isOpen && confirmDialog.type === 'approve'}
-        onClose={() => setConfirmDialog({ isOpen: false, type: null, offerId: null, studentName: '' })}
+        onClose={() => setConfirmDialog({ isOpen: false, type: null, offerId: null, studentName: '', companyName: '' })}
         onConfirm={() => handleApprove(confirmDialog.offerId)}
         title="Approve Offer"
-        message={`Are you sure you want to approve this offer for ${confirmDialog.studentName}? It will be sent to the student.`}
-        confirmText="Approve"
+        message={`Are you sure you want to approve the offer from ${confirmDialog.companyName} for ${confirmDialog.studentName}?\n\nThis will:\n• Place the student at ${confirmDialog.companyName}\n• Auto-reject all other pending offers for this student\n• Update all company shortlists showing "Placed at ${confirmDialog.companyName}"`}
+        confirmText="Approve Offer"
         confirmColor="green"
         icon="success"
       />

@@ -5,7 +5,7 @@ import Offer, { OfferStatus } from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
-import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded } from "../config/socket.js";
+import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate } from "../config/socket.js";
 
 /**
  * Get POC's assigned companies
@@ -83,6 +83,11 @@ export const getPOCCompanyStudents = async (req, res) => {
         currentStage = s.status.toUpperCase(); // SHORTLISTED or WAITLISTED
       }
 
+      // Check if student is placed at THIS specific company
+      const isPlacedAtThisCompany = studentDoc?.isPlaced && 
+        studentDoc?.placedCompany && 
+        studentDoc.placedCompany.toString() === companyId.toString();
+
       return {
         _id: s._id,
         companyId: s.companyId,
@@ -94,13 +99,15 @@ export const getPOCCompanyStudents = async (req, res) => {
         isOffered: s.isOffered,
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
+        isStudentPlaced: s.isStudentPlaced, // Student placed somewhere (this or other company)
+        studentPlacedCompany: s.studentPlacedCompany, // Name of company where placed
         student: {
           _id: s.studentId._id,
           name: s.studentId.name,
           email: s.studentId.emailId,
           phoneNumber: s.studentId.phoneNo,
           rollNumber: studentDoc?.rollNumber,
-          isPlaced: studentDoc?.isPlaced || false,
+          isPlaced: isPlacedAtThisCompany, // TRUE only if placed at THIS company
           isBlocked: studentDoc?.isBlocked || false
         }
       };
@@ -288,6 +295,17 @@ export const createOffer = async (req, res) => {
       studentId: offer.studentId._id,
       companyName: offer.companyId.name,
       approvalStatus: "PENDING"
+    });
+
+    // Emit status update for admin dashboard
+    emitOfferStatusUpdate({
+      offerId: offer._id,
+      studentId: offer.studentId._id.toString(),
+      companyId: offer.companyId._id.toString(),
+      studentName: offer.studentId.name,
+      companyName: offer.companyId.name,
+      approvalStatus: "PENDING",
+      action: 'created'
     });
 
     emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {

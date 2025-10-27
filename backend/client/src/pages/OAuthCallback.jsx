@@ -18,16 +18,26 @@ export default function OAuthCallback() {
 
     (async () => {
       try {
-        await api.get("/users/me");
+        const res = await api.get("/users/me");
+        const user = res.data.user;
+        
+        window.history.replaceState(null, "", window.location.pathname);
+        
+        // Redirect based on user role
+        if (user.role === "admin") {
+          navigate("/admin", { replace: true });
+        } else if (user.role === "poc") {
+          navigate("/poc", { replace: true });
+        } else if (user.role === "student") {
+          navigate("/student", { replace: true });
+        } else {
+          navigate("/dashboard", { replace: true });
+        }
       } catch (err) {
         console.error("whoami failed", err);
         localStorage.removeItem("jwt_token");
         navigate("/login", { replace: true });
-        return;
-      } finally {
-        window.history.replaceState(null, "", window.location.pathname);
       }
-      navigate("/dashboard", { replace: true });
     })();
   }, [navigate]);
 

@@ -12,13 +12,20 @@ export default function Navbar({ user }) {
   };
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white  border-b-2 border-blue-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-16 items-center">
-          <div className="flex items-center space-x-3">
-            <Link to="/" className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-primary to-accent rounded-md shadow-sm flex items-center justify-center text-white font-bold">PP</div>
-              <span className="font-semibold text-slate-700">Placement Portal</span>
+        <div className="flex justify-between h-20 items-center">
+          <div className="flex items-center space-x-4">
+            <Link to="/" className="flex items-center space-x-3 group">
+              <img 
+                src="https://www.iitg.ac.in/gate-jam/img/logo.png" 
+                alt="IIT Guwahati Logo" 
+                className="h-14 w-14 object-contain rounded-full shadow-md group-hover:shadow-lg transition-shadow"
+              />
+              <div className="flex flex-col">
+                <span className="font-bold text-slate-900 text-lg tracking-tight">Live Placement Sheet</span>
+                <span className="text-slate-600 text-xs font-medium">IIT Guwahati</span>
+              </div>
             </Link>
           </div>
 
@@ -28,7 +35,7 @@ export default function Navbar({ user }) {
                 {(user.role === "admin" || user.role === "superadmin") && (
                   <Link
                   to="/admin"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
                 >
                   Admin Dashboard
                 </Link>
@@ -37,7 +44,7 @@ export default function Navbar({ user }) {
                 {(user.role === "poc" || user.role === "superadmin") && (
                   <Link
                   to="/poc"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
                 >
                   POC Dashboard
                 </Link>
@@ -46,26 +53,26 @@ export default function Navbar({ user }) {
                 {(user.role === "student" || user.role === "superadmin") && (
                   <Link
                   to="/student"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-medium hover:bg-blue-500 transition-colors"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
                 >
                   Student Dashboard
                 </Link>
                 
                 )}
-                <div className="hidden sm:block text-sm text-slate-600">
-                  <div className="font-medium">{user.name}</div>
-                  <div className="text-xs">{user.role}</div>
+                <div className="hidden sm:block text-sm text-slate-700 border-l border-slate-300 pl-4 ml-2">
+                  <div className="font-semibold">{user.name}</div>
+                  <div className="text-xs text-slate-500 uppercase tracking-wide">{user.role}</div>
                 </div>
                 <button
                   onClick={logout}
-                  className="h-10 w-20 px-3 py-1 rounded-full bg-red-500 text-white text-sm hover:bg-red-600"
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all shadow-sm hover:shadow-md"
                 >
-                  Sign out
+                  Sign Out
                 </button>
               </>
             ) : (
               <div>
-                <Link to="/login" className="px-3 py-1 rounded-md bg-primary text-white text-sm hover:bg-blue-600">Sign in</Link>
+                <Link to="/login" className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md">Sign In</Link>
               </div>
             )}
           </div>

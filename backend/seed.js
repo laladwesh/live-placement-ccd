@@ -38,7 +38,7 @@ const main = async () => {
     // await Shortlist.deleteMany({});
     // await Offer.deleteMany({});
 
-    // console.log("✅ Database cleaned successfully!");
+    // console.log(" Database cleaned successfully!");
     // console.log("   - Users: 0");
     // console.log("   - Students: 0");
     // console.log("   - Companies: 0");
@@ -57,7 +57,7 @@ const main = async () => {
 
     await admin.save();
 
-    console.log("✅ Admin account created!\n");
+    console.log(" Admin account created!\n");
     // console.log("═══════════════════════════════════════════════════");
     // console.log("   ADMIN LOGIN");
     // console.log("═══════════════════════════════════════════════════");
