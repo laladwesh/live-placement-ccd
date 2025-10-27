@@ -14,9 +14,19 @@ import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatu
 export const getPOCCompanies = async (req, res) => {
   try {
     const pocId = req.user._id;
+    const userRole = req.user.role;
+
+    // Build query based on role
+    let query = { POCs: pocId };
+    
+    // If user is a POC (not admin), exclude completed processes
+    if (userRole !== 'admin') {
+      query.isProcessCompleted = false;
+    }
+    // Admins can see all companies even if process is completed
 
     // Find companies where this POC is assigned
-    const companies = await Company.find({ POCs: pocId })
+    const companies = await Company.find(query)
       .populate('POCs', 'name emailId phoneNo')
       .sort({ name: 1 });
 
@@ -42,20 +52,23 @@ export const getPOCCompanyStudents = async (req, res) => {
     let company;
     
     if (userRole === 'admin') {
-      // Admin can access any company
+      // Admin can access any company (even completed processes)
       company = await Company.findById(companyId)
         .populate('POCs', 'name emailId phoneNo');
     } else {
-      // POC must be assigned to this company
+      // POC must be assigned to this company AND process must not be completed
       company = await Company.findOne({ 
         _id: companyId, 
-        POCs: userId 
+        POCs: userId,
+        isProcessCompleted: false  // POCs cannot access completed processes
       }).populate('POCs', 'name emailId phoneNo');
     }
 
     if (!company) {
       return res.status(403).json({ 
-        message: "You are not assigned to this company" 
+        message: userRole === 'admin' 
+          ? "Company not found" 
+          : "You are not assigned to this company or the process is completed" 
       });
     }
 
@@ -184,6 +197,13 @@ export const updateInterviewStage = async (req, res) => {
           message: "You are not assigned to this company" 
         });
       }
+      
+      // POCs cannot update completed processes
+      if (shortlist.companyId.isProcessCompleted) {
+        return res.status(403).json({ 
+          message: "Cannot update interview stage - process is completed" 
+        });
+      }
     }
 
     // Check if student is already placed
@@ -243,6 +263,13 @@ export const createOffer = async (req, res) => {
       if (!shortlist.companyId.POCs.some(poc => poc.toString() === userId.toString())) {
         return res.status(403).json({ 
           message: "You are not assigned to this company" 
+        });
+      }
+      
+      // POCs cannot create offers for completed processes
+      if (shortlist.companyId.isProcessCompleted) {
+        return res.status(403).json({ 
+          message: "Cannot create offer - process is completed" 
         });
       }
     }
@@ -350,16 +377,19 @@ export const addWalkInStudent = async (req, res) => {
     if (userRole === 'admin') {
       company = await Company.findById(companyId);
     } else {
-      // Verify POC is assigned to this company
+      // Verify POC is assigned to this company AND process is not completed
       company = await Company.findOne({ 
         _id: companyId, 
-        POCs: userId 
+        POCs: userId,
+        isProcessCompleted: false  // POCs cannot add students to completed processes
       });
     }
 
     if (!company) {
       return res.status(403).json({ 
-        message: "You are not assigned to this company" 
+        message: userRole === 'admin' 
+          ? "Company not found" 
+          : "You are not assigned to this company or the process is completed" 
       });
     }
 
