@@ -22,7 +22,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
   const fetchPOCs = async () => {
     try {
       const res = await api.get("/admin/pocs");
-      setPocs(res.data.POCs || []);
+      setPocs(res.data.pocs || []);
     } catch (err) {
       console.error("Error fetching POCs:", err);
       toast.error("Failed to load POCs");
