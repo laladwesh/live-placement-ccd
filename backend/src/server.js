@@ -13,6 +13,7 @@ import { fileURLToPath } from "url";
 import { createProxyMiddleware } from "http-proxy-middleware";
 import { connectDB } from "./config/db.js";
 import { initializeSocket } from "./config/socket.js";
+import { setupAdminJS } from "./config/adminjs.config.js";
 // import authRoutes from "./routes/auth.route.js";
 import authRoutes from './routes/auth.routes.js'
 import adminRoutes from "./routes/admin.route.js";
@@ -41,12 +42,21 @@ initializeSocket(server);
 app.use(morgan('dev'));
 
 // basic middleware
-app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 app.use(cors({
   origin: process.env.FRONTEND_ROOT || "http://localhost:3000",
   credentials: true
+}));
+
+// Setup AdminJS (after basic middleware, but before helmet to avoid CSP issues)
+const { adminJs, adminRouter } = setupAdminJS();
+// Mount AdminJS router at its rootPath (/db-admin)
+app.use(adminJs.options.rootPath, adminRouter);
+
+// Helmet for security (after AdminJS to avoid CSP blocking AdminJS assets)
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for AdminJS to work
 }));
 
 // mount API routes under /api
@@ -72,8 +82,8 @@ if (isDev) {
   const proxyTarget = process.env.FRONTEND_ROOT || "http://localhost:3000";
   app.use(
     (req, res, next) => {
-      // let /api/* go to backend
-      if (req.path.startsWith("/api")) return next();
+      // let /api/* and /db-admin/* go to backend
+      if (req.path.startsWith("/api") || req.path.startsWith("/db-admin")) return next();
       // otherwise proxy to client dev server
       createProxyMiddleware({
         target: proxyTarget,
@@ -90,7 +100,9 @@ if (isDev) {
   app.use(express.static(staticPath));
   // All other non-API routes serve index.html
   app.get("*", (req, res) => {
-    if (req.path.startsWith("/api")) return res.status(404).json({ message: "Not found" });
+    if (req.path.startsWith("/api")) {
+      return res.status(404).json({ message: "Not found" });
+    }
     res.sendFile(path.join(staticPath, "index.html"));
   });
   logger.info("Production static serving enabled from client/build");
