@@ -3,6 +3,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import Navbar from "../components/Navbar";
+import AlertModal from "../components/AlertModal";
 
 export default function StudentShortlistDetails() {
   const { shortlistId } = useParams();
@@ -11,6 +12,7 @@ export default function StudentShortlistDetails() {
   const [loading, setLoading] = useState(true);
   const [shortlist, setShortlist] = useState(null);
   const [offer, setOffer] = useState(null);
+  const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
 
   useEffect(() => {
     fetchUser();
@@ -37,8 +39,11 @@ export default function StudentShortlistDetails() {
     } catch (err) {
       console.error("Error fetching shortlist details:", err);
       if (err.response?.status === 404) {
-        alert("Shortlist not found");
-        navigate("/student");
+        setErrorAlert({
+          show: true,
+          message: "Shortlist not found"
+        });
+        setTimeout(() => navigate("/student"), 2000);
       }
     } finally {
       setLoading(false);
@@ -321,6 +326,15 @@ export default function StudentShortlistDetails() {
           </div>
         </div>
       </main>
+
+      {/* Error Alert */}
+      <AlertModal
+        isOpen={errorAlert.show}
+        onClose={() => setErrorAlert({ show: false, message: '' })}
+        title="Error"
+        message={errorAlert.message}
+        type="error"
+      />
     </div>
   );
 }

@@ -11,9 +11,13 @@
     "dev:all": "concurrently \"npm run dev\" \"npm run client:start\"",
     "client:build": "cd client && npm run build",
     "build": "npm run client:build",
-    "vercel-build": "npm run client:build"
+    "vercel-build": "npm run client:build",
+    "create-admin": "node scripts/create-admin.js"
   },
   "dependencies": {
+    "@adminjs/express": "^6.1.1",
+    "@adminjs/mongoose": "^4.1.0",
+    "adminjs": "^7.8.17",
     "axios": "^1.12.2",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
@@ -21,10 +25,11 @@
     "csv-parser": "^3.2.0",
     "dotenv": "^16.6.1",
     "express": "^4.21.2",
+    "express-session": "^1.18.2",
     "helmet": "^7.0.0",
     "http-proxy-middleware": "^2.0.6",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^7.8.7",
+    "mongoose": "^8.19.2",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "querystring": "^0.2.1",
