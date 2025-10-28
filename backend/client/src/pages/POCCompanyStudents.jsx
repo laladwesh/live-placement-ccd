@@ -39,6 +39,7 @@ export default function POCCompanyStudents() {
     if (!socket || !companyId) return;
 
     // Join company room
+    console.log(`🔌 POC joining company room: ${companyId}`);
     socket.emit("join:company", companyId);
 
     // Silent refresh function - no loading screen
@@ -98,6 +99,15 @@ export default function POCCompanyStudents() {
       silentRefresh("Student removed");
     });
 
+    // Listen for student placement notifications (real-time update when student gets placed elsewhere)
+    socket.on("student:placed", (data) => {
+      console.log("🎓 Student placed elsewhere:", data);
+      toast.success(`Student placed at ${data.placedCompanyName}`, {
+        duration: 5000
+      });
+      silentRefresh(); // Refresh to show updated placement status
+    });
+
     // Cleanup
     return () => {
       socket.emit("leave:company", companyId);
@@ -108,6 +118,7 @@ export default function POCCompanyStudents() {
       socket.off("offer:status-update");
       socket.off("student:added");
       socket.off("student:removed");
+      socket.off("student:placed");
     };
   }, [socket, companyId]);
 
