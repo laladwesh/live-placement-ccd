@@ -217,3 +217,32 @@ export function emitOfferStatusUpdate(data) {
     logger.info(`Emitted offer status update for offer ${data.offerId}`);
   }
 }
+
+/**
+ * Emit student placed notification to ALL companies where student is shortlisted
+ * This notifies POCs in real-time when a student gets placed elsewhere
+ * @param {string} studentId - Student ID who got placed
+ * @param {string} placedCompanyId - Company ID where student got placed
+ * @param {string} placedCompanyName - Company name where student got placed
+ * @param {Array} shortlistedCompanyIds - Array of company IDs where student is shortlisted
+ */
+export function emitStudentPlaced(studentId, placedCompanyId, placedCompanyName, shortlistedCompanyIds) {
+  if (io) {
+    // Notify all companies where this student is shortlisted (except the placed company)
+    shortlistedCompanyIds.forEach((companyId) => {
+      const companyIdStr = companyId.toString();
+      if (companyIdStr !== placedCompanyId.toString()) {
+        io.to(`company:${companyIdStr}`).emit("student:placed", {
+          studentId,
+          placedCompanyId,
+          placedCompanyName,
+          message: `Student has been placed at ${placedCompanyName}`
+        });
+        logger.info(`Notified company ${companyIdStr} that student ${studentId} was placed at ${placedCompanyName}`);
+      }
+    });
+    
+    logger.info(`Emitted student placement notification for student ${studentId} to ${shortlistedCompanyIds.length} companies`);
+  }
+}
+
