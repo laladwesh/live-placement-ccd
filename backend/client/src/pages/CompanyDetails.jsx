@@ -94,6 +94,15 @@ export default function CompanyDetails() {
       silentRefresh();
     });
 
+    // Listen for student placement notifications (real-time update when student gets placed elsewhere)
+    socket.on("student:placed", (data) => {
+      console.log("🎓 Student placed elsewhere:", data);
+      toast.success(`Student placed at ${data.placedCompanyName}`, {
+        duration: 5000
+      });
+      silentRefresh(); // Refresh to show updated placement status
+    });
+
     // Cleanup
     return () => {
       socket.emit("leave:company", companyId);
@@ -103,6 +112,7 @@ export default function CompanyDetails() {
       socket.off("offer:created");
       socket.off("offer:approved");
       socket.off("offer:rejected");
+      socket.off("student:placed");
     };
   }, [socket, companyId]);
 
