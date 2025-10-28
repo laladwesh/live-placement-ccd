@@ -10,10 +10,10 @@ const COOKIE_MAX_AGE = parseInt(process.env.COOKIE_MAX_AGE || "3600000", 10);
 
 export const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
-    if (!email || !password) return res.status(400).json({ message: "Missing fields" });
+    const { emailId, password } = req.body;
+    if (!emailId || !password) return res.status(400).json({ message: "Missing fields" });
 
-    const user = await User.findOne({ emailId: email });
+    const user = await User.findOne({ emailId: emailId });
     if (!user || !user.passwordHash) return res.status(401).json({ message: "Invalid credentials" });
 
     const isValid = await bcrypt.compare(password, user.passwordHash);
