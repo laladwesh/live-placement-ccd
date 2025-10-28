@@ -6,7 +6,7 @@ import Offer, { ApprovalStatus } from "../models/offer.model.js";
 import Shortlist from "../models/shortlist.model.js";
 import { sendOfferApprovalEmail } from "../utils/mailer.js";
 import { logger } from "../utils/logger.js";
-import { emitOfferApproved, emitOfferRejected, emitOfferStatusUpdate } from "../config/socket.js";
+import { emitOfferApproved, emitOfferRejected, emitOfferStatusUpdate, emitStudentPlaced } from "../config/socket.js";
 
 /**
  * Create a user record used by admin.
@@ -210,6 +210,12 @@ export const approveOffer = async (req, res) => {
       }
     );
 
+    // GET ALL COMPANIES WHERE THIS STUDENT IS SHORTLISTED (for real-time notification)
+    const studentShortlists = await Shortlist.find({ 
+      studentId: offer.studentId._id 
+    }).select('companyId');
+    const shortlistedCompanyIds = studentShortlists.map(s => s.companyId);
+
     // ADD STUDENT TO COMPANY'S PLACED STUDENTS LIST
     await Company.findByIdAndUpdate(
       offer.companyId._id,
@@ -218,6 +224,15 @@ export const approveOffer = async (req, res) => {
 
     logger.info(`Admin ${req.user.emailId} approved offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
     logger.info(`Auto-rejected ${otherPendingOffers.length} other pending offers for this student`);
+
+    // EMIT STUDENT PLACED EVENT TO ALL COMPANIES WHERE STUDENT IS SHORTLISTED
+    // This will notify POCs in real-time that the student got placed elsewhere
+    emitStudentPlaced(
+      offer.studentId._id.toString(),
+      offer.companyId._id.toString(),
+      offer.companyId.name,
+      shortlistedCompanyIds
+    );
 
     // Emit socket events to notify all relevant parties
     emitOfferApproved(
