@@ -4,6 +4,7 @@ import Student from "../models/student.model.js";
 import Company from "../models/company.model.js";
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
 import Shortlist from "../models/shortlist.model.js";
+import { sendOfferApprovalEmail } from "../utils/mailer.js";
 import { logger } from "../utils/logger.js";
 import { emitOfferApproved, emitOfferRejected, emitOfferStatusUpdate } from "../config/socket.js";
 
@@ -240,6 +241,21 @@ export const approveOffer = async (req, res) => {
       approvalStatus: ApprovalStatus.APPROVED,
       action: 'approved'
     });
+
+    try {
+      await sendOfferApprovalEmail({
+        to: offer.studentId.emailId,
+        studentName: offer.studentId.name,
+        companyName: offer.companyId.name,
+      });
+
+      logger.info(
+        `Offer approval email sent to ${offer.studentId.emailId} for ${offer.companyId.name}`
+      );
+    } catch (mailErr) {
+      logger.error("Failed to send offer approval email:", mailErr);
+    }
+
 
     return res.json({
       success: true,
