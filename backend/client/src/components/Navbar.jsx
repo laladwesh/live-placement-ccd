@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar({ user }) {
+  const [menuOpen, setMenuOpen] = useState(false);
   // console.log("navbar user is: ", user);/
 
   const navigate = useNavigate();
@@ -29,37 +30,35 @@ export default function Navbar({ user }) {
             </Link>
           </div>
 
-          <div className="flex items-center space-x-4">
+          {/* Desktop links */}
+          <div className="hidden sm:flex items-center space-x-4">
             {user ? (
               <>
                 {(user.role === "admin" || user.role === "superadmin") && (
                   <Link
-                  to="/admin"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                >
-                  Admin Dashboard
-                </Link>
-                
+                    to="/admin"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+                  >
+                    Admin Dashboard
+                  </Link>
                 )}
                 {(user.role === "poc" || user.role === "superadmin") && (
                   <Link
-                  to="/poc"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                >
-                  POC Dashboard
-                </Link>
-                
+                    to="/poc"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+                  >
+                    POC Dashboard
+                  </Link>
                 )}
                 {(user.role === "student" || user.role === "superadmin") && (
                   <Link
-                  to="/student"
-                  className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                >
-                  Student Dashboard
-                </Link>
-                
+                    to="/student"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+                  >
+                    Student Dashboard
+                  </Link>
                 )}
-                <div className="hidden sm:block text-sm text-slate-700 border-l border-slate-300 pl-4 ml-2">
+                <div className="text-sm text-slate-700 border-l border-slate-300 pl-4 ml-2">
                   <div className="font-semibold">{user.name}</div>
                   <div className="text-xs text-slate-500 uppercase tracking-wide">{user.role}</div>
                 </div>
@@ -76,8 +75,49 @@ export default function Navbar({ user }) {
               </div>
             )}
           </div>
+
+          {/* Mobile menu button */}
+          <div className="flex items-center sm:hidden">
+            <button
+              className="inline-flex items-center justify-center p-2 rounded-md text-slate-600 hover:bg-slate-100"
+              aria-expanded={menuOpen}
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
+
+      {/* Mobile dropdown */}
+      {menuOpen && (
+        <div className="sm:hidden bg-white border-t border-slate-100">
+          <div className="px-4 py-3 space-y-2">
+            {user ? (
+              <>
+                {(user.role === "admin" || user.role === "superadmin") && (
+                  <Link to="/admin" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Admin Dashboard</Link>
+                )}
+                {(user.role === "poc" || user.role === "superadmin") && (
+                  <Link to="/poc" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">POC Dashboard</Link>
+                )}
+                {(user.role === "student" || user.role === "superadmin") && (
+                  <Link to="/student" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Student Dashboard</Link>
+                )}
+                <div className="pt-2 border-t border-slate-100">
+                  <div className="text-sm font-semibold text-slate-900">{user.name}</div>
+                  <div className="text-xs text-slate-500 uppercase">{user.role}</div>
+                  <button onClick={logout} className="mt-2 w-full text-left px-3 py-2 rounded-md bg-red-600 text-white">Sign Out</button>
+                </div>
+              </>
+            ) : (
+              <Link to="/login" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Sign In</Link>
+            )}
+          </div>
+        </div>
+      )}
     </header>
   );
 }
