@@ -2,11 +2,9 @@
 import React, { useState } from "react";
 import api from "../api/axios";
 
-export default function AddWalkInModal({ companyId, onClose, onAdded }) {
+export default function AddWalkInModal({ companyId, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     email: "",
-    name: "",
-    phoneNo: "",
     remarks: ""
   });
   const [loading, setLoading] = useState(false);
@@ -16,8 +14,8 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
     e.preventDefault();
     setError("");
 
-    if (!formData.email.trim() || !formData.name.trim()) {
-      setError("Email and Name are required");
+    if (!formData.email.trim()) {
+      setError("Email is required");
       return;
     }
 
@@ -32,13 +30,14 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
 
     try {
       await api.post(`/poc/companies/${companyId}/walkin`, {
-        emailId: formData.email.trim(),
-        name: formData.name.trim(),
-        phoneNo: formData.phoneNo.trim() || undefined,
+        email: formData.email.trim(),
         remarks: formData.remarks.trim() || undefined
       });
-      // Don't call onAdded() - let socket handle the refresh
-      // Just close the modal
+      // If parent provided an onSuccess handler, call it (some pages use onSuccess)
+      if (typeof onSuccess === "function") {
+        try { onSuccess(); } catch (e) { /* ignore */ }
+      }
+      // Close the modal
       onClose();
     } catch (err) {
       console.error("Error adding walk-in student:", err);
@@ -67,7 +66,7 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
           {/* Email */}
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Email <span className="text-red-500">*</span>
+              Student Email <span className="text-red-500">*</span>
             </label>
             <input
               type="email"
@@ -78,51 +77,19 @@ export default function AddWalkInModal({ companyId, onClose, onAdded }) {
               placeholder="student@iitg.ac.in"
               required
             />
+            <p className="text-xs text-slate-500 mt-1">Enter only the student's email; the system will fetch or create the student automatically.</p>
           </div>
 
-          {/* Name */}
+          {/* Remarks (optional) */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="John Doe"
-              required
-            />
-          </div>
-
-          {/* Phone Number */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Phone Number
-            </label>
-            <input
-              type="tel"
-              name="phoneNo"
-              value={formData.phoneNo}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="+91-9876543210"
-            />
-          </div>
-
-          {/* Remarks */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">
-              Remarks
-            </label>
+            <label className="block text-sm font-medium text-slate-700 mb-1">Remarks</label>
             <textarea
               name="remarks"
               value={formData.remarks}
               onChange={handleChange}
               rows="3"
               className="w-full px-3 py-2 border border-slate-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Walk-in candidate, special notes..."
+              placeholder="Optional notes about the walk-in"
             />
           </div>
 
