@@ -13,9 +13,9 @@ import { emitCompanyUpdate } from "../config/socket.js";
  */
 export const createCompany = async (req, res) => {
   try {
-    console.log("📦 CREATE COMPANY REQUEST:");
-    console.log("   User:", req.user.emailId, "| Role:", req.user.role);
-    console.log("   Body:", JSON.stringify(req.body, null, 2));
+    // console.log("📦 CREATE COMPANY REQUEST:");
+    // console.log("   User:", req.user.emailId, "| Role:", req.user.role);
+    // console.log("   Body:", JSON.stringify(req.body, null, 2));
     
     const { name, venue, description, maxRounds, pocIds = [], newPocs = [] } = req.body;
 

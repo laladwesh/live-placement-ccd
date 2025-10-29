@@ -13,8 +13,8 @@ import { logger } from "../utils/logger.js";
  */
 export const uploadStudentsCSV = async (req, res) => {
   try {
-    console.log("📤 STUDENT CSV UPLOAD:");
-    console.log("   Admin:", req.user.emailId);
+    // console.log("📤 STUDENT CSV UPLOAD:");
+    // console.log("   Admin:", req.user.emailId);
     
     if (!req.file) {
       return res.status(400).json({ message: "No file uploaded" });
@@ -38,7 +38,7 @@ export const uploadStudentsCSV = async (req, res) => {
         .on("error", reject);
     });
 
-    console.log(`   📊 Parsed ${results.length} rows from CSV`);
+    console.log(`Parsed ${results.length} rows from CSV`);
 
     // Validate and process each student
     const created = [];
@@ -195,9 +195,9 @@ export const getAllStudents = async (req, res) => {
  */
 export const addStudentManually = async (req, res) => {
   try {
-    console.log("➕ ADD STUDENT MANUALLY:");
-    console.log("   Admin:", req.user.emailId);
-    console.log("   Data:", req.body);
+    console.log(" ADD STUDENT MANUALLY:");
+    // console.log("   Admin:", req.user.emailId);
+    // console.log("   Data:", req.body);
 
     const { email, emailId, name, rollNumber, phoneNo } = req.body;
     

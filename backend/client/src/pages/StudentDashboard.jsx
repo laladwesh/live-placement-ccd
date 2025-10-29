@@ -64,19 +64,19 @@ export default function StudentDashboard() {
 
     // Listen for shortlist updates
     socket.on("shortlist:update", (data) => {
-      console.log("📡 Shortlist update received:", data);
+      // console.log("📡 Shortlist update received:", data);
       silentRefresh(); // Silent background refresh
     });
 
     // Listen for new offers
     socket.on("offer:created", (data) => {
-      console.log("🎉 Offer created:", data);
+      // console.log("🎉 Offer created:", data);
       silentRefresh();
     });
 
     // Listen for offer approved (confirmed)
     socket.on("offer:approved", (data) => {
-      console.log(" Offer approved:", data);
+      // console.log(" Offer approved:", data);
       toast.success(`Congratulations! Your offer from ${data.companyName} has been confirmed! 🎉`, {
         duration: 6000,
         icon: '🎊'
@@ -86,7 +86,7 @@ export default function StudentDashboard() {
 
     // Listen for offer rejected
     socket.on("offer:rejected", (data) => {
-      console.log("❌ Offer rejected:", data);
+      // console.log("❌ Offer rejected:", data);
       toast.error(`Offer from ${data.companyName} was not approved.`, {
         duration: 5000
       });
@@ -95,20 +95,20 @@ export default function StudentDashboard() {
 
     // Listen for offer status updates
     socket.on("offer:status-update", (data) => {
-      console.log("📊 Offer status updated:", data);
+      // console.log("📊 Offer status updated:", data);
       silentRefresh();
     });
 
     // Listen for student added/removed
     socket.on("student:added", (data) => {
-      console.log("📌 Student added:", data);
+      // console.log("📌 Student added:", data);
       if (data.student === user._id) {
         silentRefresh();
       }
     });
 
     socket.on("student:removed", (data) => {
-      console.log("🗑️ Student removed:", data);
+      // console.log("🗑️ Student removed:", data);
       silentRefresh();
     });
 

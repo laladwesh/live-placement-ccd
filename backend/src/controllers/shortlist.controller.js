@@ -32,9 +32,9 @@ export const uploadShortlistCSV = async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    console.log("📤 COMPANY SHORTLIST CSV UPLOAD:");
-    console.log("   Company ID:", companyId);
-    console.log("   Admin:", req.user?.emailId);
+    // console.log("📤 COMPANY SHORTLIST CSV UPLOAD:");
+    // console.log("   Company ID:", companyId);
+    // console.log("   Admin:", req.user?.emailId);
 
     if (!req.file) {
       return res.status(400).json({ message: "No CSV file uploaded" });
@@ -78,7 +78,7 @@ export const uploadShortlistCSV = async (req, res) => {
         .on('error', reject);
     });
 
-    console.log(`   📊 Parsed ${results.length} rows from CSV`);
+    console.log(`  Parsed ${results.length} rows from CSV`);
 
     if (results.length === 0) {
       return res.status(400).json({ 

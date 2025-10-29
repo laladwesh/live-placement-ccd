@@ -2,7 +2,7 @@ import React from "react";
 import { Link, useNavigate } from "react-router-dom";
 
 export default function Navbar({ user }) {
-  console.log("navbar user is: ", user);
+  // console.log("navbar user is: ", user);/
 
   const navigate = useNavigate();
 

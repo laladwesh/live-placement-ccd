@@ -25,7 +25,7 @@ export default function AddStudentToMasterModal({ onClose, onSuccess }) {
 
     try {
       const res = await api.post("/admin/students", formData);
-      console.log("Student created:", res.data);
+      // console.log("Student created:", res.data);
       
       if (onSuccess) onSuccess();
       onClose();

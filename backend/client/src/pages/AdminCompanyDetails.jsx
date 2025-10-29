@@ -41,7 +41,7 @@ export default function AdminCompanyDetails() {
 
     // Listen for company updates
     socket.on("company:update", (data) => {
-      console.log("🏢 Company update received:", data.action, data.data);
+      // console.log("🏢 Company update received:", data.action, data.data);
       silentRefresh(); // Silent background refresh
     });
 

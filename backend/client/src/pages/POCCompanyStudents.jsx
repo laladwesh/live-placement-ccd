@@ -39,7 +39,7 @@ export default function POCCompanyStudents() {
     if (!socket || !companyId) return;
 
     // Join company room
-    console.log(`🔌 POC joining company room: ${companyId}`);
+    // console.log(`🔌 POC joining company room: ${companyId}`);
     socket.emit("join:company", companyId);
 
     // Silent refresh function - no loading screen
@@ -59,49 +59,49 @@ export default function POCCompanyStudents() {
 
     // Listen for shortlist updates
     socket.on("shortlist:update", (data) => {
-      console.log("📡 Shortlist update received:", data);
+      // console.log("📡 Shortlist update received:", data);
       silentRefresh("Interview stage updated"); // Silent background refresh
     });
 
     // Listen for new offers
     socket.on("offer:created", (data) => {
-      console.log("🎉 Offer created:", data);
+      // console.log("🎉 Offer created:", data);
       silentRefresh("New offer created");
     });
 
     // Listen for offer approved by admin
     socket.on("offer:approved", (data) => {
-      console.log(" Offer approved by admin:", data);
+      // console.log(" Offer approved by admin:", data);
       silentRefresh(`Offer for ${data.studentName} approved by admin`);
     });
 
     // Listen for offer rejected by admin
     socket.on("offer:rejected", (data) => {
-      console.log("❌ Offer rejected by admin:", data);
+      // console.log("❌ Offer rejected by admin:", data);
       silentRefresh(`Offer for ${data.studentName} rejected by admin`);
     });
 
     // Listen for offer status updates
     socket.on("offer:status-update", (data) => {
-      console.log("📊 Offer status updated:", data);
+      // console.log("📊 Offer status updated:", data);/
       silentRefresh();
     });
 
     // Listen for students added
     socket.on("student:added", (data) => {
-      console.log("📌 Student added:", data);
+      // console.log("📌 Student added:", data);
       silentRefresh("New student added");
     });
 
     // Listen for students removed
     socket.on("student:removed", (data) => {
-      console.log("🗑️ Student removed:", data);
+      // console.log("🗑️ Student removed:", data);
       silentRefresh("Student removed");
     });
 
     // Listen for student placement notifications (real-time update when student gets placed elsewhere)
     socket.on("student:placed", (data) => {
-      console.log("🎓 Student placed elsewhere:", data);
+      // console.log("🎓 Student placed elsewhere:", data);
       toast.success(`Student placed at ${data.placedCompanyName}`, {
         duration: 5000
       });
