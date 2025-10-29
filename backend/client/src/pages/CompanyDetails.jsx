@@ -103,6 +103,25 @@ export default function CompanyDetails() {
       silentRefresh(); // Refresh to show updated placement status
     });
 
+    // Listen for company process changed events
+    socket.on("company:process-changed", (data) => {
+      if (!data || data.companyId !== companyId) return;
+      if (data.completed) {
+        toast('Company process marked completed', { duration: 3000 });
+        // If non-admin viewing as POC, redirect to poc list
+        if (user?.role === 'poc') {
+          setTimeout(() => navigate('/poc'), 250);
+        } else {
+          // Admin or others: refresh to show updated flags
+          silentRefresh();
+        }
+      } else {
+        // reopened
+        toast.success('Company process reopened', { duration: 3000 });
+        silentRefresh();
+      }
+    });
+
     // Cleanup
     return () => {
       socket.emit("leave:company", companyId);

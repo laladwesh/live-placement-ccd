@@ -6,6 +6,7 @@ import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
 import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate } from "../config/socket.js";
+import { emitCompanyProcessChanged } from "../config/socket.js";
 
 /**
  * Get POC's assigned companies
@@ -536,6 +537,9 @@ export const markProcessCompleted = async (req, res) => {
     // We're just marking the company as completed here
 
     logger.info(`POC ${req.user.emailId} marked ${company.name} as process completed`);
+
+  // Emit company process changed so other POCs remove/hide it in realtime
+  emitCompanyProcessChanged(companyId, true);
 
     return res.json({
       message: "Company interview process marked as completed",

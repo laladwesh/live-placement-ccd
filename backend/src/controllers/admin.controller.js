@@ -374,6 +374,14 @@ export const setCompanyProcessComplete = async (req, res) => {
 
     logger.info(`Admin ${req.user.emailId} set isProcessCompleted=${company.isProcessCompleted} for ${company.name}`);
 
+    // Emit process changed so POCs/admin views update in realtime
+    try {
+      const { emitCompanyProcessChanged } = await import("../config/socket.js");
+      emitCompanyProcessChanged(company._id.toString(), company.isProcessCompleted);
+    } catch (e) {
+      logger.error("Failed to emit company process changed", e);
+    }
+
     return res.json({
       success: true,
       message: `Company process ${company.isProcessCompleted ? 'marked completed' : 'reopened'}`,

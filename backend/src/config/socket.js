@@ -51,6 +51,12 @@ export function initializeSocket(server) {
       logger.info(`Socket ${socket.id} joined admin room`);
     });
 
+    // Handle POC dashboard joining poc room (to receive company list updates)
+    socket.on("join:poc", () => {
+      socket.join("poc");
+      logger.info(`Socket ${socket.id} joined poc room`);
+    });
+
     // Handle disconnection
     socket.on("disconnect", () => {
       logger.info(`Socket disconnected: ${socket.id}`);
@@ -120,6 +126,26 @@ export function emitCompanyUpdate(action, data) {
   if (io) {
     io.to("admin").emit("company:update", { action, data });
     logger.info(`Emitted company ${action} event`);
+  }
+}
+
+/**
+ * Emit company process changed event to POCs (and admin)
+ * @param {string} companyId
+ * @param {boolean} completed
+ */
+export function emitCompanyProcessChanged(companyId, completed) {
+  if (io) {
+    // Notify all POC dashboards to refresh their lists
+    io.to("poc").emit("company:process-changed", { companyId, completed });
+
+    // Also notify admin room in case admin pages need to react
+    io.to("admin").emit("company:process-changed", { companyId, completed });
+
+    // Additionally notify the specific company room (if someone is viewing that company)
+    io.to(`company:${companyId}`).emit("company:process-changed", { companyId, completed });
+
+    logger.info(`Emitted company process changed for ${companyId} completed=${completed}`);
   }
 }
 

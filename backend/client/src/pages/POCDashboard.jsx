@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
+import { useSocket } from "../context/SocketContext";
 import Navbar from "../components/Navbar";
 
 export default function POCDashboard() {
@@ -10,6 +11,7 @@ export default function POCDashboard() {
   const [companies, setCompanies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
+  const { socket } = useSocket();
 
   useEffect(() => {
     fetchUser();
@@ -20,6 +22,27 @@ export default function POCDashboard() {
       fetchCompanies();
     }
   }, [user]);
+
+  // Join poc room for realtime company updates and listen for process-changed events
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    // Only POCs and admins acting as POC should join
+    if (user.role === 'poc' || user.role === 'admin') {
+      socket.emit('join:poc');
+
+      const handler = (data) => {
+        // If company was completed or reopened, refresh the companies list
+        fetchCompanies();
+      };
+
+      socket.on('company:process-changed', handler);
+
+      return () => {
+        socket.off('company:process-changed', handler);
+      };
+    }
+  }, [socket, user]);
 
   const fetchUser = async () => {
     try {

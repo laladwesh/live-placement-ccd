@@ -35,12 +35,13 @@ export default function POCCompanyStudents() {
   }, [user, companyId]);
 
   // Socket.IO listeners - Silent background updates
+  // Include `user` in dependencies so the handler sees the current role (POC vs admin)
   useEffect(() => {
     if (!socket || !companyId) return;
 
-    // Join company room
-    // console.log(`🔌 POC joining company room: ${companyId}`);
+    // Join company room and also join poc room as a fallback to receive process-change broadcasts
     socket.emit("join:company", companyId);
+    socket.emit("join:poc");
 
     // Silent refresh function - no loading screen
     const silentRefresh = async (message) => {
@@ -108,9 +109,33 @@ export default function POCCompanyStudents() {
       silentRefresh(); // Refresh to show updated placement status
     });
 
+    // Listen for company process changes (completed/reopened)
+    socket.on("company:process-changed", (data) => {
+      if (!data || data.companyId !== companyId) return;
+      // If company is marked completed
+      if (data.completed) {
+        // If current user is a POC (not admin), navigate away to POC list
+        if (user?.role === 'poc') {
+          toast(`This company's process was marked completed`, { duration: 4000 });
+          setTimeout(() => navigate('/poc'), 250);
+        } else if (user?.role === 'admin') {
+          // Admins can stay but refresh data
+          silentRefresh('Company process marked completed');
+        } else {
+          // Other roles - just refresh
+          silentRefresh();
+        }
+      } else {
+        // Reopened
+        toast.success('Company process reopened', { duration: 3000 });
+        silentRefresh();
+      }
+    });
+
     // Cleanup
     return () => {
       socket.emit("leave:company", companyId);
+      socket.emit("leave:poc");
       socket.off("shortlist:update");
       socket.off("offer:created");
       socket.off("offer:approved");
@@ -119,8 +144,9 @@ export default function POCCompanyStudents() {
       socket.off("student:added");
       socket.off("student:removed");
       socket.off("student:placed");
+      socket.off("company:process-changed");
     };
-  }, [socket, companyId]);
+  }, [socket, companyId, user]);
 
   const fetchUser = async () => {
     try {
