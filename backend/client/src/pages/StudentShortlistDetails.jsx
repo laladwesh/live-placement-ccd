@@ -205,16 +205,16 @@ export default function StudentShortlistDetails() {
           <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
             <h2 className="text-xl font-bold text-slate-900 mb-6">Interview Progress</h2>
             <div className="relative">
-              {/* Progress Line */}
-              <div className="absolute top-6 left-0 right-0 h-1 bg-slate-200">
-                <div
-                  className="h-full bg-purple-500 transition-all"
-                  style={{ width: `${(currentStageIndex / (stageTimeline.length - 1)) * 100}%` }}
-                />
-              </div>
+                  {/* Progress Line (hidden on small screens) */}
+                  <div className="hidden md:block absolute top-6 left-0 right-0 h-1 bg-slate-200">
+                    <div
+                      className="h-full bg-purple-500 transition-all"
+                      style={{ width: `${(currentStageIndex / (stageTimeline.length - 1)) * 100}%` }}
+                    />
+                  </div>
 
-              {/* Timeline Steps */}
-              <div className="relative flex justify-between">
+                  {/* Timeline Steps - stack vertically on small screens */}
+                  <div className="relative flex flex-col md:flex-row md:justify-between gap-6">
                 {stageTimeline.map((step, index) => {
                   const isPast = index < currentStageIndex;
                   const isCurrent = step.stage === shortlist.stage;

@@ -336,8 +336,29 @@ export default function StudentDashboard() {
     <div className="mb-4 text-sm text-slate-600">
       Showing {filteredShortlists.length} of {shortlists.length} applications
     </div>
+    {/* Mobile: card list */}
+    <div className="space-y-4 md:hidden">
+      {filteredShortlists.map((shortlist) => (
+        <div key={shortlist._id} className="bg-white rounded-lg shadow p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="text-sm text-slate-500">Company</div>
+              <div className="text-lg font-medium text-slate-900">{shortlist.companyId?.name}</div>
+              <div className="text-sm text-slate-500 mt-1">{shortlist.companyId?.venue}</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-slate-500">Status</div>
+              <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{shortlist.stage || 'Pending'}</div>
+              <div className="mt-3">
+                <button onClick={() => navigate(`/student/shortlists/${shortlist._id}`)} className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">View</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
 
-    <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+    <div className="hidden md:block overflow-x-auto bg-white rounded-lg shadow-sm">
       <table className="min-w-full divide-y divide-slate-200">
         <thead className="bg-slate-50">
           <tr>

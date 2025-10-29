@@ -8,6 +8,7 @@ export default function POCDashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [companies, setCompanies] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -66,6 +67,17 @@ export default function POCDashboard() {
     );
   }
 
+  // Filter companies by search term (client-side)
+  const filteredCompanies = companies.filter(c => {
+    const q = searchTerm.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (c.name || "").toLowerCase().includes(q) ||
+      (c.venue || "").toLowerCase().includes(q) ||
+      (c.description || "").toLowerCase().includes(q)
+    );
+  });
+
   return (
     <div className="min-h-screen bg-slate-50">
       <Navbar user={user} />
@@ -75,6 +87,19 @@ export default function POCDashboard() {
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">POC Dashboard</h1>
           <p className="text-slate-600 mt-1">Manage interviews for your assigned companies</p>
+        </div>
+
+        {/* Search */}
+        <div className="mb-6">
+          <div className="max-w-2xl">
+            <input
+              type="text"
+              placeholder="Search companies by name or venue..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
         </div>
 
         {/* Companies List */}
@@ -94,7 +119,7 @@ export default function POCDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {companies.map(company => (
+            {filteredCompanies.map(company => (
               <div
                 key={company._id}
                 className="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer"
