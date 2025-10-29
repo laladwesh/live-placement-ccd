@@ -249,7 +249,7 @@ export default function POCCompanyStudents() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/poc")}
+            onClick={() => navigate(user?.role === 'admin' ? '/admin' : '/poc')}
             className="flex items-center text-slate-600 hover:text-slate-900 mb-4"
           >
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -297,13 +297,34 @@ export default function POCCompanyStudents() {
                     Mark Process Complete
                   </button>
                 )}
-                
+
+                {/* If company is completed, show badge; if admin, show a Reopen button */}
                 {company?.isProcessCompleted && (
-                  <div className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg flex items-center gap-2">
-                    <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    Process Completed
+                  <div className="flex items-center gap-2">
+                    <div className="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg flex items-center gap-2">
+                      <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Process Completed
+                    </div>
+                    {user?.role === 'admin' && (
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.post(`/admin/companies/${companyId}/complete`, { completed: false });
+                            // Refresh company and lists
+                            await fetchCompanyStudents();
+                            toast.success('Company process reopened');
+                          } catch (err) {
+                            console.error('Failed to reopen process', err);
+                            toast.error(err.response?.data?.message || 'Failed to reopen process');
+                          }
+                        }}
+                        className="px-3 py-2 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition"
+                      >
+                        Reopen Process
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

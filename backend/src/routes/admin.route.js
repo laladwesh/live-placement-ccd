@@ -7,6 +7,7 @@ import {
   approveOffer, 
   rejectOffer 
 } from "../controllers/admin.controller.js";
+import { setCompanyProcessComplete } from "../controllers/admin.controller.js";
 import {
   uploadStudentsCSV,
   getAllStudents,
@@ -35,5 +36,8 @@ router.get("/offers/pending", authMiddleware, permit("admin"), getPendingOffers)
 router.get("/offers/confirmed", authMiddleware, permit("admin"), getConfirmedOffers);
 router.post("/offers/:offerId/approve", authMiddleware, permit("admin"), approveOffer);
 router.post("/offers/:offerId/reject", authMiddleware, permit("admin"), rejectOffer);
+
+// Admin toggle to mark/reopen company process
+router.post("/companies/:companyId/complete", authMiddleware, permit("admin"), setCompanyProcessComplete);
 
 export default router;

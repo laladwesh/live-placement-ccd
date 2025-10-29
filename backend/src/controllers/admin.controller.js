@@ -353,3 +353,34 @@ export const rejectOffer = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/**
+ * Set company process completion state (admin only)
+ * POST /api/admin/companies/:companyId/complete
+ * Body: { completed: boolean }
+ */
+export const setCompanyProcessComplete = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+    const { completed } = req.body;
+
+    const company = await Company.findById(companyId);
+    if (!company) {
+      return res.status(404).json({ message: "Company not found" });
+    }
+
+    company.isProcessCompleted = !!completed;
+    await company.save();
+
+    logger.info(`Admin ${req.user.emailId} set isProcessCompleted=${company.isProcessCompleted} for ${company.name}`);
+
+    return res.json({
+      success: true,
+      message: `Company process ${company.isProcessCompleted ? 'marked completed' : 'reopened'}`,
+      company
+    });
+  } catch (err) {
+    logger.error("setCompanyProcessComplete error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
