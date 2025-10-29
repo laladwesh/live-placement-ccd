@@ -64,7 +64,7 @@ export default function AdminDashboard() {
 
     // Listen for offer rejected events
     socket.on("offer:rejected", (data) => {
-      // console.log("❌ Offer rejected:", data);
+      // console.log(" Offer rejected:", data);
       fetchOffers(); // Refresh offers list
     });
 
