@@ -87,7 +87,7 @@ export default function Login() {
 
     // Build the full backend login URL and navigate the browser to it.
     // Backend will redirect to provider (Microsoft/Google).
-    const loginUrl = `${BACKEND_BASE}/api/auth/oauth/${provider}/login`;
+    const loginUrl = `${BACKEND_BASE}/dday/api/auth/oauth/${provider}/login`;
 
     // Navigate in same tab so provider can redirect back to backend callback.
     window.location.href = loginUrl;

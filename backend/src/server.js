@@ -26,6 +26,8 @@ import { whoami } from "./controllers/me.controller.js";
 
 const PORT = process.env.PORT || 4000;
 const MONGO_URI = process.env.MONGO_URI;
+// BASE_PATH example: '/dday' - when set, APIs and admin UI will be mounted under this path
+const BASE_PATH = process.env.BASE_PATH || "/dday"; // should start with '/'
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -50,25 +52,26 @@ app.use(cors({
 
 // Setup AdminJS (after basic middleware, but before helmet to avoid CSP issues)
 const { adminJs, adminRouter } = setupAdminJS();
-// Mount AdminJS router at its rootPath (/db-admin)
-app.use(adminJs.options.rootPath, adminRouter);
+// Mount AdminJS router at its rootPath (respect BASE_PATH if provided)
+const adminMountPath = BASE_PATH ? `${BASE_PATH}${adminJs.options.rootPath}` : adminJs.options.rootPath;
+app.use(adminMountPath, adminRouter);
 
 // Helmet for security (after AdminJS to avoid CSP blocking AdminJS assets)
 app.use(helmet({
   contentSecurityPolicy: false, // Disable CSP for AdminJS to work
 }));
 
-// mount API routes under /api
-app.use("/api/auth", authRoutes);
+// mount API routes under /api (respect BASE_PATH)
+const prefixed = (p) => (BASE_PATH ? `${BASE_PATH}${p}` : p);
+app.use(prefixed('/api/auth'), authRoutes);
 
 // health
-app.get("/api/health", (req, res) => res.json({ ok: true }));
-// app.use("/api/auth", authRoutes);
-app.use("/api/admin", adminRoutes);
-app.use("/api/admin", companyRoutes);
-app.use("/api/poc", pocRoutes);
-app.use("/api/student", studentRoutes);
-app.get("/api/users/me", authMiddleware, whoami);
+app.get(prefixed('/api/health'), (req, res) => res.json({ ok: true }));
+app.use(prefixed('/api/admin'), adminRoutes);
+app.use(prefixed('/api/admin'), companyRoutes);
+app.use(prefixed('/api/poc'), pocRoutes);
+app.use(prefixed('/api/student'), studentRoutes);
+app.get(prefixed('/api/users/me'), authMiddleware, whoami);
 
 // =======================================================
 // Dev reverse proxy behavior: proxy everything not under /api to CRA dev server
@@ -81,29 +84,49 @@ if (isDev) {
   const proxyTarget = process.env.FRONTEND_ROOT || "http://localhost:3000";
   app.use(
     (req, res, next) => {
-      // let /api/* and /db-admin/* go to backend
-      if (req.path.startsWith("/api") || req.path.startsWith("/db-admin")) return next();
-      // otherwise proxy to client dev server
-      createProxyMiddleware({
+      // Let prefixed API and admin paths go to backend
+      const apiPrefix = prefixed('/api');
+      const adminPrefix = adminMountPath;
+      if (req.path.startsWith(apiPrefix) || req.path.startsWith(adminPrefix)) return next();
+
+      // Otherwise proxy to client dev server. If BASE_PATH is set, strip it when forwarding to CRA
+      const proxyOptions = {
         target: proxyTarget,
         changeOrigin: true,
         ws: true,
-        logLevel: "silent"
-      })(req, res, next);
+        logLevel: 'silent'
+      };
+      if (BASE_PATH) {
+        proxyOptions.pathRewrite = {};
+        proxyOptions.pathRewrite[`^${BASE_PATH}`] = '';
+      }
+      createProxyMiddleware(proxyOptions)(req, res, next);
     }
   );
-  logger.info("Development proxy enabled -> forwarding non-/api requests to CRA dev server");
+  logger.info("Development proxy enabled -> forwarding non-backend requests to CRA dev server");
 } else {
   // production: serve built React from client/build
   const staticPath = path.join(__dirname, "..", "client", "build");
-  app.use(express.static(staticPath));
-  // All other non-API routes serve index.html
-  app.get("*", (req, res) => {
-    if (req.path.startsWith("/api")) {
-      return res.status(404).json({ message: "Not found" });
-    }
-    res.sendFile(path.join(staticPath, "index.html"));
-  });
+  if (BASE_PATH) {
+    // Serve the built client under BASE_PATH
+    app.use(BASE_PATH, express.static(staticPath));
+    app.get(`${BASE_PATH}/*`, (req, res) => {
+      // if it's an api path return 404
+      if (req.path.startsWith(prefixed('/api'))) {
+        return res.status(404).json({ message: 'Not found' });
+      }
+      res.sendFile(path.join(staticPath, 'index.html'));
+    });
+  } else {
+    app.use(express.static(staticPath));
+    // All other non-API routes serve index.html
+    app.get('*', (req, res) => {
+      if (req.path.startsWith(prefixed('/api'))) {
+        return res.status(404).json({ message: 'Not found' });
+      }
+      res.sendFile(path.join(staticPath, 'index.html'));
+    });
+  }
   logger.info("Production static serving enabled from client/build");
 }
 
@@ -114,5 +137,6 @@ app.use((err, req, res, next) => {
 });
 
 server.listen(PORT, () => {
-  logger.info(`Server listening on http://localhost:${PORT} (NODE_ENV=${process.env.NODE_ENV})`);
+  const baseInfo = BASE_PATH ? `${BASE_PATH}` : '';
+  logger.info(`Server listening on http://localhost:${PORT}${baseInfo} (NODE_ENV=${process.env.NODE_ENV})`);
 });

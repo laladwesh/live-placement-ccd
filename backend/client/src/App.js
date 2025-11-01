@@ -43,7 +43,7 @@ function App() {
           },
         }}
       />
-      <BrowserRouter>
+  <BrowserRouter basename={process.env.REACT_APP_BASE_PATH || ''}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/auth/callback" element={<OAuthCallback />} />

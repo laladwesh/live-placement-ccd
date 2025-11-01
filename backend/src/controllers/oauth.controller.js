@@ -151,7 +151,7 @@ export const oauthCallback = async (req, res) => {
 
     // redirect back to frontend with token in fragment (frontend will read localStorage)
     // redirect to a specific frontend callback route that will consume the token
-const redirectUrl = `${FRONTEND_ROOT}/auth/callback#token=${encodeURIComponent(token)}&provider=${encodeURIComponent(provider)}`;
+const redirectUrl = `${FRONTEND_ROOT}/dday/auth/callback#token=${encodeURIComponent(token)}&provider=${encodeURIComponent(provider)}`;
 return res.redirect(redirectUrl);
   } catch (err) {
     logger.error("oauthCallback error", err?.response?.data || err);

@@ -1,8 +1,9 @@
 // src/api/axios.js
 import axios from "axios";
 
+const BASE_PATH = process.env.REACT_APP_BASE_PATH || "/dday";
 const api = axios.create({
-  baseURL: "/api",
+  baseURL: BASE_PATH ? `${BASE_PATH}/api` : "/api",
   withCredentials: false
 });
 
