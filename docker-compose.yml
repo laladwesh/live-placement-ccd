@@ -1,0 +1,30 @@
+version: '3.8'
+services:
+  # Optional local MongoDB for development/testing. It will NOT start by default.
+  # To start this service together with the app, run: `docker compose --profile local up --build`
+  mongo:
+    image: mongo:6.0
+    profiles: ["local"]
+    restart: unless-stopped
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
+    ports:
+      - '27017:27017'
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - '5005:5005'
+    env_file:
+      - .env
+    environment:
+      # Ensure container listens on the port you expose on the host.
+      # This overrides any PORT value in .env. Change if you prefer a different mapping.
+      - PORT=5005
+
+volumes:
+  mongo-data:
