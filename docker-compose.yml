@@ -1,7 +1,5 @@
 version: '3.8'
 services:
-  # Optional local MongoDB for development/testing. It will NOT start by default.
-  # To start this service together with the app, run: `docker compose --profile local up --build`
   mongo:
     image: mongo:6.0
     profiles: ["local"]
