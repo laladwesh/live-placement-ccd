@@ -174,5 +174,4 @@ vite.config.ts.timestamp-*
 
 .DS_Store
 
-
-dummy.js
+seed.js

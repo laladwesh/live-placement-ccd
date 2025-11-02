@@ -19,5 +19,5 @@ COPY backend/ .
 COPY --from=client-build /app/client/build ./client/build
 
 ENV NODE_ENV=production
-EXPOSE 4000
+EXPOSE 5005
 CMD ["node", "src/server.js"]
