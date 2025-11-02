@@ -1,4 +1,3 @@
-version: '3.8'
 services:
   mongo:
     image: mongo:6.0
@@ -13,15 +12,18 @@ services:
       - '27017:27017'
 
   app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_BASE_PATH: /dday
     restart: unless-stopped
     ports:
       - '5005:5005'
     env_file:
       - .env
     environment:
-      # Ensure container listens on the port you expose on the host.
-      # This overrides any PORT value in .env. Change if you prefer a different mapping.
+      # Ensure container listens on the port exposed to the host
       - PORT=5005
 
 volumes:
