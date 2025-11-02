@@ -50,10 +50,30 @@ app.use(cors({
   credentials: true
 }));
 
+// If BASE_PATH is set, redirect requests that target admin root without the base to the base-prefixed path.
+// This helps old bookmarks or direct visits to `/db-admin` redirect to `/dday/db-admin`.
+if (BASE_PATH) {
+  app.use((req, res, next) => {
+    try {
+      const adminSuffix = '/db-admin';
+      const urlPath = req.path || req.url || '';
+      // if request is to /db-admin/... but not already under BASE_PATH, redirect
+      if (urlPath.startsWith(adminSuffix) && !urlPath.startsWith(BASE_PATH)) {
+        const target = `${BASE_PATH}${req.originalUrl}`;
+        return res.redirect(302, target);
+      }
+    } catch (err) {
+      // ignore and continue
+    }
+    next();
+  });
+}
+
 // Setup AdminJS (after basic middleware, but before helmet to avoid CSP issues)
 const { adminJs, adminRouter } = setupAdminJS();
-// Mount AdminJS router at its rootPath (respect BASE_PATH if provided)
-const adminMountPath = BASE_PATH ? `${BASE_PATH}${adminJs.options.rootPath}` : adminJs.options.rootPath;
+// AdminJS options.rootPath already includes BASE_PATH (if provided), so mount at that exact path
+const adminMountPath = adminJs.options.rootPath;
+console.log("AdminJS will be mounted at:", adminMountPath);
 app.use(adminMountPath, adminRouter);
 
 // Helmet for security (after AdminJS to avoid CSP blocking AdminJS assets)
@@ -85,9 +105,11 @@ if (isDev) {
   app.use(
     (req, res, next) => {
       // Let prefixed API and admin paths go to backend
-      const apiPrefix = prefixed('/api');
-      const adminPrefix = adminMountPath;
-      if (req.path.startsWith(apiPrefix) || req.path.startsWith(adminPrefix)) return next();
+  const apiPrefix = prefixed('/api');
+  const adminPrefix = adminMountPath;
+  // Check both req.path and req.originalUrl because some middleware may modify req.path.
+  const urlToCheck = req.originalUrl || req.path;
+  if (urlToCheck.startsWith(apiPrefix) || urlToCheck.startsWith(adminPrefix)) return next();
 
       // Otherwise proxy to client dev server. If BASE_PATH is set, strip it when forwarding to CRA
       const proxyOptions = {

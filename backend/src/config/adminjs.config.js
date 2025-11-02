@@ -37,6 +37,10 @@ const authenticate = async (email, password) => {
 
 // Configure AdminJS
 export const setupAdminJS = () => {
+  // Compute admin root including BASE_PATH so AdminJS generates correct URLs
+  const BASE_PATH = process.env.BASE_PATH || '';
+  const adminRoot = BASE_PATH ? `${BASE_PATH}/db-admin` : '/db-admin';
+
   const adminOptions = {
     resources: [
       {
@@ -129,9 +133,10 @@ export const setupAdminJS = () => {
         },
       },
     ],
-    rootPath: '/db-admin',
-    loginPath: '/db-admin/login',
-    logoutPath: '/db-admin/logout',
+    // AdminJS paths: set root/login/logout under adminRoot (includes BASE_PATH when provided)
+    rootPath: adminRoot,
+    loginPath: `${adminRoot}/login`,
+    logoutPath: `${adminRoot}/logout`,
     branding: {
       companyName: 'CCD Placement Portal',
       logo: false,
@@ -160,16 +165,23 @@ export const setupAdminJS = () => {
   }
 
   // Build authentication router
+  // Provide explicit session options to avoid express-session deprecation warnings
   const adminRouter = AdminJSExpress.buildAuthenticatedRouter(
     adminJs,
     {
       authenticate,
       cookieName: 'adminjs',
       cookiePassword: process.env.JWT_SECRET || 'super-secret-cookie-change-in-production',
+    },
+    null, // predefined router (null lets AdminJS create an express.Router())
+    {
+      resave: false,
+      saveUninitialized: false,
+      secret: process.env.SESSION_SECRET || process.env.JWT_SECRET || 'super-secret-session',
     }
   );
 
-  logger.info('AdminJS initialized at /db-admin');
+  logger.info(`AdminJS initialized at ${adminJs.options.rootPath || adminRoot}`);
 
   return { adminJs, adminRouter };
 };
