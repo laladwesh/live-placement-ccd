@@ -25,13 +25,12 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    // Connect to Socket.IO server
-    const socketURL = process.env.REACT_APP_BACKEND_URL || "http://localhost:4000";
-    
-    const newSocket = io(socketURL, {
-      auth: {
-        token
-      },
+    const socketBase = process.env.REACT_APP_BACKEND_URL || window.location.origin;
+    const socketPath = process.env.REACT_APP_SOCKET_PATH || "/dday/api/socket.io";
+
+    const newSocket = io(socketBase, {
+      path: socketPath,
+      auth: { token },
       transports: ["websocket", "polling"],
       reconnection: true,
       reconnectionDelay: 1000,

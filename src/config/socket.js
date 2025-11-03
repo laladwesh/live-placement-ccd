@@ -9,7 +9,11 @@ let io = null;
  * @param {http.Server} server - HTTP server instance
  */
 export function initializeSocket(server) {
+  const BASE_PATH = process.env.BASE_PATH || "";
+  const socketPath = `${BASE_PATH ? BASE_PATH : ""}/api/socket.io`.replace(/\/+/g, '/');
+
   io = new Server(server, {
+    path: socketPath,
     cors: {
       origin: process.env.FRONTEND_ROOT || "http://localhost:3000",
       methods: ["GET", "POST"],
