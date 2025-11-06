@@ -25,31 +25,52 @@ export const SocketProvider = ({ children }) => {
       return;
     }
 
-    const socketBase = process.env.REACT_APP_BACKEND_URL || window.location.origin;
+    // In development, connect to localhost:4000
+    // In production, use same origin
+    const isDev = process.env.NODE_ENV !== 'production';
+    const socketBase = process.env.REACT_APP_BACKEND_URL || (isDev ? "http://localhost:4000" : window.location.origin);
     const socketPath = process.env.REACT_APP_SOCKET_PATH || "/dday/api/socket.io";
+
+    console.log("[Socket.IO] Client Config:");
+    console.log("  Environment:", process.env.NODE_ENV);
+    console.log("  Base URL:", socketBase);
+    console.log("  Path:", socketPath);
+    console.log("  Full URL:", `${socketBase}${socketPath}`);
 
     const newSocket = io(socketBase, {
       path: socketPath,
       auth: { token },
-      transports: ["websocket", "polling"],
+      transports: ["polling", "websocket"], // Match server: try polling first, then upgrade
       reconnection: true,
       reconnectionDelay: 1000,
-      reconnectionAttempts: 5
+      reconnectionAttempts: 5,
+      timeout: 20000,
+      forceNew: true
     });
 
     newSocket.on("connect", () => {
       console.log(" Socket connected:", newSocket.id);
+      console.log("   Transport:", newSocket.io.engine.transport.name);
       setConnected(true);
     });
 
     newSocket.on("disconnect", (reason) => {
-      // console.log("❌ Socket disconnected:", reason);
+      console.log(" Socket disconnected:", reason);
       setConnected(false);
     });
 
     newSocket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+      console.error(" Socket connection error:", error.message);
+      console.error("   Error details:", error);
       setConnected(false);
+    });
+
+    newSocket.io.on("reconnect_attempt", () => {
+      console.log("[Reconnect] Attempting to reconnect...");
+    });
+
+    newSocket.io.on("reconnect", (attemptNumber) => {
+      console.log(" Reconnected after", attemptNumber, "attempts");
     });
 
     setSocket(newSocket);
