@@ -143,7 +143,7 @@ export default function UploadCSVModal({ companyId, onClose, onSuccess }) {
               />
               {file && (
                 <p className="text-sm text-green-600 mt-2">
-                  ✓ Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                  Selected: {file.name} ({(file.size / 1024).toFixed(2)} KB)
                 </p>
               )}
             </div>
