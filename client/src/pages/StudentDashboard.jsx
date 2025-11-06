@@ -77,7 +77,7 @@ export default function StudentDashboard() {
     // Listen for offer approved (confirmed)
     socket.on("offer:approved", (data) => {
       // console.log(" Offer approved:", data);
-      toast.success(`Congratulations! Your offer from ${data.companyName} has been confirmed! 🎉`, {
+      toast.success(`Congratulations! Your offer from ${data.companyName} has been confirmed!`, {
         duration: 6000,
         icon: '🎊'
       });
@@ -368,9 +368,7 @@ export default function StudentDashboard() {
             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
               Venue
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
-              Current Status
-            </th>
+            
             <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
               POCs
             </th>
@@ -385,38 +383,7 @@ export default function StudentDashboard() {
               <td className="px-6 py-4 text-slate-700">
                 {shortlist.companyId?.venue || "—"}
               </td>
-              <td className="px-6 py-4">
-                <div className="flex flex-col gap-1">
-                  {/* Main Status Badge */}
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                      shortlist.stage === "OFFERED" || shortlist.stage === "SELECTED"
-                        ? "bg-green-100 text-green-800"
-                        : shortlist.stage === "REJECTED"
-                        ? "bg-red-100 text-red-800"
-                        : shortlist.stage === "WAITLISTED"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-blue-100 text-blue-800"
-                    }`}
-                  >
-                    {shortlist.stage || "Pending"}
-                  </span>
-                  
-                  {/* CCD Confirmation Pending Badge */}
-                  {shortlist.hasPendingOffer && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-300">
-                      ⏳ CCD Confirmation Pending
-                    </span>
-                  )}
-                  
-                  {/* Offer Confirmed Badge */}
-                  {shortlist.isOffered && !shortlist.hasPendingOffer && (
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-300">
-                      ✅ Offer Confirmed
-                    </span>
-                  )}
-                </div>
-              </td>
+              
               <td className="px-6 py-4 text-slate-700">
                 {shortlist.companyId?.POCs?.length > 0 ? (
                     shortlist.companyId.POCs.map((poc) => (
