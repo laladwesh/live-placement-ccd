@@ -180,7 +180,7 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
                 onClick={downloadSampleCSV}
                 className="text-sm text-blue-600 hover:text-blue-800 underline"
               >
-                📥 Download Sample CSV Format
+                Download Sample CSV Format
               </button>
               {/* <span className="text-sm text-slate-500">
                 (Format: email,name,rollNumber,phoneNo)
