@@ -24,7 +24,7 @@ export async function sendOfferApprovalEmail({ to, studentName, companyName }) {
  const mailOptions = {
    from: `"CCD" <${process.env.SMTP_USER}>`,
    to,
-   subject: `🎉 Test Mail ${studentName} — Offer Approved!`,
+   subject: `Test Mail ${studentName} — Offer Approved!`,
    // html template has to be updated according to template provide by sir, this is a placeholder.
    html: `
      <div style="font-family: Arial, sans-serif; line-height: 1.5;">
