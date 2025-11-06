@@ -24,16 +24,16 @@ export default function ShortlistCard({ shortlist }) {
 
   const getStageIcon = (stage) => {
     const icons = {
-      SHORTLISTED: "📋",
-      WAITLISTED: "⏳",
-      R1: "🎯",
-      R2: "🎯",
-      R3: "🎯",
-      R4: "🎯",
-      OFFERED: "🎉",
-      REJECTED: "❌"
+      SHORTLISTED: "",
+      WAITLISTED: "",
+      R1: "",
+      R2: "",
+      R3: "",
+      R4: "",
+      OFFERED: "",
+      REJECTED: ""
     };
-    return icons[stage] || "📄";
+    return icons[stage] || "";
   };
 
   const formatCTC = (ctc) => {
@@ -78,18 +78,18 @@ export default function ShortlistCard({ shortlist }) {
       {/* Company Details */}
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2 text-slate-600">
-          <span className="font-medium">💰 CTC:</span>
+          <span className="font-medium">CTC:</span>
           <span>{formatCTC(shortlist.companyId?.ctc)}</span>
         </div>
         {shortlist.companyId?.location && (
           <div className="flex items-center gap-2 text-slate-600">
-            <span className="font-medium">📍 Location:</span>
+            <span className="font-medium">Location:</span>
             <span>{shortlist.companyId.location}</span>
           </div>
         )}
         {shortlist.companyId?.visitDate && (
           <div className="flex items-center gap-2 text-slate-600">
-            <span className="font-medium">📅 Visit Date:</span>
+            <span className="font-medium">Visit Date:</span>
             <span>{formatDate(shortlist.companyId.visitDate)}</span>
           </div>
         )}
@@ -99,7 +99,7 @@ export default function ShortlistCard({ shortlist }) {
       {shortlist.remarks && (
         <div className="mt-3 pt-3 border-t border-slate-100">
           <p className="text-sm text-slate-500 italic">
-            💬 {shortlist.remarks}
+            Remarks: {shortlist.remarks}
           </p>
         </div>
       )}
