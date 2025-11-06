@@ -396,7 +396,7 @@ export default function CompanyDetails() {
                         <div className="ml-4">
                           <div className="text-sm font-medium text-slate-900">{item.student?.name}</div>
                           {item.student?.isPlaced && (
-                            <div className="text-xs text-green-600">✓ Placed</div>
+                            <div className="text-xs text-green-600">Placed</div>
                           )}
                         </div>
                       </div>
