@@ -45,8 +45,24 @@ app.use(morgan('dev'));
 // basic middleware
 app.use(express.json());
 app.use(cookieParser());
+
+// Extract origin without path for CORS
+let corsOrigin = process.env.FRONTEND_ROOT || "http://localhost:3000";
+try {
+  const url = new URL(corsOrigin);
+  corsOrigin = url.origin;
+} catch (e) {
+  // use as-is if not a valid URL
+}
+
+// In development, allow both localhost:3000 and the configured origin
+const isDev = process.env.NODE_ENV !== "production";
+const allowedOrigins = isDev 
+  ? ["http://localhost:3000", "http://localhost:4000", corsOrigin]
+  : corsOrigin;
+
 app.use(cors({
-  origin: process.env.FRONTEND_ROOT || "http://localhost:3000",
+  origin: allowedOrigins,
   credentials: true
 }));
 
@@ -77,9 +93,15 @@ console.log("AdminJS will be mounted at:", adminMountPath);
 app.use(adminMountPath, adminRouter);
 
 // Helmet for security (after AdminJS to avoid CSP blocking AdminJS assets)
-app.use(helmet({
-  contentSecurityPolicy: false, // Disable CSP for AdminJS to work
-}));
+// Don't apply helmet to Socket.IO paths
+app.use((req, res, next) => {
+  if (req.path.includes('/socket.io/')) {
+    return next();
+  }
+  helmet({
+    contentSecurityPolicy: false, // Disable CSP for AdminJS to work
+  })(req, res, next);
+});
 
 // mount API routes under /api (respect BASE_PATH)
 const prefixed = (p) => (BASE_PATH ? `${BASE_PATH}${p}` : p);
@@ -97,7 +119,7 @@ app.get(prefixed('/api/users/me'), authMiddleware, whoami);
 // Dev reverse proxy behavior: proxy everything not under /api to CRA dev server
 // Production behavior: serve client/build statically
 // =======================================================
-const isDev = process.env.NODE_ENV !== "production";
+// const isDev = process.env.NODE_ENV !== "production";
 
 if (isDev) {
   // Proxy non-API requests to CRA dev server at http://localhost:3000
