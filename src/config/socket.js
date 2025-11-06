@@ -10,20 +10,67 @@ let io = null;
  */
 export function initializeSocket(server) {
   const BASE_PATH = process.env.BASE_PATH || "";
-  const socketPath = `${BASE_PATH ? BASE_PATH : ""}/api/socket.io`.replace(/\/+/g, '/');
+  const socketPath = BASE_PATH ? `${BASE_PATH}/api/socket.io` : '/api/socket.io';
+
+  // Extract origin without path for CORS (origins don't include paths!)
+  let corsOrigin = process.env.FRONTEND_ROOT || "http://localhost:3000";
+  try {
+    const url = new URL(corsOrigin);
+    corsOrigin = url.origin; // This removes any path like /dday
+  } catch (e) {
+    // If FRONTEND_ROOT is not a valid URL, use as-is
+  }
+
+  // In development, allow multiple origins
+  const isDev = process.env.NODE_ENV !== "production";
+  const allowedOrigins = isDev 
+    ? ["http://localhost:3000", "http://localhost:4000", corsOrigin]
+    : corsOrigin;
 
   io = new Server(server, {
     path: socketPath,
     cors: {
-      origin: process.env.FRONTEND_ROOT || "http://localhost:3000",
+      origin: allowedOrigins,
       methods: ["GET", "POST"],
       credentials: true
     },
-    transports: ["websocket", "polling"]
+    transports: ["polling", "websocket"], // Try polling first, then upgrade
+    allowEIO3: true, // Support older clients
+    pingTimeout: 60000,
+    pingInterval: 25000
+  });
+  
+  console.log("=".repeat(60));
+  console.log("[Socket.IO] Server Initialized:");
+  console.log("   Path:", socketPath);
+  console.log("   CORS Origin:", allowedOrigins);
+  console.log("   BASE_PATH:", BASE_PATH);
+  console.log("   NODE_ENV:", process.env.NODE_ENV);
+  console.log("=".repeat(60));
+  
+  logger.info(`Socket.IO initialized with path: ${socketPath}, CORS origin: ${corsOrigin}`);
+
+  // Log connection errors
+  io.engine.on("connection_error", (err) => {
+    console.log(" Socket.IO connection_error:", err);
+    logger.error("Socket.IO connection error:", {
+      code: err.code,
+      message: err.message,
+      context: err.context,
+      req: err.req ? {
+        url: err.req.url,
+        method: err.req.method,
+        headers: err.req.headers
+      } : null
+    });
+  });
+
+  io.engine.on("initial_headers", (headers, req) => {
+    console.log("[Socket.IO] initial_headers for:", req.url);
   });
 
   io.on("connection", (socket) => {
-    logger.info(`Socket connected: ${socket.id}`);
+    logger.info(`[OK] Socket connected: ${socket.id}`);
 
     // Handle client joining a company room (for POCs and admins viewing company)
     socket.on("join:company", (companyId) => {
