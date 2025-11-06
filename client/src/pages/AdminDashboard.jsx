@@ -249,7 +249,7 @@ export default function AdminDashboard() {
           <td className="px-4 py-3 border-b border-slate-200">
             {placedOffer ? (
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                ✓ Placed at {placedOffer.companyId?.name}
+                Placed at {placedOffer.companyId?.name}
               </span>
             ) : hasMultipleOffers ? (
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
@@ -282,7 +282,7 @@ export default function AdminDashboard() {
                   disabled={processing === offers[0]._id}
                   className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
                 >
-                  {processing === offers[0]._id ? "..." : "✓ Approve"}
+                  {processing === offers[0]._id ? "..." : "Approve"}
                 </button>
                 <button
                   onClick={() => openRejectReasonModal(offers[0]._id)}
@@ -316,7 +316,7 @@ export default function AdminDashboard() {
             <td className="px-4 py-2 border-b border-slate-200">
               {!isPending && offer._id === placedOffer?._id ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                  ✓ ACCEPTED
+                  ACCEPTED
                 </span>
               ) : !isPending && placedOffer ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-200 text-slate-600">
