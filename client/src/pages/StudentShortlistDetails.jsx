@@ -105,10 +105,10 @@ export default function StudentShortlistDetails() {
 
   const company = shortlist.companyId;
   const stageTimeline = [
-    { stage: "SHORTLISTED", label: "Shortlisted", icon: "📋" },
-    { stage: "R1", label: "Round 1", icon: "🎯" },
-    { stage: "R2", label: "Round 2", icon: "🎯" },
-    { stage: "R3", label: "Round 3", icon: "🎯" },
+    { stage: "SHORTLISTED", label: "Shortlisted", icon: "" },
+    { stage: "R1", label: "Round 1", icon: "" },
+    { stage: "R2", label: "Round 2", icon: "" },
+    { stage: "R3", label: "Round 3", icon: "" },
   ];
 
   const currentStageIndex = stageTimeline.findIndex(s => s.stage === shortlist.stage);
@@ -149,7 +149,9 @@ export default function StudentShortlistDetails() {
           {/* Company Details Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
             <div className="flex items-center gap-3">
-              <span className="text-2xl">💰</span>
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-slate-600 font-medium">₹</span>
+              </div>
               <div>
                 <p className="text-sm text-slate-600">CTC</p>
                 <p className="font-semibold text-slate-900">{formatCTC(company?.ctc)}</p>
@@ -157,7 +159,12 @@ export default function StudentShortlistDetails() {
             </div>
             {company?.location && (
               <div className="flex items-center gap-3">
-                <span className="text-2xl">📍</span>
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
                 <div>
                   <p className="text-sm text-slate-600">Location</p>
                   <p className="font-semibold text-slate-900">{company.location}</p>
@@ -166,7 +173,11 @@ export default function StudentShortlistDetails() {
             )}
             {company?.visitDate && (
               <div className="flex items-center gap-3">
-                <span className="text-2xl">📅</span>
+                <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
                 <div>
                   <p className="text-sm text-slate-600">Visit Date</p>
                   <p className="font-semibold text-slate-900">{formatDate(company.visitDate)}</p>
@@ -174,7 +185,11 @@ export default function StudentShortlistDetails() {
               </div>
             )}
             <div className="flex items-center gap-3">
-              <span className="text-2xl">🎯</span>
+              <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <div>
                 <p className="text-sm text-slate-600">Interview Rounds</p>
                 <p className="font-semibold text-slate-900">{company?.maxRounds || 3} rounds</p>
@@ -249,7 +264,11 @@ export default function StudentShortlistDetails() {
         {shortlist.isOffered && offer && (
           <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg shadow-sm p-6 mb-6 border border-green-200">
             <div className="flex items-start gap-4">
-              <span className="text-5xl">🎉</span>
+              <div className="w-16 h-16 bg-green-200 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-10 h-10 text-green-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </div>
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-green-800 mb-2">Congratulations!</h2>
                 <p className="text-green-700 mb-4">
@@ -282,7 +301,11 @@ export default function StudentShortlistDetails() {
         {shortlist.stage === "REJECTED" && (
           <div className="bg-red-50 rounded-lg shadow-sm p-6 mb-6 border border-red-200">
             <div className="flex items-start gap-4">
-              <span className="text-4xl">❌</span>
+              <div className="w-12 h-12 bg-red-200 rounded-full flex items-center justify-center flex-shrink-0">
+                <svg className="w-7 h-7 text-red-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </div>
               <div>
                 <h2 className="text-xl font-bold text-red-800 mb-2">Not Selected</h2>
                 <p className="text-red-700">
@@ -299,7 +322,11 @@ export default function StudentShortlistDetails() {
           
           <div className="space-y-3">
             <div className="flex items-start gap-3">
-              <span className="text-xl">📅</span>
+              <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
               <div>
                 <p className="text-sm text-slate-600">Added to Shortlist</p>
                 <p className="font-medium text-slate-900">{formatDate(shortlist.createdAt)}</p>
@@ -307,7 +334,11 @@ export default function StudentShortlistDetails() {
             </div>
 
             <div className="flex items-start gap-3">
-              <span className="text-xl">🔄</span>
+              <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </div>
               <div>
                 <p className="text-sm text-slate-600">Last Updated</p>
                 <p className="font-medium text-slate-900">{formatDate(shortlist.updatedAt)}</p>
@@ -316,7 +347,11 @@ export default function StudentShortlistDetails() {
 
             {shortlist.remarks && (
               <div className="flex items-start gap-3">
-                <span className="text-xl">💬</span>
+                <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-5 h-5 text-slate-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
+                  </svg>
+                </div>
                 <div>
                   <p className="text-sm text-slate-600">Remarks</p>
                   <p className="font-medium text-slate-900">{shortlist.remarks}</p>
