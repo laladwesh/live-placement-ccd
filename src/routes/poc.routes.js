@@ -5,7 +5,10 @@ import {
   getPOCCompanies,
   getPOCCompanyStudents,
   updateInterviewStage,
+  updateShortlistStatus,
   createOffer,
+  revertOffer,
+  undoRejection,
   addWalkInStudent,
   markProcessCompleted
 } from "../controllers/poc.controller.js";
@@ -25,8 +28,17 @@ router.get("/companies/:companyId/students", getPOCCompanyStudents);
 // Update interview stage
 router.patch("/shortlist/:shortlistId/stage", updateInterviewStage);
 
+// Update shortlist status (shortlisted/waitlisted)
+router.patch("/shortlist/:shortlistId/status", updateShortlistStatus);
+
 // Create offer for student
 router.post("/shortlist/:shortlistId/offer", createOffer);
+
+// Revert offer (undo)
+router.delete("/shortlist/:shortlistId/offer", revertOffer);
+
+// Undo rejection
+router.patch("/shortlist/:shortlistId/undo-rejection", undoRejection);
 
 // Add walk-in student
 router.post("/companies/:companyId/walkin", addWalkInStudent);
