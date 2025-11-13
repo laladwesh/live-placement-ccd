@@ -9,6 +9,8 @@ WORKDIR /app/client
 # Copy client package files and install dependencies
 COPY client/package.json client/package-lock.json* ./
 RUN npm install --legacy-peer-deps
+# Ensure jspdf and jspdf-autotable are available during client build
+RUN npm install jspdf jspdf-autotable --legacy-peer-deps --save
 # Copy client source and build production bundle
 COPY client/ .
 RUN npm run build
