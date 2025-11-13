@@ -175,3 +175,6 @@ vite.config.ts.timestamp-*
 .DS_Store
 
 seed.js
+scripts/dummy.js
+scripts/seed.js
+scripts/move-rounds-to-shortlist.js
