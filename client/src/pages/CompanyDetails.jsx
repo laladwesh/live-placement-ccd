@@ -60,43 +60,43 @@ export default function CompanyDetails() {
 
     // Listen for student additions
     socket.on("student:added", (data) => {
-      // console.log("📌 Student added:", data);
+      // console.log("Student added:", data);
       silentRefresh(); // Silent background refresh
     });
 
     // Listen for student removals
     socket.on("student:removed", (data) => {
-      // console.log("🗑️ Student removed:", data);
+      // console.log("Student removed:", data);
       silentRefresh();
     });
 
     // Listen for shortlist updates (stage changes by POC)
     socket.on("shortlist:update", (data) => {
-      // console.log("📊 Shortlist updated:", data);
+      // console.log("Shortlist updated:", data);
       silentRefresh(); // Refresh when POC changes interview stage
     });
 
     // Listen for offers created by POC
     socket.on("offer:created", (data) => {
-      // console.log("🎉 Offer created:", data);/
+      // console.log("Offer created:", data);
       silentRefresh(); // Refresh to show new offer
     });
 
     // Listen for offer approvals
     socket.on("offer:approved", (data) => {
-      // console.log(" Offer approved:", data);
+      // console.log("Offer approved:", data);
       silentRefresh();
     });
 
     // Listen for offer rejections
     socket.on("offer:rejected", (data) => {
-      // console.log("❌ Offer rejected:", data);
+      // console.log("Offer rejected:", data);
       silentRefresh();
     });
 
     // Listen for student placement notifications (real-time update when student gets placed elsewhere)
     socket.on("student:placed", (data) => {
-      // console.log("🎓 Student placed elsewhere:", data);
+      // console.log("Student placed elsewhere:", data);
       toast.success(`Student placed at ${data.placedCompanyName}`, {
         duration: 5000
       });
@@ -142,7 +142,7 @@ export default function CompanyDetails() {
     } catch (err) {
       console.error("whoami error", err);
       localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
+      window.location.href = "/dday/login";
     }
   };
 
