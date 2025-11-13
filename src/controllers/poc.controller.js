@@ -5,7 +5,7 @@ import Offer, { OfferStatus } from "../models/offer.model.js";
 import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
-import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate } from "../config/socket.js";
+import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate, emitOfferReverted } from "../config/socket.js";
 import { emitCompanyProcessChanged } from "../config/socket.js";
 
 /**
@@ -83,9 +83,17 @@ export const getPOCCompanyStudents = async (req, res) => {
     const students = await Student.find({ userId: { $in: studentIds } });
     const studentMap = new Map(students.map(s => [s.userId.toString(), s]));
 
+    // Get all offers for these students to check for rejected offers
+    const offers = await Offer.find({ 
+      companyId: companyId,
+      studentId: { $in: studentIds }
+    });
+    const offerMap = new Map(offers.map(o => [o.studentId.toString(), o]));
+
     // Enrich shortlists with placement status and format for frontend
     const enrichedShortlists = shortlists.map(s => {
       const studentDoc = studentMap.get(s.studentId._id.toString());
+      const offer = offerMap.get(s.studentId._id.toString());
       
       // Determine currentStage based on isOffered, stage, or status
       let currentStage;
@@ -111,6 +119,7 @@ export const getPOCCompanyStudents = async (req, res) => {
         currentStage: currentStage,
         interviewStatus: s.interviewStatus,
         isOffered: s.isOffered,
+        hasRejectedOffer: offer?.approvalStatus === "REJECTED", // Check if admin rejected the offer
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
         isStudentPlaced: s.isStudentPlaced, // Student placed somewhere (this or other company)
@@ -215,6 +224,11 @@ export const updateInterviewStage = async (req, res) => {
       });
     }
 
+    // Save previous stage before updating (for undo functionality)
+    if (shortlist.stage !== stage) {
+      shortlist.previousStage = shortlist.stage;
+    }
+
     // Update stage
     shortlist.stage = stage;
     await shortlist.save();
@@ -236,6 +250,91 @@ export const updateInterviewStage = async (req, res) => {
     });
   } catch (err) {
     logger.error("updateInterviewStage error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Update student status (shortlisted/waitlisted) and optionally clear stage
+ * PATCH /api/poc/shortlist/:shortlistId/status
+ * Body: { status: "shortlisted" | "waitlisted", clearStage?: boolean }
+ */
+export const updateShortlistStatus = async (req, res) => {
+  try {
+    const { shortlistId } = req.params;
+    const { status, clearStage } = req.body;
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    const shortlist = await Shortlist.findById(shortlistId)
+      .populate('studentId', 'name emailId')
+      .populate('companyId', 'name POCs');
+
+    if (!shortlist) {
+      return res.status(404).json({ message: "Shortlist entry not found" });
+    }
+
+    // Validate status
+    if (!Object.values(Status).includes(status)) {
+      return res.status(400).json({ 
+        message: "Invalid status. Must be 'shortlisted' or 'waitlisted'" 
+      });
+    }
+
+    // Admins can update any company, POCs only their assigned companies
+    if (userRole !== 'admin') {
+      // Verify POC is assigned to this company
+      if (!shortlist.companyId.POCs.some(poc => poc.toString() === userId.toString())) {
+        return res.status(403).json({ 
+          message: "You are not assigned to this company" 
+        });
+      }
+      
+      // POCs cannot update completed processes
+      if (shortlist.companyId.isProcessCompleted) {
+        return res.status(403).json({ 
+          message: "Cannot update status - process is completed" 
+        });
+      }
+    }
+
+    // Check if student is already placed
+    const student = await Student.findOne({ userId: shortlist.studentId._id });
+    if (student && student.isPlaced) {
+      return res.status(400).json({ 
+        message: "Student is already placed and cannot be modified" 
+      });
+    }
+
+    // Update status
+    shortlist.status = status;
+    
+    // Clear stage if requested (when moving back from rounds to shortlisted)
+    if (clearStage) {
+      shortlist.stage = null;
+      shortlist.interviewStatus = null;
+    }
+    
+    await shortlist.save();
+
+    logger.info(`POC ${req.user.emailId} updated ${shortlist.studentId.emailId} status to ${status}${clearStage ? ' (cleared stage)' : ''}`);
+
+    // Emit socket event for real-time update
+    emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
+      shortlistId: shortlist._id,
+      companyId: shortlist.companyId._id,
+      studentId: shortlist.studentId._id,
+      status: shortlist.status,
+      stage: shortlist.stage,
+      updatedAt: shortlist.updatedAt
+    });
+
+    return res.json({
+      message: "Status updated successfully",
+      shortlist
+    });
+  } catch (err) {
+    logger.error("updateShortlistStatus error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
@@ -283,15 +382,18 @@ export const createOffer = async (req, res) => {
       });
     }
 
-    // Check if offer already exists
+    // Check if offer already exists (including rejected offers - POC cannot create new offer)
     const existingOffer = await Offer.findOne({
       studentId: shortlist.studentId._id,
       companyId: shortlist.companyId._id
     });
 
     if (existingOffer) {
+      const offerStatusMsg = existingOffer.approvalStatus === "REJECTED" 
+        ? "Offer was rejected by admin. Cannot create new offer for this student."
+        : "Offer already exists for this student";
       return res.status(400).json({ 
-        message: "Offer already exists for this student" 
+        message: offerStatusMsg
       });
     }
 
@@ -352,6 +454,179 @@ export const createOffer = async (req, res) => {
     });
   } catch (err) {
     logger.error("createOffer error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Revert offer (undo offer creation)
+ * DELETE /api/poc/shortlist/:shortlistId/offer
+ */
+export const revertOffer = async (req, res) => {
+  try {
+    const { shortlistId } = req.params;
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    const shortlist = await Shortlist.findById(shortlistId)
+      .populate('studentId', 'name emailId')
+      .populate('companyId', 'name POCs');
+
+    if (!shortlist) {
+      return res.status(404).json({ message: "Shortlist entry not found" });
+    }
+
+    // Admins can revert offers for any company, POCs only their assigned companies
+    if (userRole !== 'admin') {
+      if (!shortlist.companyId.POCs.some(poc => poc.toString() === userId.toString())) {
+        return res.status(403).json({ 
+          message: "You are not assigned to this company" 
+        });
+      }
+      
+      if (shortlist.companyId.isProcessCompleted) {
+        return res.status(403).json({ 
+          message: "Cannot revert offer - process is completed" 
+        });
+      }
+    }
+
+    // Check if offer exists
+    const offer = await Offer.findOne({
+      studentId: shortlist.studentId._id,
+      companyId: shortlist.companyId._id
+    });
+
+    if (!offer) {
+      return res.status(404).json({ 
+        message: "No offer found for this student" 
+      });
+    }
+
+    // Don't allow reverting if offer was already accepted/rejected by student
+    if (offer.offerStatus === "ACCEPTED" || offer.offerStatus === "REJECTED") {
+      return res.status(400).json({ 
+        message: `Cannot revert offer - student has already ${offer.offerStatus.toLowerCase()} it` 
+      });
+    }
+
+    // Delete the offer
+    await Offer.deleteOne({ _id: offer._id });
+
+    // Revert shortlist back to previous stage
+    shortlist.isOffered = false;
+    if (shortlist.previousStage) {
+      shortlist.stage = shortlist.previousStage;
+      shortlist.previousStage = null;
+    }
+    await shortlist.save();
+
+    logger.info(`POC ${req.user.emailId} reverted offer for ${shortlist.studentId.emailId} at ${shortlist.companyId.name}`);
+
+    // Emit socket events for real-time update
+    emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
+      shortlistId: shortlist._id,
+      companyId: shortlist.companyId._id,
+      studentId: shortlist.studentId._id,
+      stage: shortlist.stage,
+      isOffered: false,
+      updatedAt: shortlist.updatedAt
+    });
+
+    // Emit offer reverted event to admin and all relevant rooms
+    emitOfferReverted(shortlist.studentId._id.toString(), shortlist.companyId._id.toString(), {
+      offerId: offer._id,
+      shortlistId: shortlist._id,
+      companyId: shortlist.companyId._id,
+      studentId: shortlist.studentId._id,
+      studentName: shortlist.studentId.name,
+      companyName: shortlist.companyId.name,
+      revertedBy: req.user.name,
+      previousStage: shortlist.stage
+    });
+
+    return res.json({
+      message: "Offer reverted successfully",
+      shortlist
+    });
+  } catch (err) {
+    logger.error("revertOffer error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Undo rejection (move student back from REJECTED to previous stage)
+ * PATCH /api/poc/shortlist/:shortlistId/undo-rejection
+ */
+export const undoRejection = async (req, res) => {
+  try {
+    const { shortlistId } = req.params;
+    const userId = req.user._id;
+    const userRole = req.user.role;
+
+    const shortlist = await Shortlist.findById(shortlistId)
+      .populate('studentId', 'name emailId')
+      .populate('companyId', 'name POCs');
+
+    if (!shortlist) {
+      return res.status(404).json({ message: "Shortlist entry not found" });
+    }
+
+    // Check if student is actually rejected
+    if (shortlist.stage !== Stage.REJECTED) {
+      return res.status(400).json({ 
+        message: "Student is not in rejected state" 
+      });
+    }
+
+    // Admins can undo for any company, POCs only their assigned companies
+    if (userRole !== 'admin') {
+      if (!shortlist.companyId.POCs.some(poc => poc.toString() === userId.toString())) {
+        return res.status(403).json({ 
+          message: "You are not assigned to this company" 
+        });
+      }
+      
+      if (shortlist.companyId.isProcessCompleted) {
+        return res.status(403).json({ 
+          message: "Cannot undo rejection - process is completed" 
+        });
+      }
+    }
+
+    // Check if student is already placed
+    const student = await Student.findOne({ userId: shortlist.studentId._id });
+    if (student && student.isPlaced) {
+      return res.status(400).json({ 
+        message: "Student is already placed and cannot be modified" 
+      });
+    }
+
+    // Revert to previous stage or default to SHORTLISTED
+    const previousStage = shortlist.previousStage || null;
+    shortlist.stage = previousStage;
+    shortlist.previousStage = null;
+
+    await shortlist.save();
+
+    logger.info(`POC ${req.user.emailId} undid rejection for ${shortlist.studentId.emailId} - reverted to ${previousStage || 'SHORTLISTED'}`);
+
+    // Emit socket event for real-time update
+    emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
+      shortlistId: shortlist._id,
+      companyId: shortlist.companyId._id,
+      studentId: shortlist.studentId._id,
+      stage: shortlist.stage,
+      updatedAt: shortlist.updatedAt
+    });
+
+    return res.json({
+      message: "Rejection undone successfully",
+      shortlist
+    });
+  } catch (err) {
+    logger.error("undoRejection error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
