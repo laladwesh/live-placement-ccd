@@ -41,6 +41,7 @@ const ShortlistSchema = new mongoose.Schema({
   stage: { type: String, enum: Object.values(Stage), required: false },
   interviewStatus: { type: String, enum: Object.values(InterviewStatus), required: false },
   isOffered: { type: Boolean, default: false },
+  previousStage: { type: String, required: false }, // Store previous stage for undo operations
   
   // Placement tracking fields
   isStudentPlaced: { type: Boolean, default: false },
