@@ -2,52 +2,180 @@
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import ConfirmDialog from "./ConfirmDialog";
+import PINConfirmModal from "./PINConfirmModal";
 
-export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdate, onOfferCreated }) {
+export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdate, onOfferCreated, isPOC = false }) {
   const [updating, setUpdating] = useState(false);
   const [creatingOffer, setCreatingOffer] = useState(false);
-  const [showOfferConfirm, setShowOfferConfirm] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [revertingOffer, setRevertingOffer] = useState(false);
+  const [undoingRejection, setUndoingRejection] = useState(false);
+
+  // PIN confirmation states
+  const [showPINConfirm, setShowPINConfirm] = useState(false);
+  const [pendingAction, setPendingAction] = useState(null);
+  const [actionMetadata, setActionMetadata] = useState(null);
 
   // Check if student is placed at THIS company (student.isPlaced means placed at this company)
   const isPlacedHere = shortlist.student?.isPlaced;
   // Check if student is placed at ANOTHER company (shortlist.isStudentPlaced but NOT student.isPlaced)
   const isPlacedElsewhere = shortlist.isStudentPlaced && !shortlist.student?.isPlaced;
   const placedCompanyName = shortlist.studentPlacedCompany;
+  // Check if student has a rejected offer (admin rejected the offer)
+  const hasRejectedOffer = shortlist.hasRejectedOffer;
   // const isBlocked = shortlist.student?.isBlocked;
   const currentStage = shortlist.currentStage;
 
-  const handleStageChange = async (newStage) => {
-    if (isPlacedHere || isPlacedElsewhere || updating) return;
-
-    setUpdating(true);
-    try {
-      await api.patch(`/poc/shortlist/${shortlist._id}/stage`, { stage: newStage });
-      // Don't call onStageUpdate() - let socket handle the refresh
-      // The socket will update all connected clients including this one
-    } catch (err) {
-      console.error("Error updating stage:", err);
-      toast.error(err.response?.data?.message || "Failed to update stage");
-    } finally {
-      setUpdating(false);
+  // Wrapper function to handle PIN confirmation for POCs
+  const withPINConfirmation = (action, actionType, title, message) => {
+    if (isPOC) {
+      // Show PIN modal for POCs
+      setPendingAction(() => action);
+      setActionMetadata({ type: actionType, title, message });
+      setShowPINConfirm(true);
+    } else {
+      // Execute immediately for non-POCs (admin)
+      action();
     }
   };
 
-  const handleCreateOffer = async () => {
-    if (isPlacedHere || isPlacedElsewhere || creatingOffer) return;
-
-    setCreatingOffer(true);
-    try {
-      await api.post(`/poc/shortlist/${shortlist._id}/offer`);
-      toast.success(`Offer created for ${shortlist.student?.name}`);
-      // Don't call onOfferCreated() - let socket handle the refresh
-      // The socket will update all connected clients including this one
-    } catch (err) {
-      console.error("Error creating offer:", err);
-      toast.error(err.response?.data?.message || "Failed to create offer");
-    } finally {
-      setCreatingOffer(false);
+  const executePendingAction = () => {
+    if (pendingAction) {
+      pendingAction();
+      setPendingAction(null);
+      setActionMetadata(null);
     }
+  };
+
+  const handleStageChange = async (newStage) => {
+    if (isPlacedHere || isPlacedElsewhere || hasRejectedOffer || updating) return;
+
+    const action = async () => {
+      setUpdating(true);
+      try {
+        await api.patch(`/poc/shortlist/${shortlist._id}/stage`, { stage: newStage });
+        // Don't call onStageUpdate() - let socket handle the refresh
+        // The socket will update all connected clients including this one
+      } catch (err) {
+        console.error("Error updating stage:", err);
+        toast.error(err.response?.data?.message || "Failed to update stage");
+      } finally {
+        setUpdating(false);
+      }
+    };
+
+    const stageLabel = newStage === "REJECTED" ? "Reject" : `Move to ${newStage}`;
+    withPINConfirmation(
+      action,
+      newStage === "REJECTED" ? "reject" : "update",
+      `${stageLabel} Student`,
+      `Are you sure you want to ${stageLabel.toLowerCase()} ${shortlist.student?.name}?`
+    );
+  };
+
+  const handleStatusChange = async (newStatus, clearStage = false) => {
+    if (isPlacedHere || isPlacedElsewhere || hasRejectedOffer || updatingStatus) return;
+
+    const action = async () => {
+      setUpdatingStatus(true);
+      try {
+        await api.patch(`/poc/shortlist/${shortlist._id}/status`, { 
+          status: newStatus,
+          clearStage: clearStage
+        });
+        // Don't call onStageUpdate() - let socket handle the refresh
+        toast.success(`Student moved to ${newStatus === 'shortlisted' ? 'Shortlisted' : 'Waitlisted'}`);
+      } catch (err) {
+        console.error("Error updating status:", err);
+        toast.error(err.response?.data?.message || "Failed to update status");
+      } finally {
+        setUpdatingStatus(false);
+      }
+    };
+
+    const statusLabel = newStatus === 'shortlisted' ? 'Shortlisted' : 'Waitlisted';
+    withPINConfirmation(
+      action,
+      "update",
+      `Move to ${statusLabel}`,
+      `Are you sure you want to move ${shortlist.student?.name} to ${statusLabel}?`
+    );
+  };
+
+  const handleCreateOffer = async () => {
+    if (isPlacedHere || isPlacedElsewhere || hasRejectedOffer || creatingOffer) return;
+
+    const action = async () => {
+      setCreatingOffer(true);
+      try {
+        await api.post(`/poc/shortlist/${shortlist._id}/offer`);
+        toast.success(`Offer created for ${shortlist.student?.name}`);
+        // Don't call onOfferCreated() - let socket handle the refresh
+        // The socket will update all connected clients including this one
+      } catch (err) {
+        console.error("Error creating offer:", err);
+        toast.error(err.response?.data?.message || "Failed to create offer");
+      } finally {
+        setCreatingOffer(false);
+      }
+    };
+
+    withPINConfirmation(
+      action,
+      "offer",
+      "Create Offer",
+      `Are you sure you want to create an offer for ${shortlist.student?.name}? This will be sent to admin for approval.`
+    );
+  };
+
+  const handleRevertOffer = async () => {
+    if (revertingOffer) return;
+
+    const action = async () => {
+      setRevertingOffer(true);
+      try {
+        await api.delete(`/poc/shortlist/${shortlist._id}/offer`);
+        toast.success(`Offer reverted for ${shortlist.student?.name}`);
+        // Socket will handle the refresh
+      } catch (err) {
+        console.error("Error reverting offer:", err);
+        toast.error(err.response?.data?.message || "Failed to revert offer");
+      } finally {
+        setRevertingOffer(false);
+      }
+    };
+
+    withPINConfirmation(
+      action,
+      "delete",
+      "Revert Offer",
+      `Are you sure you want to revert the offer for ${shortlist.student?.name}?`
+    );
+  };
+
+  const handleUndoRejection = async () => {
+    if (undoingRejection) return;
+
+    const action = async () => {
+      setUndoingRejection(true);
+      try {
+        await api.patch(`/poc/shortlist/${shortlist._id}/undo-rejection`);
+        toast.success(`Rejection undone for ${shortlist.student?.name}`);
+        // Socket will handle the refresh
+      } catch (err) {
+        console.error("Error undoing rejection:", err);
+        toast.error(err.response?.data?.message || "Failed to undo rejection");
+      } finally {
+        setUndoingRejection(false);
+      }
+    };
+
+    withPINConfirmation(
+      action,
+      "update",
+      "Undo Rejection",
+      `Are you sure you want to undo the rejection for ${shortlist.student?.name}?`
+    );
   };
 
   const getStageColor = (stage) => {
@@ -73,6 +201,32 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     }
     return "bg-slate-100 text-slate-700 hover:bg-slate-200";
   };
+
+  // Determine what the dynamic status button should do
+  const getStatusButtonConfig = () => {
+    if (currentStage === 'WAITLISTED') {
+      return {
+        label: 'Mark as Shortlisted',
+        action: () => handleStatusChange('shortlisted', false),
+        color: 'bg-blue-600 hover:bg-blue-700 text-white'
+      };
+    } else if (currentStage?.startsWith('R')) {
+      return {
+        label: 'Remove from Rounds',
+        action: () => handleStatusChange('shortlisted', true),
+        color: 'bg-orange-600 hover:bg-orange-700 text-white'
+      };
+    } else if (currentStage === 'SHORTLISTED') {
+      return {
+        label: 'Move to Waitlist',
+        action: () => handleStatusChange('waitlisted', false),
+        color: 'bg-yellow-600 hover:bg-yellow-700 text-white'
+      };
+    }
+    return null;
+  };
+
+  const statusButtonConfig = getStatusButtonConfig();
 
   return (
     <div className={`p-4 ${isPlacedHere || isPlacedElsewhere ? 'bg-gray-50' : 'hover:bg-slate-50'}`}>
@@ -101,6 +255,14 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                   <span>Placed elsewhere ({placedCompanyName})</span>
                 </div>
               )}
+              {hasRejectedOffer && (
+                <div className="flex items-center gap-1 text-xs text-red-600 font-medium mt-1">
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>Offer rejected by admin</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -113,8 +275,21 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
         </div>
 
         {/* Round Buttons */}
-        {!isPlacedHere && !isPlacedElsewhere && !["OFFERED", "REJECTED"].includes(currentStage) && (
+        {!isPlacedHere && !isPlacedElsewhere && !hasRejectedOffer && !["OFFERED", "REJECTED"].includes(currentStage) && (
           <div className="flex gap-2 flex-shrink-0">
+            {/* Dynamic Status Button */}
+            {statusButtonConfig && (
+              <button
+                onClick={statusButtonConfig.action}
+                disabled={updatingStatus}
+                className={`px-3 py-1 text-sm font-medium rounded transition disabled:opacity-50 ${statusButtonConfig.color}`}
+                title={statusButtonConfig.label}
+              >
+                {updatingStatus ? "..." : statusButtonConfig.label}
+              </button>
+            )}
+            
+            {/* Round Buttons */}
             {[...Array(maxRounds)].map((_, index) => {
               const round = index + 1;
               return (
@@ -142,14 +317,28 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
             <div className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded">
               Not Available (Placed elsewhere)
             </div>
+          ) : hasRejectedOffer ? (
+            <div className="px-4 py-2 bg-red-100 text-red-700 text-sm font-medium rounded">
+              Offer Rejected by Admin
+            </div>
           ) : currentStage === "OFFERED" ? (
-            <div className="px-4 py-2 bg-green-100 text-green-800 text-sm font-medium rounded">
-              Offer Sent
-            </div>
+            <button
+              onClick={handleRevertOffer}
+              disabled={revertingOffer}
+              className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded hover:bg-orange-700 transition disabled:opacity-50"
+              title="Revert offer and move back to previous round"
+            >
+              {revertingOffer ? "Reverting..." : "Revert Offer"}
+            </button>
           ) : currentStage === "REJECTED" ? (
-            <div className="px-4 py-2 bg-red-100 text-red-800 text-sm font-medium rounded">
-              Rejected
-            </div>
+            <button
+              onClick={handleUndoRejection}
+              disabled={undoingRejection}
+              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition disabled:opacity-50"
+              title="Undo rejection and move back to previous round"
+            >
+              {undoingRejection ? "Undoing..." : "Undo Rejection"}
+            </button>
           ) : (
             <>
               {/* Reject Button */}
@@ -164,7 +353,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               
               {/* Offer Button */}
               <button
-                onClick={() => setShowOfferConfirm(true)}
+                onClick={handleCreateOffer}
                 disabled={creatingOffer || currentStage === "SHORTLISTED" || currentStage === "WAITLISTED"}
                 className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 title={currentStage === "SHORTLISTED" || currentStage === "WAITLISTED" ? "Complete at least one round first" : "Create offer"}
@@ -193,16 +382,18 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
         </div>
       )}
 
-      {/* Confirm Offer Dialog */}
-      <ConfirmDialog
-        isOpen={showOfferConfirm}
-        onClose={() => setShowOfferConfirm(false)}
-        onConfirm={handleCreateOffer}
-        title="Create Offer"
-        message={`Are you sure you want to create an offer for ${shortlist.student?.name}? This will be sent to admin for approval.`}
-        confirmText="Create Offer"
-        confirmColor="green"
-        icon="success"
+      {/* PIN Confirmation Modal (for POCs only) */}
+      <PINConfirmModal
+        isOpen={showPINConfirm}
+        onClose={() => {
+          setShowPINConfirm(false);
+          setPendingAction(null);
+          setActionMetadata(null);
+        }}
+        onConfirm={executePendingAction}
+        title={actionMetadata?.title || "Confirm Action"}
+        message={actionMetadata?.message || "Please enter PIN to confirm this action."}
+        actionType={actionMetadata?.type || "update"}
       />
     </div>
   );
