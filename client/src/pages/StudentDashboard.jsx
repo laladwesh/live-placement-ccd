@@ -95,20 +95,20 @@ export default function StudentDashboard() {
 
     // Listen for offer status updates
     socket.on("offer:status-update", (data) => {
-      // console.log("📊 Offer status updated:", data);
+      // console.log("Offer status updated:", data);
       silentRefresh();
     });
 
     // Listen for student added/removed
     socket.on("student:added", (data) => {
-      // console.log("📌 Student added:", data);
+      // console.log("Student added:", data);
       if (data.student === user._id) {
         silentRefresh();
       }
     });
 
     socket.on("student:removed", (data) => {
-      // console.log("🗑️ Student removed:", data);
+      // console.log("Student removed:", data);
       silentRefresh();
     });
 
@@ -136,7 +136,7 @@ export default function StudentDashboard() {
       }
     } catch (err) {
       console.error("Error fetching user:", err);
-      navigate("/login");
+      navigate("/dday/login");
     }
   };
 
