@@ -5,6 +5,8 @@ import EditCompanyModal from "./EditCompanyModal";
 import ConfirmDialog from "./ConfirmDialog";
 import AlertModal from "./AlertModal";
 import api from "../api/axios";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function CompanyCard({ company, onUpdate, onDelete }) {
   const navigate = useNavigate();
@@ -12,6 +14,113 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
+  const [downloading, setDownloading] = useState(false);
+
+  const handleDownloadPDF = async () => {
+    try {
+      setDownloading(true);
+      
+      // Fetch students data
+      const res = await api.get(`/poc/companies/${company._id}/students`);
+      const shortlists = res.data.shortlists || [];
+      
+      // Filter: Include SHORTLISTED, WAITLISTED, and all ROUNDS (R1, R2, R3, R4)
+      // Exclude: REJECTED, students with OFFERS, students PLACED at this company
+      const filteredStudents = shortlists.filter(s => {
+        const isRejected = s.stage === 'REJECTED' || s.currentStage === 'REJECTED';
+        const isOffered = s.isOffered;
+        const isPlacedAtThisCompany = s.student?.isPlaced; // isPlaced is true only for students placed at THIS company
+        
+        return !isRejected && !isOffered && !isPlacedAtThisCompany;
+      });
+
+      // Sort by status (shortlisted first, then waitlisted, then rounds), then by name
+      const sortedStudents = filteredStudents.sort((a, b) => {
+        // Priority order: SHORTLISTED > WAITLISTED > R1 > R2 > R3 > R4
+        const priority = {
+          'SHORTLISTED': 1,
+          'WAITLISTED': 2,
+          'R1': 3,
+          'R2': 4,
+          'R3': 5,
+          'R4': 6
+        };
+        
+        const aPriority = priority[a.currentStage] || 999;
+        const bPriority = priority[b.currentStage] || 999;
+        
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+        
+        return (a.student?.name || '').localeCompare(b.student?.name || '');
+      });
+
+      // Generate PDF
+      const doc = new jsPDF();
+      
+            //IITG Placement Cell Header
+            doc.setFontSize(16);
+            doc.text("Indian Institute of Technology Guwahati", 105, 10, null, null, "center");
+            
+            //Confidentiality Notice
+            doc.setFontSize(10);
+            doc.text("Confidential - For Placement Use Only", 105, 16, null, null, "center");
+            
+            // Add title
+            doc.setFontSize(18);
+            doc.text(`Company - ${company.name} - Student List`, 105, 25, null, null, "center");
+            
+            // Add date and time
+            doc.setFontSize(10);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 33);
+      
+      
+      // Prepare table data
+      const tableData = sortedStudents.map((s, index) => {
+        let statusText = s.currentStage;
+        if (s.currentStage === 'SHORTLISTED') statusText = 'Shortlisted';
+        else if (s.currentStage === 'WAITLISTED') statusText = 'Waitlisted';
+        else if (s.currentStage?.startsWith('R')) statusText = 'Shortlisted'; // Show rounds as Shortlisted in PDF
+        
+        return [
+          index + 1,
+          s.student?.name || 'N/A',
+          s.student?.email || 'N/A',
+          s.student?.phoneNumber || 'N/A',
+          statusText
+        ];
+      });
+      
+      // Add table
+      autoTable(doc, {
+        startY: 35,
+        head: [['#', 'Name', 'Email', 'Phone Number', 'Status']],
+        body: tableData,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [59, 130, 246] },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 60 },
+          3: { cellWidth: 35 },
+          4: { cellWidth: 30 }
+        }
+      });
+      
+      // Save PDF
+      doc.save(`${company.name.replace(/[^a-z0-9]/gi, '_')}_students.pdf`);
+      
+    } catch (err) {
+      console.error("Error downloading PDF:", err);
+      setErrorAlert({
+        show: true,
+        message: err.response?.data?.message || "Failed to download student list"
+      });
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const handleDelete = async () => {
     setShowDeleteConfirm(false);
@@ -48,6 +157,16 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
             )}
           </div>
           <div className="flex gap-2">
+            <button
+              onClick={handleDownloadPDF}
+              disabled={downloading}
+              className="text-slate-400 hover:text-green-600 transition disabled:opacity-50"
+              title="Download Student List (PDF)"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+            </button>
             <button
               onClick={() => setShowEditModal(true)}
               className="text-slate-400 hover:text-blue-600 transition"
