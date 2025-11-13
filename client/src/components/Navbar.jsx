@@ -9,7 +9,7 @@ export default function Navbar({ user }) {
 
   const logout = () => {
     localStorage.removeItem("jwt_token");
-    navigate("/login");
+    navigate("/dday/login");
   };
 
   return (
