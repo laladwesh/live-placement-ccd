@@ -8,6 +8,8 @@ import StudentInterviewRow from "../components/StudentInterviewRow";
 import AddWalkInModal from "../components/AddWalkInModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 export default function POCCompanyStudents() {
   const { companyId } = useParams();
@@ -22,6 +24,7 @@ export default function POCCompanyStudents() {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterStage, setFilterStage] = useState("all");
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     fetchUser();
@@ -60,19 +63,19 @@ export default function POCCompanyStudents() {
 
     // Listen for shortlist updates
     socket.on("shortlist:update", (data) => {
-      // console.log("📡 Shortlist update received:", data);
+      // console.log("Shortlist update received:", data);
       silentRefresh("Interview stage updated"); // Silent background refresh
     });
 
     // Listen for new offers
     socket.on("offer:created", (data) => {
-      // console.log("🎉 Offer created:", data);
+      // console.log("Offer created:", data);
       silentRefresh("New offer created");
     });
 
     // Listen for offer approved by admin
     socket.on("offer:approved", (data) => {
-      // console.log(" Offer approved by admin:", data);
+      // console.log("Offer approved by admin:", data);
       silentRefresh(`Offer for ${data.studentName} approved by admin`);
     });
 
@@ -82,27 +85,32 @@ export default function POCCompanyStudents() {
       silentRefresh(`Offer for ${data.studentName} rejected by admin`);
     });
 
+    // Listen for offer reverted (POC undid offer)
+    socket.on("offer:reverted", (data) => {
+      silentRefresh(`Offer reverted for ${data.studentName}`);
+    });
+
     // Listen for offer status updates
     socket.on("offer:status-update", (data) => {
-      // console.log("📊 Offer status updated:", data);/
+      // console.log("Offer status updated:", data);
       silentRefresh();
     });
 
     // Listen for students added
     socket.on("student:added", (data) => {
-      // console.log("📌 Student added:", data);
+      // console.log("Student added:", data);
       silentRefresh("New student added");
     });
 
     // Listen for students removed
     socket.on("student:removed", (data) => {
-      // console.log("🗑️ Student removed:", data);
+      // console.log("Student removed:", data);
       silentRefresh("Student removed");
     });
 
     // Listen for student placement notifications (real-time update when student gets placed elsewhere)
     socket.on("student:placed", (data) => {
-      // console.log("🎓 Student placed elsewhere:", data);
+      // console.log("Student placed elsewhere:", data);
       toast.success(`Student placed at ${data.placedCompanyName}`, {
         duration: 5000,
       });
@@ -142,6 +150,7 @@ export default function POCCompanyStudents() {
       socket.off("offer:created");
       socket.off("offer:approved");
       socket.off("offer:rejected");
+      socket.off("offer:reverted");
       socket.off("offer:status-update");
       socket.off("student:added");
       socket.off("student:removed");
@@ -201,6 +210,106 @@ export default function POCCompanyStudents() {
     fetchCompanyStudents();
   };
 
+  const handleDownloadPDF = () => {
+    try {
+      setDownloading(true);
+      
+      // Filter: Include SHORTLISTED, WAITLISTED, and all ROUNDS (R1, R2, R3, R4)
+      // Exclude: REJECTED, students with OFFERS, students PLACED at this company
+      const filteredStudents = shortlists.filter(s => {
+        const isRejected = s.stage === 'REJECTED' || s.currentStage === 'REJECTED';
+        const isOffered = s.isOffered;
+        const isPlacedAtThisCompany = s.student?.isPlaced; // isPlaced is true only for students placed at THIS company
+        
+        return !isRejected && !isOffered && !isPlacedAtThisCompany;
+      });
+
+      // Sort by status (shortlisted first, then waitlisted, then rounds), then by name
+      const sortedStudents = filteredStudents.sort((a, b) => {
+        // Priority order: SHORTLISTED > WAITLISTED > R1 > R2 > R3 > R4
+        const priority = {
+          'SHORTLISTED': 1,
+          'WAITLISTED': 2,
+          'R1': 3,
+          'R2': 4,
+          'R3': 5,
+          'R4': 6
+        };
+        
+        const aPriority = priority[a.currentStage] || 999;
+        const bPriority = priority[b.currentStage] || 999;
+        
+        if (aPriority !== bPriority) {
+          return aPriority - bPriority;
+        }
+        
+        return (a.student?.name || '').localeCompare(b.student?.name || '');
+      });
+
+      // Generate PDF
+      const doc = new jsPDF();
+
+      //IITG Placement Cell Header
+      doc.setFontSize(16);
+      doc.text("Indian Institute of Technology Guwahati", 105, 10, null, null, "center");
+      
+      //Confidentiality Notice
+      doc.setFontSize(10);
+      doc.text("Confidential - For Placement Use Only", 105, 16, null, null, "center");
+      
+      // Add title
+      doc.setFontSize(18);
+      doc.text(`Company - ${company.name} - Student List`, 105, 25, null, null, "center");
+      
+      // Add date and time
+      doc.setFontSize(10);
+      doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 33);
+      
+      
+      // Prepare table data
+      const tableData = sortedStudents.map((s, index) => {
+        let statusText = s.currentStage;
+        if (s.currentStage === 'SHORTLISTED') statusText = 'Shortlisted';
+        else if (s.currentStage === 'WAITLISTED') statusText = 'Waitlisted';
+        else if (s.currentStage?.startsWith('R')) statusText = 'Shortlisted'; // Show rounds as Shortlisted in PDF
+        
+        return [
+          index + 1,
+          s.student?.name || 'N/A',
+          s.student?.email || 'N/A',
+          s.student?.phoneNumber || 'N/A',
+          statusText
+        ];
+      });
+      
+      // Add table
+      autoTable(doc, {
+        startY: 35,
+        head: [['#', 'Name', 'Email', 'Phone Number', 'Status']],
+        body: tableData,
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [59, 130, 246] },
+        columnStyles: {
+          0: { cellWidth: 10 },
+          1: { cellWidth: 40 },
+          2: { cellWidth: 60 },
+          3: { cellWidth: 35 },
+          4: { cellWidth: 30 }
+        }
+      });
+      
+      // Save PDF
+      doc.save(`${company.name.replace(/[^a-z0-9]/gi, '_')}_students.pdf`);
+      
+      toast.success("PDF downloaded successfully");
+    } catch (err) {
+      console.error("Error downloading PDF:", err);
+      toast.error("Failed to download student list");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
   const handleMarkProcessComplete = async () => {
     try {
       await api.post(`/poc/companies/${companyId}/complete`);
@@ -228,23 +337,28 @@ export default function POCCompanyStudents() {
       item.student?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.student?.email?.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Dynamic filter based on stage
+    // Cascading filter logic based on milestone progression
     let matchesFilter = filterStage === "all";
 
     if (!matchesFilter) {
       if (filterStage === "shortlisted") {
-        matchesFilter = item.currentStage === "SHORTLISTED";
+        // Shortlisted includes: SHORTLISTED + all ROUNDS (R1-R4) + OFFERED + PLACED
+        matchesFilter = 
+          item.currentStage === "SHORTLISTED" ||
+          item.currentStage?.startsWith("R") || // R1, R2, R3, R4
+          item.isOffered ||
+          item.student?.isPlaced;
       } else if (filterStage === "waitlisted") {
+        // Waitlisted shows only WAITLISTED students
         matchesFilter = item.currentStage === "WAITLISTED";
-      } else if (filterStage.startsWith("r")) {
-        // Handle dynamic rounds (r1, r2, r3, r4, etc.)
-        const roundNum = filterStage.substring(1);
-        matchesFilter = item.stage === `R${roundNum}`;
       } else if (filterStage === "offered") {
-        matchesFilter = item.isOffered;
+        // Offered includes: OFFERED + PLACED
+        matchesFilter = item.isOffered || item.student?.isPlaced;
       } else if (filterStage === "rejected") {
+        // Rejected shows only REJECTED students
         matchesFilter = item.stage === "REJECTED";
       } else if (filterStage === "placed") {
+        // Placed shows only PLACED students
         matchesFilter = item.student?.isPlaced;
       }
     }
@@ -343,6 +457,28 @@ export default function POCCompanyStudents() {
 
               {/* RIGHT BUTTON SECTION */}
               <div className="flex flex-wrap gap-3 w-full sm:w-auto">
+                <button
+                  onClick={handleDownloadPDF}
+                  disabled={downloading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 w-full sm:w-auto justify-center disabled:opacity-50"
+                  title="Download Student List (PDF)"
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                    />
+                  </svg>
+                  Download PDF
+                </button>
+
                 <button
                   onClick={() => setShowWalkInModal(true)}
                   className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 w-full sm:w-auto justify-center"
@@ -521,15 +657,6 @@ export default function POCCompanyStudents() {
               <option value="all">All Stages</option>
               <option value="shortlisted">Shortlisted</option>
               <option value="waitlisted">Waitlisted</option>
-              {/* Dynamic round options based on maxRounds */}
-              {Array.from(
-                { length: company?.maxRounds || 4 },
-                (_, i) => i + 1
-              ).map((round) => (
-                <option key={`r${round}`} value={`r${round}`}>
-                  Round {round}
-                </option>
-              ))}
               <option value="offered">Offered</option>
               <option value="rejected">Rejected</option>
               <option value="placed">Placed</option>
@@ -570,6 +697,7 @@ export default function POCCompanyStudents() {
                     maxRounds={company?.maxRounds || 4}
                     onStageUpdate={handleStageUpdate}
                     onOfferCreated={handleOfferCreated}
+                    isPOC={user?.role === "poc"}
                   />
                 ))}
               </div>
