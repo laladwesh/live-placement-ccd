@@ -1,5 +1,5 @@
 // src/pages/AdminOffersDashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -33,7 +33,12 @@ export default function AdminOffersDashboard() {
 
   useEffect(() => {
     fetchUser();
-    fetchOffers();
+    const initialFetch = async () => {
+      setLoading(true);
+      await fetchOffers();
+      setLoading(false);
+    };
+    initialFetch();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -43,36 +48,42 @@ export default function AdminOffersDashboard() {
 
     socket.emit("join:admin");
 
-    // Listen for new offers created by POCs
-    socket.on("offer:created", (data) => {
-      // console.log("🎉 New offer created:", data);
+    const handleOfferCreated = (data) => {
       toast.success(`New offer pending approval: ${data.companyName}`);
-      fetchOffers(); // Refresh offers list
-    });
+      fetchOffers();
+    };
 
-    // Listen for offer status updates
-    socket.on("offer:status-update", (data) => {
-      // console.log("📊 Offer status updated:", data);
-      fetchOffers(); // Refresh offers list
-    });
+    const handleOfferStatusUpdate = (data) => {
+      fetchOffers();
+    };
 
-    // Listen for offer approved events
-    socket.on("offer:approved", (data) => {
-      // console.log(" Offer approved:", data);
-      fetchOffers(); // Refresh offers list
-    });
+    const handleOfferApproved = (data) => {
+      fetchOffers();
+    };
 
-    // Listen for offer rejected events
-    socket.on("offer:rejected", (data) => {
-      // console.log("❌ Offer rejected:", data);
-      fetchOffers(); // Refresh offers list
-    });
+    const handleOfferRejected = (data) => {
+      fetchOffers();
+    };
+
+    const handleOfferReverted = (data) => {
+      toast(`Offer reverted by POC: ${data.companyName}`, {
+        icon: '🔄',
+      });
+      fetchOffers();
+    };
+
+    socket.on("offer:created", handleOfferCreated);
+    socket.on("offer:status-update", handleOfferStatusUpdate);
+    socket.on("offer:approved", handleOfferApproved);
+    socket.on("offer:rejected", handleOfferRejected);
+    socket.on("offer:reverted", handleOfferReverted);
 
     return () => {
-      socket.off("offer:created");
-      socket.off("offer:status-update");
-      socket.off("offer:approved");
-      socket.off("offer:rejected");
+      socket.off("offer:created", handleOfferCreated);
+      socket.off("offer:status-update", handleOfferStatusUpdate);
+      socket.off("offer:approved", handleOfferApproved);
+      socket.off("offer:rejected", handleOfferRejected);
+      socket.off("offer:reverted", handleOfferReverted);
     };
   }, [socket]);
 
@@ -91,22 +102,26 @@ export default function AdminOffersDashboard() {
     }
   };
 
-  const fetchOffers = async () => {
-    setLoading(true);
+  const fetchOffers = useCallback(async () => {
     try {
+      // Add cache buster to force fresh data
+      const timestamp = Date.now();
       const [pendingRes, confirmedRes] = await Promise.all([
-        api.get("/admin/offers/pending"),
-        api.get("/admin/offers/confirmed")
+        api.get(`/admin/offers/pending?t=${timestamp}`),
+        api.get(`/admin/offers/confirmed?t=${timestamp}`)
       ]);
+      
+      console.log(" [Admin] Fetched offers:", {
+        pending: pendingRes.data.offers?.length || 0,
+        confirmed: confirmedRes.data.offers?.length || 0
+      });
       
       setPendingOffers(pendingRes.data.offers || []);
       setConfirmedOffers(confirmedRes.data.offers || []);
     } catch (err) {
       console.error("Error fetching offers:", err);
-    } finally {
-      setLoading(false);
     }
-  };
+  }, []);
 
   const handleApprove = async (offerId, studentId) => {
     try {
