@@ -14,7 +14,7 @@ export default function Dashboard() {
       } catch (err) {
         console.error("whoami error", err);
         localStorage.removeItem("jwt_token");
-        window.location.href = "/login";
+        window.location.href = "/dday/login";
       } finally {
         setLoading(false);
       }
