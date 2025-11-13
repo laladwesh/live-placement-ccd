@@ -273,6 +273,27 @@ export function emitOfferRejected(studentId, companyId, data) {
 }
 
 /**
+ * Emit offer reverted event (POC reverted/undid offer)
+ * @param {string} studentId - Student ID
+ * @param {string} companyId - Company ID
+ * @param {object} data - Offer revert data
+ */
+export function emitOfferReverted(studentId, companyId, data) {
+  if (io) {
+    // Emit to company room (POCs viewing this company)
+    io.to(`company:${companyId}`).emit("offer:reverted", data);
+    
+    // Emit to admin room (so they can see the offer was reverted)
+    io.to("admin").emit("offer:reverted", data);
+    
+    // Emit to student's personal room
+    io.to(`student:${studentId}`).emit("offer:reverted", data);
+    
+    logger.info(`Emitted offer reverted for student ${studentId}, company ${companyId}`);
+  }
+}
+
+/**
  * Emit offer status update (for real-time updates on all dashboards)
  * @param {object} data - Offer data with status
  */
