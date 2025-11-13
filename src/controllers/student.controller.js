@@ -37,15 +37,29 @@ export const getMyShortlists = async (req, res) => {
       pendingOffers.map(o => o.companyId.toString())
     );
 
+    // Get rejected offers for this student to hide those companies
+    const rejectedOffers = await Offer.find({
+      studentId: studentId,
+      approvalStatus: "REJECTED"  // Admin rejected offers
+    }).select("companyId");
+    
+    const rejectedOfferCompanyIds = new Set(
+      rejectedOffers.map(o => o.companyId.toString())
+    );
+
     // Filter out companies where:
     // 1. Process is completed
-    // 2. Student is REJECTED
+    // 2. Student is REJECTED by POC
+    // 3. Offer was REJECTED by admin
     const activeShortlists = shortlists.filter(s => {
       // Remove if process completed
       if (s.companyId?.isProcessCompleted) return false;
       
-      // Remove if student is rejected
+      // Remove if student is rejected by POC
       if (s.stage === "REJECTED") return false;
+      
+      // Remove if offer was rejected by admin
+      if (rejectedOfferCompanyIds.has(s.companyId._id.toString())) return false;
       
       return true;
     });
@@ -72,7 +86,7 @@ export const getMyShortlists = async (req, res) => {
       rejected: 0 // Don't show rejected in stats since we filter them out
     };
 
-    logger.info(`Student ${studentId} fetched ${activeShortlists.length} active shortlists (rejected companies hidden)`);
+    logger.info(`Student ${studentId} fetched ${activeShortlists.length} active shortlists (rejected by POC and admin-rejected offers hidden)`);
 
     res.json({
       success: true,
