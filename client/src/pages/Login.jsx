@@ -4,7 +4,7 @@ import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
 import { FcGoogle } from "react-icons/fc";
 import { SiMicrosoft } from "react-icons/si";
-
+import iitgimg from "../assets/iitg2.jpeg";
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -109,7 +109,7 @@ export default function Login() {
     <div
   className="relative min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
   style={{
-    backgroundImage: "url('/iitg2.jpeg')",
+    backgroundImage: `url(${iitgimg})`,
   }}
     >
       {/* Light overlay */}
