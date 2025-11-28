@@ -15,7 +15,8 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [pendingOffers, setPendingOffers] = useState([]);
   const [confirmedOffers, setConfirmedOffers] = useState([]);
-  const [activeTab, setActiveTab] = useState("pending"); // "pending" or "confirmed"
+  const [rejectedOffers, setRejectedOffers] = useState([]);
+  const [activeTab, setActiveTab] = useState("pending"); // "pending", "confirmed", "rejected"
   const [processing, setProcessing] = useState(null); // offerId being processed
   const [expandedStudent, setExpandedStudent] = useState(null); // Track expanded student rows
   const [searchTerm, setSearchTerm] = useState(""); // Search filter
@@ -105,7 +106,23 @@ export default function AdminDashboard() {
       ]);
       
       setPendingOffers(pendingRes.data.offers || []);
-      setConfirmedOffers(confirmedRes.data.offers || []);
+      
+      const allConfirmed = confirmedRes.data.offers || [];
+      
+      // Filter Confirmed (Approved + Auto-rejected)
+      const confirmedList = allConfirmed.filter(o => 
+        o.approvalStatus === "APPROVED" || 
+        (o.approvalStatus === "REJECTED" && o.remarks && o.remarks.toLowerCase().includes("auto-rejected"))
+      );
+
+      // Filter Rejected (Manually Rejected only)
+      const rejectedList = allConfirmed.filter(o => 
+        o.approvalStatus === "REJECTED" && 
+        (!o.remarks || !o.remarks.toLowerCase().includes("auto-rejected"))
+      );
+
+      setConfirmedOffers(confirmedList);
+      setRejectedOffers(rejectedList);
     } catch (err) {
       console.error("Error fetching offers:", err);
     } finally {
@@ -183,6 +200,7 @@ export default function AdminDashboard() {
 
   const groupedPendingOffers = filterBySearch(groupOffersByStudent(pendingOffers));
   const groupedConfirmedOffers = filterBySearch(groupOffersByStudent(confirmedOffers));
+  const groupedRejectedOffers = filterBySearch(groupOffersByStudent(rejectedOffers));
 
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -202,7 +220,10 @@ export default function AdminDashboard() {
     const hasMultipleOffers = offers.length > 1;
     
     // Find if student is placed (in confirmed offers)
-    const placedOffer = !isPending ? offers.find(o => o.offerStatus === "ACCEPTED") : null;
+    const placedOffer = !isPending && activeTab === "confirmed" ? offers.find(o => o.offerStatus === "ACCEPTED") : null;
+    
+    // For rejected tab, we want to show the rejection reason of the first offer (or all if expanded)
+    const rejectionReason = activeTab === "rejected" ? offers[0]?.remarks : null;
 
     return (
       <>
@@ -252,7 +273,11 @@ export default function AdminDashboard() {
 
           {/* Status */}
           <td className="px-4 py-3 border-b border-slate-200">
-            {placedOffer ? (
+            {activeTab === "rejected" ? (
+               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                Rejected
+              </span>
+            ) : placedOffer ? (
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                 Placed at {placedOffer.companyId?.name}
               </span>
@@ -267,9 +292,13 @@ export default function AdminDashboard() {
             )}
           </td>
 
-          {/* Created Date */}
+          {/* Created Date / Placed At / Rejection Reason */}
           <td className="px-4 py-3 text-sm text-slate-600 border-b border-slate-200">
-            {formatDate(offers[0]?.createdAt)}
+            {activeTab === "rejected" ? (
+               <span className="text-xs text-red-600 italic">{rejectionReason || "No reason provided"}</span>
+            ) : (
+               formatDate(offers[0]?.createdAt)
+            )}
           </td>
 
           {/* Actions */}
@@ -301,6 +330,8 @@ export default function AdminDashboard() {
               <span className="text-xs text-slate-500">Expand to manage →</span>
             ) : placedOffer ? (
               <span className="text-xs text-green-600 font-medium">Completed</span>
+            ) : activeTab === "rejected" ? (
+               <span className="text-xs text-red-600 font-medium">Rejected</span>
             ) : (
               <span className="text-xs text-slate-500">—</span>
             )}
@@ -319,7 +350,11 @@ export default function AdminDashboard() {
               <div className="text-xs text-slate-500">{offer.companyId?.venue}</div>
             </td>
             <td className="px-4 py-2 border-b border-slate-200">
-              {!isPending && offer._id === placedOffer?._id ? (
+              {activeTab === "rejected" ? (
+                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                  REJECTED
+                </span>
+              ) : !isPending && offer._id === placedOffer?._id ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                   ACCEPTED
                 </span>
@@ -334,7 +369,11 @@ export default function AdminDashboard() {
               )}
             </td>
             <td className="px-4 py-2 text-xs text-slate-600 border-b border-slate-200">
-              {formatDate(offer.createdAt)}
+               {activeTab === "rejected" ? (
+                 <span className="text-xs text-red-600 italic">{offer.remarks || "No reason"}</span>
+               ) : (
+                 formatDate(offer.createdAt)
+               )}
             </td>
             <td className="px-4 py-2 border-b border-slate-200">
               {isPending ? (
@@ -360,6 +399,8 @@ export default function AdminDashboard() {
                     {processing === offer._id ? "..." : "Reject"}
                   </button>
                 </div>
+              ) : activeTab === "rejected" ? (
+                 <span className="text-xs text-red-600">Rejected</span>
               ) : offer._id !== placedOffer?._id && placedOffer ? (
                 <span className="text-xs text-slate-500">Placed at {placedOffer.companyId?.name}</span>
               ) : (
@@ -437,6 +478,21 @@ export default function AdminDashboard() {
                 <span>Confirmed Offers</span>
                 <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                   {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'Student' : 'Students'}
+                </span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("rejected")}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition ${
+                activeTab === "rejected"
+                  ? "text-red-600 border-b-2 border-red-600 bg-red-50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span>Rejected Offers</span>
+                <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                  {groupedRejectedOffers.length} {groupedRejectedOffers.length === 1 ? 'Student' : 'Students'}
                 </span>
               </div>
             </button>
@@ -537,7 +593,7 @@ export default function AdminDashboard() {
               </div>
             </div>
           )
-        ) : (
+        ) : activeTab === "confirmed" ? (
           groupedConfirmedOffers.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
               <div className="text-6xl mb-4">📭</div>
@@ -588,6 +644,62 @@ export default function AdminDashboard() {
               </div>
               <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
                 Showing {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'student' : 'students'}
+                {searchTerm && ` matching "${searchTerm}"`}
+              </div>
+            </div>
+          )
+        ) : (
+          // Rejected Offers Tab
+          groupedRejectedOffers.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+              <div className="text-6xl mb-4">🗑️</div>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                {searchTerm ? "No students found" : "No Rejected Offers"}
+              </h3>
+              <p className="text-slate-600">
+                {searchTerm ? "Try adjusting your search" : "No offers have been rejected manually"}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        S.No
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Student Details
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Rejection Reason
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Details
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupedRejectedOffers.map((studentData, index) => (
+                      <StudentOfferRow 
+                        key={studentData.student._id} 
+                        studentData={studentData} 
+                        isPending={false}
+                        index={index}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
+                Showing {groupedRejectedOffers.length} {groupedRejectedOffers.length === 1 ? 'student' : 'students'}
                 {searchTerm && ` matching "${searchTerm}"`}
               </div>
             </div>
