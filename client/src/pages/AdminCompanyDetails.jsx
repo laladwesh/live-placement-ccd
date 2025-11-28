@@ -58,7 +58,7 @@ export default function AdminCompanyDetails() {
     } catch (err) {
       console.error("whoami error", err);
       localStorage.removeItem("jwt_token");
-      window.location.href = "/dday/login";
+      window.location.href = "/login";
     }
   };
 
