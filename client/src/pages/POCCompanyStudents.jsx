@@ -6,6 +6,7 @@ import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import StudentInterviewRow from "../components/StudentInterviewRow";
 import AddWalkInModal from "../components/AddWalkInModal";
+import StudentDetailsModal from "../components/StudentDetailsModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
 import jsPDF from "jspdf";
@@ -25,6 +26,19 @@ export default function POCCompanyStudents() {
   const [filterStage, setFilterStage] = useState("all");
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+
+  useEffect(() => {
+    // Workaround: Force refresh once when entering the page to ensure socket connection works
+    // The user reported socket issues that are resolved by a refresh
+    const currentState = window.history.state || {};
+    if (!currentState.hasRefreshed) {
+      const newState = { ...currentState, hasRefreshed: true };
+      window.history.replaceState(newState, '');
+      window.location.reload();
+    }
+  }, []);
 
   useEffect(() => {
     fetchUser();
@@ -208,6 +222,11 @@ export default function POCCompanyStudents() {
   const handleWalkInAdded = () => {
     setShowWalkInModal(false);
     fetchCompanyStudents();
+  };
+
+  const handleStudentClick = (studentId) => {
+    setSelectedStudentId(studentId);
+    setShowDetailsModal(true);
   };
 
   const handleDownloadPDF = () => {
@@ -420,6 +439,9 @@ export default function POCCompanyStudents() {
               <div className="flex-1 min-w-0">
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">
                   {company?.name}
+                </h1>
+                <h1 className="text-slate-600 mt-2 flex items-center text-sm sm:text-lg">
+                  {company?.description}
                 </h1>
 
                 {company?.venue && (
@@ -698,6 +720,7 @@ export default function POCCompanyStudents() {
                     onStageUpdate={handleStageUpdate}
                     onOfferCreated={handleOfferCreated}
                     isPOC={user?.role === "poc"}
+                    onClick={() => handleStudentClick(shortlist.student._id)}
                   />
                 ))}
               </div>
@@ -705,6 +728,13 @@ export default function POCCompanyStudents() {
           </div>
         </div>
       </main>
+
+      {/* Student Details Modal */}
+      <StudentDetailsModal
+        isOpen={showDetailsModal}
+        onClose={() => setShowDetailsModal(false)}
+        studentId={selectedStudentId}
+      />
 
       {/* Walk-In Modal */}
       {showWalkInModal && (
