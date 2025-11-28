@@ -142,7 +142,7 @@ export default function CompanyDetails() {
     } catch (err) {
       console.error("whoami error", err);
       localStorage.removeItem("jwt_token");
-      window.location.href = "/dday/login";
+      window.location.href = "/login";
     }
   };
 
