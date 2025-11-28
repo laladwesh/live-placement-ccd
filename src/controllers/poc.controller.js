@@ -825,3 +825,67 @@ export const markProcessCompleted = async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/**
+ * Get detailed cross-company status for a student
+ * GET /api/poc/student/:studentId/details
+ */
+export const getStudentCrossCompanyDetails = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    
+    // Find student user
+    const studentUser = await User.findById(studentId);
+    if (!studentUser) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Find all shortlists for this student
+    const shortlists = await Shortlist.find({ studentId: studentId })
+      .populate({
+        path: 'companyId',
+        select: 'name description venue POCs',
+        populate: {
+          path: 'POCs',
+          select: 'name phoneNo emailId'
+        }
+      })
+      .sort({ 'companyId.name': 1 });
+
+    // Format response
+    const companyDetails = shortlists.map(s => {
+      // Determine current stage/status
+      let currentStatus = s.status;
+      if (s.isOffered) {
+        currentStatus = "OFFERED";
+      } else if (s.stage) {
+        currentStatus = s.stage;
+      }
+
+      return {
+        companyName: s.companyId.name,
+        status: currentStatus,
+        slot: s.companyId.description || "N/A", // Mapping description to "slot" as requested
+        venue: s.companyId.venue || "N/A",
+        pocs: s.companyId.POCs.map(p => ({
+          name: p.name,
+          phone: p.phoneNo,
+          email: p.emailId
+        }))
+      };
+    });
+
+    return res.json({
+      student: {
+        name: studentUser.name,
+        email: studentUser.emailId,
+        phone: studentUser.phoneNo
+      },
+      companies: companyDetails
+    });
+
+  } catch (err) {
+    logger.error("getStudentCrossCompanyDetails error:", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
