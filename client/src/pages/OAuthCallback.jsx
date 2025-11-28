@@ -10,7 +10,7 @@ export default function OAuthCallback() {
     const params = new URLSearchParams(hash);
     const token = params.get("token");
     if (!token) {
-      navigate("/dday/login", { replace: true });
+      navigate("/login", { replace: true });
       return;
     }
 
@@ -36,7 +36,7 @@ export default function OAuthCallback() {
       } catch (err) {
         console.error("whoami failed", err);
         localStorage.removeItem("jwt_token");
-        navigate("/dday/login", { replace: true });
+        navigate("/login", { replace: true });
       }
     })();
   }, [navigate]);
