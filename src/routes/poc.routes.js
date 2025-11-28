@@ -10,7 +10,8 @@ import {
   revertOffer,
   undoRejection,
   addWalkInStudent,
-  markProcessCompleted
+  markProcessCompleted,
+  getStudentCrossCompanyDetails
 } from "../controllers/poc.controller.js";
 
 const router = express.Router();
@@ -45,5 +46,8 @@ router.post("/companies/:companyId/walkin", addWalkInStudent);
 
 // Mark company process as completed
 router.post("/companies/:companyId/complete", markProcessCompleted);
+
+// Get student cross-company details
+router.get("/student/:studentId/details", getStudentCrossCompanyDetails);
 
 export default router;
