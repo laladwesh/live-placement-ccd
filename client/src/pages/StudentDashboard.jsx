@@ -136,7 +136,7 @@ export default function StudentDashboard() {
       }
     } catch (err) {
       console.error("Error fetching user:", err);
-      navigate("/dday/login");
+      navigate("/login");
     }
   };
 
