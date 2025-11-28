@@ -15,7 +15,8 @@ export default function AdminOffersDashboard() {
   const [loading, setLoading] = useState(true);
   const [pendingOffers, setPendingOffers] = useState([]);
   const [confirmedOffers, setConfirmedOffers] = useState([]);
-  const [activeTab, setActiveTab] = useState("pending"); // "pending" or "confirmed"
+  const [rejectedOffers, setRejectedOffers] = useState([]);
+  const [activeTab, setActiveTab] = useState("pending"); // "pending", "confirmed", or "rejected"
   const [processing, setProcessing] = useState(null); // offerId being processed
   const [expandedStudent, setExpandedStudent] = useState(null); // Track expanded student rows
   const [searchTerm, setSearchTerm] = useState(""); // Search filter
@@ -111,13 +112,19 @@ export default function AdminOffersDashboard() {
         api.get(`/admin/offers/confirmed?t=${timestamp}`)
       ]);
       
+      const allConfirmed = confirmedRes.data.offers || [];
+      const approved = allConfirmed.filter(o => o.approvalStatus === "APPROVED");
+      const rejected = allConfirmed.filter(o => o.approvalStatus === "REJECTED");
+
       console.log(" [Admin] Fetched offers:", {
         pending: pendingRes.data.offers?.length || 0,
-        confirmed: confirmedRes.data.offers?.length || 0
+        confirmed: approved.length,
+        rejected: rejected.length
       });
       
       setPendingOffers(pendingRes.data.offers || []);
-      setConfirmedOffers(confirmedRes.data.offers || []);
+      setConfirmedOffers(approved);
+      setRejectedOffers(rejected);
     } catch (err) {
       console.error("Error fetching offers:", err);
     }
@@ -193,6 +200,7 @@ export default function AdminOffersDashboard() {
 
   const groupedPendingOffers = filterBySearch(groupOffersByStudent(pendingOffers));
   const groupedConfirmedOffers = filterBySearch(groupOffersByStudent(confirmedOffers));
+  const groupedRejectedOffers = filterBySearch(groupOffersByStudent(rejectedOffers));
 
   const formatDate = (date) => {
     if (!date) return "N/A";
@@ -262,7 +270,11 @@ export default function AdminOffersDashboard() {
 
           {/* Status */}
           <td className="px-4 py-3 border-b border-slate-200">
-            {placedOffer ? (
+            {activeTab === "rejected" ? (
+               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                 REJECTED
+               </span>
+            ) : placedOffer ? (
               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                 Placed at {placedOffer.companyId?.name}
               </span>
@@ -277,12 +289,21 @@ export default function AdminOffersDashboard() {
             )}
           </td>
 
-          {/* Created Date */}
+          {/* Variable Column (Created / Placed At / Rejection Reason) */}
           <td className="px-4 py-3 text-sm text-slate-600 border-b border-slate-200">
-            {formatDate(offers[0]?.createdAt)}
+            {activeTab === "pending" ? (
+              formatDate(offers[0]?.createdAt)
+            ) : activeTab === "rejected" ? (
+              <span className="text-xs italic text-slate-500">
+                {offers[0]?.remarks || "No reason provided"}
+              </span>
+            ) : (
+              // Confirmed tab - Placed At
+              placedOffer ? formatDate(placedOffer.approvedAt) : "—"
+            )}
           </td>
 
-          {/* Actions */}
+          {/* Actions / Details */}
           <td className="px-4 py-3 border-b border-slate-200">
             {!hasMultipleOffers && isPending ? (
               <div className="flex gap-2">
@@ -309,6 +330,8 @@ export default function AdminOffersDashboard() {
               </div>
             ) : hasMultipleOffers ? (
               <span className="text-xs text-slate-500">Expand to manage →</span>
+            ) : activeTab === "rejected" ? (
+               <span className="text-xs text-red-600 font-medium">Rejected by Admin</span>
             ) : placedOffer ? (
               <span className="text-xs text-green-600 font-medium">Completed</span>
             ) : (
@@ -329,7 +352,11 @@ export default function AdminOffersDashboard() {
               <div className="text-xs text-slate-500">{offer.companyId?.venue}</div>
             </td>
             <td className="px-4 py-2 border-b border-slate-200">
-              {!isPending && offer._id === placedOffer?._id ? (
+              {activeTab === "rejected" ? (
+                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
+                   REJECTED
+                 </span>
+              ) : !isPending && offer._id === placedOffer?._id ? (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
                   ACCEPTED
                 </span>
@@ -344,7 +371,11 @@ export default function AdminOffersDashboard() {
               )}
             </td>
             <td className="px-4 py-2 text-xs text-slate-600 border-b border-slate-200">
-              {formatDate(offer.createdAt)}
+              {activeTab === "rejected" ? (
+                 <span className="text-xs italic text-slate-500">{offer.remarks || "No reason"}</span>
+              ) : (
+                 formatDate(offer.createdAt)
+              )}
             </td>
             <td className="px-4 py-2 border-b border-slate-200">
               {isPending ? (
@@ -370,6 +401,8 @@ export default function AdminOffersDashboard() {
                     {processing === offer._id ? "..." : "Reject"}
                   </button>
                 </div>
+              ) : activeTab === "rejected" ? (
+                 <span className="text-xs text-red-600">Rejected</span>
               ) : offer._id !== placedOffer?._id && placedOffer ? (
                 <span className="text-xs text-slate-500">Placed at {placedOffer.companyId?.name}</span>
               ) : (
@@ -432,6 +465,21 @@ export default function AdminOffersDashboard() {
                 <span>Confirmed Offers</span>
                 <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
                   {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'Student' : 'Students'}
+                </span>
+              </div>
+            </button>
+            <button
+              onClick={() => setActiveTab("rejected")}
+              className={`flex-1 px-6 py-4 text-sm font-medium transition ${
+                activeTab === "rejected"
+                  ? "text-red-600 border-b-2 border-red-600 bg-red-50"
+                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
+              }`}
+            >
+              <div className="flex items-center justify-center gap-2">
+                <span>Rejected Offers</span>
+                <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
+                  {groupedRejectedOffers.length} {groupedRejectedOffers.length === 1 ? 'Student' : 'Students'}
                 </span>
               </div>
             </button>
@@ -532,7 +580,7 @@ export default function AdminOffersDashboard() {
               </div>
             </div>
           )
-        ) : (
+        ) : activeTab === "confirmed" ? (
           groupedConfirmedOffers.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-12 text-center">
               <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -585,6 +633,64 @@ export default function AdminOffersDashboard() {
               </div>
               <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
                 Showing {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'student' : 'students'}
+                {searchTerm && ` matching "${searchTerm}"`}
+              </div>
+            </div>
+          )
+        ) : (
+          // Rejected Offers Tab
+          groupedRejectedOffers.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+              <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                {searchTerm ? "No students found" : "No Rejected Offers"}
+              </h3>
+              <p className="text-slate-600">
+                {searchTerm ? "Try adjusting your search" : "No offers have been rejected yet"}
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-slate-200">
+                  <thead className="bg-slate-100">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        S.No
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Student Details
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Company
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Rejection Reason
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                        Details
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {groupedRejectedOffers.map((studentData, index) => (
+                      <StudentOfferRow 
+                        key={studentData.student._id} 
+                        studentData={studentData} 
+                        isPending={false}
+                        index={index}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
+                Showing {groupedRejectedOffers.length} {groupedRejectedOffers.length === 1 ? 'student' : 'students'}
                 {searchTerm && ` matching "${searchTerm}"`}
               </div>
             </div>
