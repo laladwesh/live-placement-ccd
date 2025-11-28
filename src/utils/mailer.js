@@ -24,15 +24,24 @@ export async function sendOfferApprovalEmail({ to, studentName, companyName }) {
  const mailOptions = {
    from: `"CCD" <${process.env.SMTP_USER}>`,
    to,
-   subject: `Test Mail ${studentName} — Offer Approved!`,
-   // html template has to be updated according to template provide by sir, this is a placeholder.
+   subject: `CCD Placement Confirmation – Congratulations!`,
    html: `
-     <div style="font-family: Arial, sans-serif; line-height: 1.5;">
-       <h2>Testing ${studentName},</h2>
-       <p>We are delighted to inform you that you have been <strong>offered a role</strong> at <strong>${companyName}</strong>.</p>
+     <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #222;">
+       <p>Dear <strong>${studentName}</strong>,</p>
+       <p>Congratulations!</p>
+       <p>As per the offer(s) we received and the offer allocation policy of CCD, we are happy to inform you that you have been successfully placed in <strong>${companyName}</strong>.</p>
+       <p>We have already informed the company that you are intimated about this offer and you are out of the further placement process.</p>
+       <p><strong>Important Instructions:</strong></p>
+       <ul>
+         <li>As per the CCD placement policy, you are requested not to appear for any further interviews.</li>
+         <li>By the end of the day, your offer details will be displayed in the placement portal.</li>
+         <li>Please do not reply to this email. All queries are to be handled through <a href="mailto:ccd_queries@iitg.ac.in">ccd_queries@iitg.ac.in</a>.</li>
+       </ul>
+       <p>We wish you all the very best for your career ahead.</p>
        <br />
-       <p>Best regards,</p>
-       <p><strong>Aagam bhaiya</strong></p>
+       <p>Warm regards,<br />
+       Center for Career Development (CCD)<br />
+       IIT Guwahati</p>
      </div>
    `,
  };
