@@ -26,7 +26,7 @@ export default function StudentShortlistDetails() {
       setUser(res.data);
     } catch (err) {
       console.error("Error fetching user:", err);
-      navigate("/dday/login");
+      navigate("/login");
     }
   };
 
