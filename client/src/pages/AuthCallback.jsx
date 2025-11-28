@@ -16,7 +16,7 @@ export default function AuthCallback() {
 
         if (!token) {
           // nothing to do — redirect to login
-          navigate("/dday/login");
+          navigate("/login");
           return;
         }
 
@@ -44,7 +44,7 @@ export default function AuthCallback() {
       } catch (err) {
         console.error("Auth callback error:", err);
         localStorage.removeItem("jwt_token");
-        navigate("/dday/login");
+        navigate("/login");
       }
     };
 
