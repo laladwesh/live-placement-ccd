@@ -242,7 +242,15 @@ export default function CompanyDetails() {
         {/* Header */}
         <div className="mb-8">
           <button
-            onClick={() => navigate("/admin")}
+            onClick={() => {
+              // If the current user is an admin, send them to the admin companies list
+              if (user?.role === 'admin' || user?.role === 'superadmin') {
+                navigate('/admin/company');
+              } else {
+                // Non-admin users go to the generic admin landing
+                navigate('/admin');
+              }
+            }}
             className="flex items-center text-slate-600 hover:text-slate-900 mb-4"
           >
             <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
