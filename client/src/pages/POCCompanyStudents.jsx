@@ -233,37 +233,34 @@ export default function POCCompanyStudents() {
     try {
       setDownloading(true);
       
-      // Filter: Include SHORTLISTED, WAITLISTED, and all ROUNDS (R1, R2, R3, R4)
-      // Exclude: REJECTED, students with OFFERS, students PLACED at this company
+      // Include all non-rejected students (including placed students).
+      // Treat OFFERED (unconfirmed offer) as SHORTLISTED for sorting purposes.
       const filteredStudents = shortlists.filter(s => {
         const isRejected = s.stage === 'REJECTED' || s.currentStage === 'REJECTED';
-        const isOffered = s.isOffered;
-        const isPlacedAtThisCompany = s.student?.isPlaced; // isPlaced is true only for students placed at THIS company
-        
-        return !isRejected && !isOffered && !isPlacedAtThisCompany;
+        return !isRejected;
       });
 
-      // Sort by status (shortlisted first, then waitlisted, then rounds), then by name
-      const sortedStudents = filteredStudents.sort((a, b) => {
-        // Priority order: SHORTLISTED > WAITLISTED > R1 > R2 > R3 > R4
-        const priority = {
-          'SHORTLISTED': 1,
-          'WAITLISTED': 2,
-          'R1': 3,
-          'R2': 4,
-          'R3': 5,
-          'R4': 6
-        };
-        
-        const aPriority = priority[a.currentStage] || 999;
-        const bPriority = priority[b.currentStage] || 999;
-        
-        if (aPriority !== bPriority) {
-          return aPriority - bPriority;
+      // Group students: Shortlisted (including OFFERED and rounds) -> Waitlisted -> Placed
+      // Preserve original order within each group (stable grouping)
+      const shortlistedGroup = [];
+      const waitlistedGroup = [];
+      const placedGroup = [];
+
+      filteredStudents.forEach(s => {
+        if (s.student?.isPlaced) {
+          placedGroup.push(s);
+        } else {
+          const stage = (s.currentStage || '').toUpperCase();
+          if (stage === 'WAITLISTED') {
+            waitlistedGroup.push(s);
+          } else {
+            // Treat SHORTLISTED, R1-R4, OFFERED etc. as shortlisted group
+            shortlistedGroup.push(s);
+          }
         }
-        
-        return (a.student?.name || '').localeCompare(b.student?.name || '');
       });
+
+      const sortedStudents = [...shortlistedGroup, ...waitlistedGroup, ...placedGroup];
 
       // Generate PDF
       const doc = new jsPDF();
@@ -287,11 +284,23 @@ export default function POCCompanyStudents() {
       
       // Prepare table data
       const tableData = sortedStudents.map((s, index) => {
-        let statusText = s.currentStage;
-        if (s.currentStage === 'SHORTLISTED') statusText = 'Shortlisted';
-        else if (s.currentStage === 'WAITLISTED') statusText = 'Waitlisted';
-        else if (s.currentStage?.startsWith('R')) statusText = 'Shortlisted'; // Show rounds as Shortlisted in PDF
-        
+        // Determine display status for PDF
+        let statusText = '';
+
+        if (s.student?.isPlaced) {
+          statusText = 'Placed';
+        } else {
+          const stage = (s.currentStage || '').toUpperCase();
+          if (stage === 'SHORTLISTED' || stage.startsWith('R') || stage === 'OFFERED') {
+            // Treat rounds and OFFERED as Shortlisted
+            statusText = 'Shortlisted';
+          } else if (stage === 'WAITLISTED') {
+            statusText = 'Waitlisted';
+          } else {
+            statusText = stage || 'Shortlisted';
+          }
+        }
+
         return [
           index + 1,
           s.student?.name || 'N/A',
@@ -501,25 +510,27 @@ export default function POCCompanyStudents() {
                   Download PDF
                 </button>
 
-                <button
-                  onClick={() => setShowWalkInModal(true)}
-                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 w-full sm:w-auto justify-center"
-                >
-                  <svg
-                    className="w-5 h-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
+                {user?.role === "admin" && (
+                  <button
+                    onClick={() => setShowWalkInModal(true)}
+                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 w-full sm:w-auto justify-center"
                   >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M12 4v16m8-8H4"
-                    />
-                  </svg>
-                  Add Walk-In
-                </button>
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 4v16m8-8H4"
+                      />
+                    </svg>
+                    Add Walk-In
+                  </button>
+                )}
 
                 {!company?.isProcessCompleted && (
                   <button
