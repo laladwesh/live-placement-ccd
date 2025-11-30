@@ -99,7 +99,7 @@ export default function AdminOffersDashboard() {
       }
     } catch (err) {
       console.error("Error fetching user:", err);
-      navigate("/login");
+      navigate("/dday/login");
     }
   };
 
