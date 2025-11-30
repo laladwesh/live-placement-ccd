@@ -1,5 +1,5 @@
 // src/components/CompanyCard.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import EditCompanyModal from "./EditCompanyModal";
 import ConfirmDialog from "./ConfirmDialog";
@@ -15,6 +15,21 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [downloading, setDownloading] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const fetchUser = async () => {
+      try {
+        const res = await api.get('/users/me');
+        if (mounted) setUser(res.data.user || null);
+      } catch (err) {
+        // ignore - user may be unauthenticated in some views
+      }
+    };
+    fetchUser();
+    return () => { mounted = false; };
+  }, []);
 
   const handleDownloadPDF = async () => {
     try {
@@ -24,37 +39,34 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
       const res = await api.get(`/poc/companies/${company._id}/students`);
       const shortlists = res.data.shortlists || [];
       
-      // Filter: Include SHORTLISTED, WAITLISTED, and all ROUNDS (R1, R2, R3, R4)
-      // Exclude: REJECTED, students with OFFERS, students PLACED at this company
+      // Include all non-rejected students (including placed students).
+      // Treat OFFERED (unconfirmed offer) as SHORTLISTED for sorting purposes.
       const filteredStudents = shortlists.filter(s => {
         const isRejected = s.stage === 'REJECTED' || s.currentStage === 'REJECTED';
-        const isOffered = s.isOffered;
-        const isPlacedAtThisCompany = s.student?.isPlaced; // isPlaced is true only for students placed at THIS company
-        
-        return !isRejected && !isOffered && !isPlacedAtThisCompany;
+        return !isRejected;
       });
 
-      // Sort by status (shortlisted first, then waitlisted, then rounds), then by name
-      const sortedStudents = filteredStudents.sort((a, b) => {
-        // Priority order: SHORTLISTED > WAITLISTED > R1 > R2 > R3 > R4
-        const priority = {
-          'SHORTLISTED': 1,
-          'WAITLISTED': 2,
-          'R1': 3,
-          'R2': 4,
-          'R3': 5,
-          'R4': 6
-        };
-        
-        const aPriority = priority[a.currentStage] || 999;
-        const bPriority = priority[b.currentStage] || 999;
-        
-        if (aPriority !== bPriority) {
-          return aPriority - bPriority;
+      // Group students: Shortlisted (including OFFERED and rounds) -> Waitlisted -> Placed
+      // Preserve original order within each group (stable grouping)
+      const shortlistedGroup = [];
+      const waitlistedGroup = [];
+      const placedGroup = [];
+
+      filteredStudents.forEach(s => {
+        if (s.student?.isPlaced) {
+          placedGroup.push(s);
+        } else {
+          const stage = (s.currentStage || '').toUpperCase();
+          if (stage === 'WAITLISTED') {
+            waitlistedGroup.push(s);
+          } else {
+            // Treat SHORTLISTED, R1-R4, OFFERED etc. as shortlisted group
+            shortlistedGroup.push(s);
+          }
         }
-        
-        return (a.student?.name || '').localeCompare(b.student?.name || '');
       });
+
+      const sortedStudents = [...shortlistedGroup, ...waitlistedGroup, ...placedGroup];
 
       // Generate PDF
       const doc = new jsPDF();
@@ -78,11 +90,27 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
       
       // Prepare table data
       const tableData = sortedStudents.map((s, index) => {
-        let statusText = s.currentStage;
-        if (s.currentStage === 'SHORTLISTED') statusText = 'Shortlisted';
-        else if (s.currentStage === 'WAITLISTED') statusText = 'Waitlisted';
-        else if (s.currentStage?.startsWith('R')) statusText = 'Shortlisted'; // Show rounds as Shortlisted in PDF
-        
+        // Determine display status for PDF
+        let statusText = '';
+
+        if (s.student?.isPlaced) {
+          statusText = 'Placed';
+        } else {
+          const stage = (s.currentStage || '').toUpperCase();
+          if (stage === 'SHORTLISTED' || stage.startsWith('R') || stage === 'OFFERED') {
+            // Treat rounds and OFFERED as Shortlisted
+            statusText = 'Shortlisted';
+          } else if (stage === 'WAITLISTED') {
+            statusText = 'Waitlisted';
+          } else {
+            statusText = stage || 'Shortlisted';
+          }
+        }
+
+        // For placed students, do not show the placed company name (per request).
+        // The table currently has columns: #, Name, Email, Phone, Status
+        // We will keep those columns and ensure Status shows 'Placed' for placed students.
+
         return [
           index + 1,
           s.student?.name || 'N/A',
@@ -241,11 +269,17 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
             </svg>
             Manage Company
           </button>
-          <button 
-            onClick={() => navigate(`/poc/companies/${company._id}/students`)}
-            className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition font-medium flex items-center justify-center gap-1"
-            title="View and manage students as POC"
-          >
+            <button 
+              onClick={() => {
+                if (user?.role === 'admin' || user?.role === 'superadmin') {
+                  navigate('/admin/company');
+                } else {
+                  navigate(`/poc/companies/${company._id}/students`);
+                }
+              }}
+              className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition font-medium flex items-center justify-center gap-1"
+              title="View and manage students as POC"
+            >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
