@@ -93,7 +93,8 @@ export const uploadShortlistCSV = async (req, res) => {
     const failed = [];
     const notFound = [];
 
-    for (const entry of results) {
+    for (let i = 0; i < results.length; i++) {
+      const entry = results[i];
       try {
         // Find user - student MUST exist in database already
         const user = await User.findOne({ emailId: entry.email });
@@ -147,6 +148,10 @@ export const uploadShortlistCSV = async (req, res) => {
           updated.push({ email: entry.email, name: user.name });
         } else {
           // Create new shortlist entry
+          // Preserve CSV ordering: assign createdAt so that when sorted by createdAt desc
+          // the original CSV order is preserved (first CSV row appears first).
+          const createdAt = new Date(Date.now() + (results.length - i));
+
           shortlist = new Shortlist({
             studentId: user._id,
             companyId: company._id,
@@ -155,8 +160,10 @@ export const uploadShortlistCSV = async (req, res) => {
             status: isShortlisted ? Status.SHORTLISTED : Status.WAITLISTED,
             stage: null,
             interviewStatus: null,
-            isOffered: false
+            isOffered: false,
+            createdAt
           });
+          // When saving a document with a custom createdAt, Mongoose will also set updatedAt automatically
           await shortlist.save();
           added.push({ email: entry.email, name: user.name });
 
