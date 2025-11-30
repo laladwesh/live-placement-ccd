@@ -99,9 +99,28 @@ export default function AdminCompanyDetails() {
     setCompanyToEdit(null); // Clear the company to edit
     fetchCompanies(); // Refresh the list of companies
   };
-  const filteredCompanies = companies.filter(company =>
-    company.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredCompanies = companies.filter(company => {
+    const q = (searchTerm || "").trim().toLowerCase();
+
+    if (q === "") return true;
+
+    const name = (company.name || "").toLowerCase();
+    const description = (company.description || "").toLowerCase();
+    const venue = (company.venue || "").toLowerCase();
+
+    const pocMatch = (company.POCs || []).some(poc => {
+      const pname = (poc?.name || "").toLowerCase();
+      const pemail = (poc?.emailId || poc?.email || "").toLowerCase();
+      return pname.includes(q) || pemail.includes(q);
+    });
+
+    return (
+      name.includes(q) ||
+      description.includes(q) ||
+      venue.includes(q) ||
+      pocMatch
+    );
+  });
 
   if (!user) {
     return (
@@ -175,7 +194,7 @@ export default function AdminCompanyDetails() {
           <div className="relative">
             <input
               type="text"
-              placeholder="Search companies..."
+              placeholder="Search companies, description, venue, or POC..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full px-4 py-2 pl-10 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
