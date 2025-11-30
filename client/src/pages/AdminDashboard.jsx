@@ -93,7 +93,7 @@ export default function AdminDashboard() {
       }
     } catch (err) {
       console.error("Error fetching user:", err);
-      navigate("/login");
+      navigate("/dday/login");
     }
   };
 
