@@ -76,7 +76,7 @@ export const setupAdminJS = () => {
           listProperties: ['userId', 'rollNumber', 'isPlaced', 'placedCompany', 'createdAt'],
           showProperties: ['userId', 'rollNumber', 'isPlaced', 'placedCompany', 'shortlistedCompanies', 'waitlistedCompanies', 'createdAt', 'updatedAt'],
           editProperties: ['rollNumber', 'isPlaced', 'placedCompany'],
-          filterProperties: ['rollNumber', 'isPlaced', 'placedCompany'],
+          filterProperties: ['userId','rollNumber', 'isPlaced', 'placedCompany'],
           properties: {
             userId: {
               isTitle: true,
@@ -112,7 +112,7 @@ export const setupAdminJS = () => {
           listProperties: ['studentId', 'companyId', 'status', 'stage', 'isOffered', 'isStudentPlaced', 'createdAt'],
           showProperties: ['studentId', 'companyId', 'companyName', 'status', 'stage', 'interviewStatus', 'isOffered', 'isStudentPlaced', 'studentPlacedCompany', 'createdAt', 'updatedAt'],
           editProperties: ['status', 'stage', 'interviewStatus', 'isOffered'],
-          filterProperties: ['companyId', 'status', 'stage', 'isOffered', 'isStudentPlaced'],
+          filterProperties: ['studentId' , 'companyId', 'status', 'stage', 'isOffered', 'isStudentPlaced'],
         },
       },
       {
