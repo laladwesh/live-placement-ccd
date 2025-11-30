@@ -50,10 +50,16 @@ export default function ShortlistCard({ shortlist }) {
     });
   };
 
+  const isClickable = false; // Set to true if you want the card to be clickable
+
+  const handleClick = () => {
+    console.log("Shortlist clicked:", shortlist._id);
+  };
+
   return (
     <div
-      onClick={() => navigate(`/student/shortlist/${shortlist._id}`)}
-      className="bg-white border border-slate-200 rounded-lg p-5 hover:shadow-lg transition cursor-pointer"
+      onClick={handleClick}
+      className={`bg-white border border-slate-200 rounded-lg p-5 hover:shadow-lg transition ${isClickable ? 'cursor-pointer' : ''}`}
     >
       {/* Company Header */}
       <div className="flex items-start justify-between mb-4">
@@ -105,12 +111,14 @@ export default function ShortlistCard({ shortlist }) {
       )}
 
       {/* View Details Link */}
-      <div className="mt-4 flex items-center justify-end text-blue-600 text-sm font-medium">
-        <span>View Details</span>
-        <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-        </svg>
-      </div>
+      {isClickable && (
+        <div className="mt-4 flex items-center justify-end text-blue-600 text-sm font-medium">
+          <span>View Details</span>
+          <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      )}
     </div>
   );
 }
