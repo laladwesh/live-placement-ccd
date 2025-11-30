@@ -1,5 +1,6 @@
 // backend/src/controllers/company.controller.js
 import Company from "../models/company.model.js";
+import Shortlist from "../models/shortlist.model.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
@@ -265,7 +266,16 @@ export const deleteCompany = async (req, res) => {
 
     const companyData = { _id: company._id, name: company.name };
 
-    await company.deleteOne();
+      // Delete all shortlists associated with this company
+      try {
+        const resDel = await Shortlist.deleteMany({ companyId: company._id });
+        logger.info(`Deleted ${resDel.deletedCount || 0} shortlists for company ${company.name}`);
+      } catch (err) {
+        logger.error(`Error deleting shortlists for company ${company.name}:`, err);
+        // proceed with company deletion even if shortlist deletion fails
+      }
+
+      await company.deleteOne();
 
     logger.info(`Company deleted: ${company.name} by admin ${req.user.email}`);
 
