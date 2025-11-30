@@ -136,7 +136,7 @@ export default function StudentDashboard() {
       }
     } catch (err) {
       console.error("Error fetching user:", err);
-      navigate("/login");
+      navigate("/dday/login");
     }
   };
 
@@ -349,9 +349,6 @@ export default function StudentDashboard() {
             <div className="text-right">
               <div className="text-sm text-slate-500">Status</div>
               <div className="mt-1 inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{shortlist.stage || 'Pending'}</div>
-              <div className="mt-3">
-                <button onClick={() => navigate(`/student/shortlists/${shortlist._id}`)} className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm">View</button>
-              </div>
             </div>
           </div>
         </div>
