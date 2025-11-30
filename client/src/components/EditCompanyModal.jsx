@@ -1,5 +1,5 @@
 // src/components/EditCompanyModal.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 
@@ -14,6 +14,7 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
   });
   const [pocs, setPocs] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchPOCs();
@@ -28,6 +29,12 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
       toast.error("Failed to load POCs");
     }
   };
+
+  const filteredPocs = useMemo(() => {
+    if (!searchQuery) return pocs;
+    const q = searchQuery.trim().toLowerCase();
+    return pocs.filter(p => (p.name || "").toLowerCase().includes(q));
+  }, [pocs, searchQuery]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -72,7 +79,13 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
     setLoading(true);
 
     try {
-      await api.patch(`/admin/companies/${company._id}`, formData);
+      // Ensure newly created POCs are allowed by default when editing/updating a company
+      const payload = {
+        ...formData,
+        newPocs: (formData.newPocs || []).map(p => ({ ...p, isAllowed: true }))
+      };
+
+      await api.patch(`/admin/companies/${company._id}`, payload);
       toast.success("Company updated successfully!");
       // Don't call onSuccess() - let socket handle the refresh
       onClose(); // Just close the modal
@@ -230,27 +243,42 @@ export default function EditCompanyModal({ company, onClose, onSuccess }) {
             {pocs.length === 0 ? (
               <p className="text-sm text-slate-500">No existing POCs available.</p>
             ) : (
-              <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
-                {pocs.map(poc => (
-                  <label
-                    key={poc._id}
-                    className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b last:border-b-0"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.pocIds.includes(poc._id)}
-                      onChange={() => handlePOCToggle(poc._id)}
-                      className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                    <div className="flex-1">
-                      <div className="text-sm font-medium text-slate-900">{poc.name}</div>
-                      <div className="text-xs text-slate-500">{poc.emailId}</div>
-                    </div>
-                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
-                      POC
-                    </span>
-                  </label>
-                ))}
+              <div>
+                <div className="mb-2">
+                  <input
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search POCs by name"
+                    className="w-full px-3 py-2 text-sm border border-slate-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="border border-slate-200 rounded-lg max-h-48 overflow-y-auto">
+                  {filteredPocs.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500">No POCs match your search.</div>
+                  ) : (
+                    filteredPocs.map(poc => (
+                      <label
+                        key={poc._id}
+                        className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer border-b last:border-b-0"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.pocIds.includes(poc._id)}
+                          onChange={() => handlePOCToggle(poc._id)}
+                          className="w-4 h-4 text-blue-600 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <div className="text-sm font-medium text-slate-900">{poc.name}</div>
+                          <div className="text-xs text-slate-500">{poc.emailId}</div>
+                        </div>
+                        <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded">
+                          POC
+                        </span>
+                      </label>
+                    ))
+                  )}
+                </div>
               </div>
             )}
           </div>
