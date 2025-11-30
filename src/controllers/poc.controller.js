@@ -862,16 +862,19 @@ export const getStudentCrossCompanyDetails = async (req, res) => {
         currentStatus = s.stage;
       }
 
+      // Defensive handling: populated companyId can be null if the company was deleted
+      const comp = s.companyId || null;
+
       return {
-        companyName: s.companyId.name,
+        companyName: comp?.name || s.companyName || "Deleted Company",
         status: currentStatus,
-        slot: s.companyId.description || "N/A", // Mapping description to "slot" as requested
-        venue: s.companyId.venue || "N/A",
-        pocs: s.companyId.POCs.map(p => ({
-          name: p.name,
-          phone: p.phoneNo,
-          email: p.emailId
-        }))
+        slot: comp?.description || s.companyName?.description || "N/A",
+        venue: comp?.venue || "N/A",
+        pocs: Array.isArray(comp?.POCs) ? comp.POCs.map(p => ({
+          name: p?.name || "N/A",
+          phone: p?.phoneNo || "N/A",
+          email: p?.emailId || "N/A"
+        })) : []
       };
     });
 
