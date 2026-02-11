@@ -96,16 +96,39 @@ export const getPendingOffers = async (req, res) => {
  */
 export const getConfirmedOffers = async (req, res) => {
   try {
-    // Get all non-pending offers (APPROVED and REJECTED)
-    const confirmedOffers = await Offer.find({ 
-      approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] }
-    })
-      .populate('studentId', 'name emailId phoneNo')
+    // Read optional server-side filters from query
+    const { programme, department, cpiMin, cpiMax } = req.query;
+
+    // If any academic filters provided, find matching user ids first
+    let matchingUserIds = null;
+    if (programme || department || cpiMin || cpiMax) {
+      const userQuery = {};
+      if (programme) userQuery.programme = programme;
+      if (department) userQuery.department = department;
+      if (cpiMin || cpiMax) {
+        userQuery.cpi = {};
+        if (cpiMin) userQuery.cpi.$gte = Number(cpiMin);
+        if (cpiMax) userQuery.cpi.$lte = Number(cpiMax);
+      }
+      const users = await User.find(userQuery).select('_id');
+      matchingUserIds = users.map(u => u._id);
+      // If no users match, return empty
+      if (matchingUserIds.length === 0) {
+        return res.json({ success: true, count: 0, offers: [] });
+      }
+    }
+
+    // Build offer query
+    const offerQuery = { approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] } };
+    if (matchingUserIds) offerQuery.studentId = { $in: matchingUserIds };
+
+    const confirmedOffers = await Offer.find(offerQuery)
+      .populate('studentId', 'name emailId phoneNo programme department cpi')
       .populate('companyId', 'name venue')
       .populate('approvedBy', 'name emailId')
       .sort({ approvedAt: -1, createdAt: -1 });
 
-    // Enrich with rollNumber from Student model
+    // Enrich with rollNumber from Student model and ensure academic fields present
     const enrichedOffers = await Promise.all(
       confirmedOffers.map(async (offer) => {
         const student = await Student.findOne({ userId: offer.studentId._id });
@@ -113,6 +136,10 @@ export const getConfirmedOffers = async (req, res) => {
         if (student) {
           offerObj.studentId.rollNumber = student.rollNumber;
         }
+        // Ensure programme/department/cpi keys exist on response student
+        offerObj.studentId.programme = offerObj.studentId.programme || null;
+        offerObj.studentId.department = offerObj.studentId.department || null;
+        offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
         return offerObj;
       })
     );
@@ -389,6 +416,71 @@ export const setCompanyProcessComplete = async (req, res) => {
     });
   } catch (err) {
     logger.error("setCompanyProcessComplete error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
+ * Get detailed cross-company status for a student (admin view)
+ * GET /api/admin/students/:studentId/details
+ */
+export const getStudentDetails = async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    // Find student user
+    const studentUser = await User.findById(studentId);
+    if (!studentUser) {
+      return res.status(404).json({ message: "Student not found" });
+    }
+
+    // Find all shortlists for this student
+    const shortlists = await Shortlist.find({ studentId: studentId })
+      .populate({
+        path: 'companyId',
+        select: 'name description venue POCs',
+        populate: {
+          path: 'POCs',
+          select: 'name phoneNo emailId'
+        }
+      })
+      .sort({ 'companyId.name': 1 });
+
+    // Format response
+    const companyDetails = shortlists.map(s => {
+      let currentStatus = s.status;
+      if (s.isOffered) currentStatus = "OFFERED";
+      else if (s.stage) currentStatus = s.stage;
+
+      const comp = s.companyId || null;
+
+      return {
+        companyName: comp?.name || s.companyName || "Deleted Company",
+        status: currentStatus,
+        slot: comp?.description || s.companyName?.description || "N/A",
+        venue: comp?.venue || "N/A",
+        pocs: Array.isArray(comp?.POCs) ? comp.POCs.map(p => ({
+          name: p?.name || "N/A",
+          phone: p?.phoneNo || "N/A",
+          email: p?.emailId || "N/A"
+        })) : []
+      };
+    });
+
+    return res.json({
+      student: {
+        name: studentUser.name,
+        email: studentUser.emailId,
+        phone: studentUser.phoneNo,
+        programme: studentUser.programme || null,
+        department: studentUser.department || null,
+        cpi: typeof studentUser.cpi === 'number' ? studentUser.cpi : null
+      },
+      companies: companyDetails
+    });
+
+  } catch (err) {
+    logger.error("getStudentDetails (admin) error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
