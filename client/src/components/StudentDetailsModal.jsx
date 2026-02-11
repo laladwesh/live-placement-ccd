@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import api from '../api/axios';
 
-const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
+const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
@@ -17,7 +17,8 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
     try {
       setLoading(true);
       setError(null);
-      const response = await api.get(`/poc/student/${studentId}/details`);
+      const endpoint = isAdmin ? `/admin/students/${studentId}/details` : `/poc/student/${studentId}/details`;
+      const response = await api.get(endpoint);
       setData(response.data);
     } catch (err) {
       console.error("Error fetching student details:", err);
@@ -56,7 +57,7 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
         <div className="space-y-6">
           {/* Student Info */}
           <div className="bg-gray-50 p-4 rounded-lg">
-            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-4 text-sm">
               <div>
                 <span className="font-semibold text-gray-600">Email:</span>
                 <span className="ml-2 text-gray-900">{data.student.email}</span>
@@ -65,6 +66,22 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId }) => {
                 <span className="font-semibold text-gray-600">Phone:</span>
                 <span className="ml-2 text-gray-900">{data.student.phone || "N/A"}</span>
               </div>
+              {isAdmin && (
+                <>
+                  <div>
+                    <span className="font-semibold text-gray-600">Programme:</span>
+                    <span className="ml-2 text-gray-900">{data.student.programme || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-600">Department:</span>
+                    <span className="ml-2 text-gray-900">{data.student.department || 'N/A'}</span>
+                  </div>
+                  <div>
+                    <span className="font-semibold text-gray-600">CPI:</span>
+                    <span className="ml-2 text-gray-900">{data.student.cpi !== null && data.student.cpi !== undefined ? data.student.cpi : 'N/A'}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
