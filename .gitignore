@@ -179,3 +179,4 @@ scripts/dummy.js
 scripts/seed.js
 scripts/move-rounds-to-shortlist.js
 scripts/add_companies_from_list.js
+com.js
