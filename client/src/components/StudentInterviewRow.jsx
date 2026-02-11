@@ -18,6 +18,8 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
 
   // Check if student is placed at THIS company (student.isPlaced means placed at this company)
   const isPlacedHere = shortlist.student?.isPlaced;
+
+  console.log("Shortlist data:", shortlist);
   // Check if student is placed at ANOTHER company (shortlist.isStudentPlaced but NOT student.isPlaced)
   const isPlacedElsewhere = shortlist.isStudentPlaced && !shortlist.student?.isPlaced;
   const placedCompanyName = shortlist.studentPlacedCompany;

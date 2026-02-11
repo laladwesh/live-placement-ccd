@@ -180,7 +180,7 @@ export default function POCCompanyStudents() {
     } catch (err) {
       console.error("whoami error", err);
       localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
+      window.location.href = "/dday/login";
     }
   };
 
@@ -247,7 +247,10 @@ export default function POCCompanyStudents() {
       const placedGroup = [];
 
       filteredStudents.forEach(s => {
-        if (s.student?.isPlaced) {
+        // Consider student placed if they are placed at THIS company (student.isPlaced)
+        // or if they are placed somewhere else (isStudentPlaced). Both should be
+        // grouped into the Placed section in the PDF and shown last.
+        if (s.student?.isPlaced || s.isStudentPlaced) {
           placedGroup.push(s);
         } else {
           const stage = (s.currentStage || '').toUpperCase();
@@ -287,8 +290,14 @@ export default function POCCompanyStudents() {
         // Determine display status for PDF
         let statusText = '';
 
-        if (s.student?.isPlaced) {
-          statusText = 'Placed';
+        if (s.student?.isPlaced || s.isStudentPlaced) {
+          // If student is placed at this company, student.isPlaced will be true.
+          // If they are placed at another company, the API provides `studentPlacedCompany`.
+          if (s.student?.isPlaced) {
+            statusText = 'Placed';
+          } else {
+            statusText = s.studentPlacedCompany ? `Placed` : 'Placed';
+          }
         } else {
           const stage = (s.currentStage || '').toUpperCase();
           if (stage === 'SHORTLISTED' || stage.startsWith('R') || stage === 'OFFERED') {
