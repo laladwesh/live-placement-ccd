@@ -5,7 +5,8 @@ import {
   getPendingOffers, 
   getConfirmedOffers, 
   approveOffer, 
-  rejectOffer 
+  rejectOffer,
+  getStudentDetails
 } from "../controllers/admin.controller.js";
 import { setCompanyProcessComplete } from "../controllers/admin.controller.js";
 import {
@@ -39,5 +40,8 @@ router.post("/offers/:offerId/reject", authMiddleware, permit("admin"), rejectOf
 
 // Admin toggle to mark/reopen company process
 router.post("/companies/:companyId/complete", authMiddleware, permit("admin"), setCompanyProcessComplete);
+
+// Admin view: get student cross-company details (includes academic fields)
+router.get('/students/:studentId/details', authMiddleware, permit('admin'), getStudentDetails);
 
 export default router;
