@@ -6,6 +6,7 @@ import api from "../api/axios";
 import Navbar from "../components/Navbar";
 import ConfirmDialog from "../components/ConfirmDialog";
 import InputModal from "../components/InputModal";
+import StudentDetailsModal from "../components/StudentDetailsModal";
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminDashboard() {
@@ -20,6 +21,21 @@ export default function AdminDashboard() {
   const [processing, setProcessing] = useState(null); // offerId being processed
   const [expandedStudent, setExpandedStudent] = useState(null); // Track expanded student rows
   const [searchTerm, setSearchTerm] = useState(""); // Search filter
+  // Server-side filters: active filters and temporary inputs
+  const [programmeFilter, setProgrammeFilter] = useState("");
+  const [departmentFilter, setDepartmentFilter] = useState("");
+  const [cpiMin, setCpiMin] = useState("");
+  const [cpiMax, setCpiMax] = useState("");
+  const [tempProgramme, setTempProgramme] = useState("");
+  const [tempDepartment, setTempDepartment] = useState("");
+  const [tempCpiMin, setTempCpiMin] = useState("");
+  const [tempCpiMax, setTempCpiMax] = useState("");
+  const [programmesList, setProgrammesList] = useState([]);
+  const [departmentsList, setDepartmentsList] = useState([]);
+  const [programmesAll, setProgrammesAll] = useState([]);
+  const [departmentsAll, setDepartmentsAll] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [showStudentModal, setShowStudentModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
     isOpen: false,
     type: null, // 'approve' or 'reject'
@@ -97,13 +113,19 @@ export default function AdminDashboard() {
     }
   };
 
-  const fetchOffers = async () => {
+  const fetchOffers = async (overrideFilters = null) => {
     setLoading(true);
     try {
-      const [pendingRes, confirmedRes] = await Promise.all([
-        api.get("/admin/offers/pending"),
-        api.get("/admin/offers/confirmed")
-      ]);
+      // include active server-side filters when requesting confirmed offers
+      const pendingReq = api.get("/admin/offers/pending");
+      const params = {};
+      const useFilters = overrideFilters || { programme: programmeFilter, department: departmentFilter, cpiMin, cpiMax };
+      if (useFilters.programme) params.programme = useFilters.programme;
+      if (useFilters.department) params.department = useFilters.department;
+      if (useFilters.cpiMin) params.cpiMin = useFilters.cpiMin;
+      if (useFilters.cpiMax) params.cpiMax = useFilters.cpiMax;
+      const confirmedReq = api.get("/admin/offers/confirmed", { params });
+      const [pendingRes, confirmedRes] = await Promise.all([pendingReq, confirmedReq]);
       
       setPendingOffers(pendingRes.data.offers || []);
       
@@ -123,6 +145,28 @@ export default function AdminDashboard() {
 
       setConfirmedOffers(confirmedList);
       setRejectedOffers(rejectedList);
+
+      // derive programme/department lists from confirmed results for dropdowns
+      try {
+        const progs = new Set();
+        const depts = new Set();
+        (confirmedRes.data.offers || []).forEach(o => {
+          const s = o.studentId || {};
+          if (s.programme) progs.add(s.programme);
+          if (s.department) depts.add(s.department);
+        });
+        const progsArr = Array.from(progs).sort();
+        const deptsArr = Array.from(depts).sort();
+        setProgrammesList(progsArr);
+        setDepartmentsList(deptsArr);
+        // Preserve full lists on first load (when no overrideFilters provided)
+        if (!overrideFilters || Object.keys(overrideFilters).length === 0) {
+          if (programmesAll.length === 0) setProgrammesAll(progsArr);
+          if (departmentsAll.length === 0) setDepartmentsAll(deptsArr);
+        }
+      } catch (e) {
+        // ignore
+      }
     } catch (err) {
       console.error("Error fetching offers:", err);
     } finally {
@@ -228,7 +272,7 @@ export default function AdminDashboard() {
     return (
       <>
         {/* Main Row */}
-        <tr className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50 transition`}>
+        <tr onClick={() => { setSelectedStudentId(student._id); setShowStudentModal(true); }} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50 transition`}>
           {/* S.No */}
           <td className="px-4 py-3 text-sm text-slate-900 font-medium border-b border-slate-200">
             {index + 1}
@@ -249,7 +293,7 @@ export default function AdminDashboard() {
             {hasMultipleOffers ? (
               <div className="relative">
                 <button
-                  onClick={() => setExpandedStudent(isExpanded ? null : student._id)}
+                  onClick={(e) => { e.stopPropagation(); setExpandedStudent(isExpanded ? null : student._id); }}
                   className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition text-sm font-medium"
                 >
                   <span>{offers.length} Companies</span>
@@ -306,20 +350,20 @@ export default function AdminDashboard() {
             {!hasMultipleOffers && isPending ? (
               <div className="flex gap-2">
                 <button
-                  onClick={() => setConfirmDialog({
+                  onClick={(e) => { e.stopPropagation(); setConfirmDialog({
                     isOpen: true,
                     type: 'approve',
                     offerId: offers[0]._id,
                     studentName: student?.name,
                     companyName: offers[0]?.companyId?.name
-                  })}
+                  }); }}
                   disabled={processing === offers[0]._id}
                   className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
                 >
                   {processing === offers[0]._id ? "..." : "Approve"}
                 </button>
                 <button
-                  onClick={() => openRejectReasonModal(offers[0]._id)}
+                  onClick={(e) => { e.stopPropagation(); openRejectReasonModal(offers[0]._id); }}
                   disabled={processing === offers[0]._id}
                   className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
                 >
@@ -379,20 +423,20 @@ export default function AdminDashboard() {
               {isPending ? (
                 <div className="flex gap-2">
                   <button
-                    onClick={() => setConfirmDialog({
+                    onClick={(e) => { e.stopPropagation(); setConfirmDialog({
                       isOpen: true,
                       type: 'approve',
                       offerId: offer._id,
                       studentName: student?.name,
                       companyName: offer.companyId?.name
-                    })}
+                    }); }}
                     disabled={processing === offer._id}
                     className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
                   >
                     {processing === offer._id ? "..." : "Approve"}
                   </button>
                   <button
-                    onClick={() => openRejectReasonModal(offer._id)}
+                    onClick={(e) => { e.stopPropagation(); openRejectReasonModal(offer._id); }}
                     disabled={processing === offer._id}
                     className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
                   >
@@ -594,60 +638,98 @@ export default function AdminDashboard() {
             </div>
           )
         ) : activeTab === "confirmed" ? (
-          groupedConfirmedOffers.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4">📭</div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                {searchTerm ? "No students found" : "No Confirmed Offers"}
-              </h3>
-              <p className="text-slate-600">
-                {searchTerm ? "Try adjusting your search" : "No offers have been approved yet"}
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        S.No
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Student Details
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Placed At
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Details
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupedConfirmedOffers.map((studentData, index) => (
-                      <StudentOfferRow 
-                        key={studentData.student._id} 
-                        studentData={studentData} 
-                        isPending={false}
-                        index={index}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
-                Showing {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'student' : 'students'}
-                {searchTerm && ` matching "${searchTerm}"`}
+          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            {/* Filters (server-side) placed inside confirmed tab */}
+            <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
+              <div className="flex flex-wrap gap-3 items-end">
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-600 mb-1">Programme</label>
+                  <select value={tempProgramme} onChange={(e) => setTempProgramme(e.target.value)} className="px-3 py-2 border rounded-md">
+                    <option value="">All</option>
+                    {(programmesAll.length ? programmesAll : programmesList).map(p => (<option key={p} value={p}>{p}</option>))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-600 mb-1">Department</label>
+                  <select value={tempDepartment} onChange={(e) => setTempDepartment(e.target.value)} className="px-3 py-2 border rounded-md">
+                    <option value="">All</option>
+                    {(departmentsAll.length ? departmentsAll : departmentsList).map(d => (<option key={d} value={d}>{d}</option>))}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-600 mb-1">CPI Min</label>
+                  <input type="number" step="0.01" min="0" max="10" value={tempCpiMin} onChange={(e) => setTempCpiMin(e.target.value)} className="px-3 py-2 border rounded-md w-28" />
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-600 mb-1">CPI Max</label>
+                  <input type="number" step="0.01" min="0" max="10" value={tempCpiMax} onChange={(e) => setTempCpiMax(e.target.value)} className="px-3 py-2 border rounded-md w-28" />
+                </div>
+
+                <div className="ml-auto flex gap-2">
+                  <button onClick={async () => { setProgrammeFilter(tempProgramme); setDepartmentFilter(tempDepartment); setCpiMin(tempCpiMin); setCpiMax(tempCpiMax); await fetchOffers({ programme: tempProgramme, department: tempDepartment, cpiMin: tempCpiMin, cpiMax: tempCpiMax }); }} className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm">Apply</button>
+                  <button onClick={async () => { setProgrammeFilter(''); setDepartmentFilter(''); setCpiMin(''); setCpiMax(''); setTempProgramme(''); setTempDepartment(''); setTempCpiMin(''); setTempCpiMax(''); await fetchOffers({}); }} className="px-3 py-2 bg-slate-100 rounded-md text-sm">Clear</button>
+                </div>
               </div>
             </div>
-          )
+
+            {groupedConfirmedOffers.length === 0 ? (
+              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+                <div className="text-6xl mb-4">📭</div>
+                <h3 className="text-xl font-semibold text-slate-900 mb-2">
+                  {searchTerm ? "No students found" : "No Confirmed Offers"}
+                </h3>
+                <p className="text-slate-600">
+                  {searchTerm ? "Try adjusting your search" : "No offers have been approved yet"}
+                </p>
+              </div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-slate-200">
+                    <thead className="bg-slate-100">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          S.No
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Student Details
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Company
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Placed At
+                        </th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
+                          Details
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {groupedConfirmedOffers.map((studentData, index) => (
+                        <StudentOfferRow 
+                          key={studentData.student._id} 
+                          studentData={studentData} 
+                          isPending={false}
+                          index={index}
+                        />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
+                  Showing {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'student' : 'students'}
+                  {searchTerm && ` matching "${searchTerm}"`}
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           // Rejected Offers Tab
           groupedRejectedOffers.length === 0 ? (
@@ -708,6 +790,13 @@ export default function AdminDashboard() {
       </main>
 
       {/* Confirm Approve Dialog */}
+      <StudentDetailsModal
+        isOpen={showStudentModal}
+        onClose={() => { setShowStudentModal(false); setSelectedStudentId(null); }}
+        studentId={selectedStudentId}
+        isAdmin={true}
+      />
+
       <ConfirmDialog
         isOpen={confirmDialog.isOpen && confirmDialog.type === 'approve'}
         onClose={() => setConfirmDialog({ isOpen: false, type: null, offerId: null, studentName: '', companyName: '' })}
