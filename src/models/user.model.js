@@ -16,6 +16,10 @@ const UserSchema = new mongoose.Schema({
   companyName: { type: String, trim: true }, // For POC role - name of their company
   passwordHash: { type: String }, // only for local login
   isAllowed: { type: Boolean, default: false }, // pre-authorized for oauth
+  // Academic / student fields
+  programme: { type: String, trim: true, default: "" },
+  department: { type: String, trim: true, default: "" },
+  cpi: { type: Number, min: 0, max: 10, default: null },
   providers: [
     {
       provider: { type: String },
