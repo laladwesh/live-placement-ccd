@@ -91,7 +91,8 @@ export const getPOCCompanyStudents = async (req, res) => {
     const offerMap = new Map(offers.map(o => [o.studentId.toString(), o]));
 
     // Enrich shortlists with placement status and format for frontend
-    const enrichedShortlists = shortlists.map(s => {
+    // Use an async mapping so we can resolve placed company names from Student docs when needed
+    const enrichedShortlists = await Promise.all(shortlists.map(async (s) => {
       const studentDoc = studentMap.get(s.studentId._id.toString());
       const offer = offerMap.get(s.studentId._id.toString());
       
@@ -105,10 +106,24 @@ export const getPOCCompanyStudents = async (req, res) => {
         currentStage = s.status.toUpperCase(); // SHORTLISTED or WAITLISTED
       }
 
-      // Check if student is placed at THIS specific company
+      // Check if student is placed at THIS specific company (matching ObjectId)
       const isPlacedAtThisCompany = studentDoc?.isPlaced && 
         studentDoc?.placedCompany && 
         studentDoc.placedCompany.toString() === companyId.toString();
+
+      // Compute whether student is placed anywhere (from Student doc) OR tracked on the Shortlist
+      let studentPlacedCompanyNameFromDoc = "";
+      if (studentDoc && studentDoc.isPlaced && studentDoc.placedCompany) {
+        try {
+          const placedComp = await Company.findById(studentDoc.placedCompany).select('name');
+          studentPlacedCompanyNameFromDoc = placedComp?.name || "";
+        } catch (e) {
+          studentPlacedCompanyNameFromDoc = "";
+        }
+      }
+
+      const isStudentPlacedFlag = !!(studentDoc?.isPlaced) || !!s.isStudentPlaced;
+      const studentPlacedCompanyFinal = studentPlacedCompanyNameFromDoc || s.studentPlacedCompany || "";
 
       return {
         _id: s._id,
@@ -122,19 +137,21 @@ export const getPOCCompanyStudents = async (req, res) => {
         hasRejectedOffer: offer?.approvalStatus === "REJECTED", // Check if admin rejected the offer
         createdAt: s.createdAt,
         updatedAt: s.updatedAt,
-        isStudentPlaced: s.isStudentPlaced, // Student placed somewhere (this or other company)
-        studentPlacedCompany: s.studentPlacedCompany, // Name of company where placed
+        // Propagate placed-anywhere flag so POC UI immediately reflects placement even if shortlist wasn't updated
+        isStudentPlaced: isStudentPlacedFlag,
+        studentPlacedCompany: studentPlacedCompanyFinal,
         student: {
           _id: s.studentId._id,
           name: s.studentId.name,
           email: s.studentId.emailId,
           phoneNumber: s.studentId.phoneNo,
           rollNumber: studentDoc?.rollNumber,
-          isPlaced: isPlacedAtThisCompany, // TRUE only if placed at THIS company
+          // Keep this flag TRUE only when placed at THIS company
+          isPlaced: isPlacedAtThisCompany,
           isBlocked: studentDoc?.isBlocked || false
         }
       };
-    });
+    }));
 
     // Calculate stats based on company's maxRounds
     const maxRounds = company.maxRounds || 4;
