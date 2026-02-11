@@ -19,7 +19,7 @@ const main = async () => {
     process.exit(1);
   }
   try {
-    const MONGO_URI = process.env.MONGO_URI;
+    const MONGO_URI = process.env.MONGO_URI || "mongodb+srv://dev_vibha:hehe%401711@placementliveportal.83npy51.mongodb.net/mydb?retryWrites=true&w=majority&appName=PlacementLivePortal";
     if (!MONGO_URI) {
       console.error("[ERROR] Please set MONGO_URI in .env");
       process.exit(1);
