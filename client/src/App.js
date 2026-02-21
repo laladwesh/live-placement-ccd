@@ -13,8 +13,10 @@ import POCDashboard from "./pages/POCDashboard";
 import POCCompanyStudents from "./pages/POCCompanyStudents";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentShortlistDetails from "./pages/StudentShortlistDetails";
+import TeamPage from "./pages/TeamPage";
 import PrivateRoute from "./components/PrivateRoute";
 import AuthCallback from "./pages/AuthCallback";
+import Footer from "./components/Footer";
 
 function App() {
   return (
@@ -107,9 +109,12 @@ function App() {
             <StudentShortlistDetails />
           </PrivateRoute>
         } />
+        <Route path="/team" element={<TeamPage />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
       </Routes>
+      
+      <Footer />
     </BrowserRouter>
     </>
   );
