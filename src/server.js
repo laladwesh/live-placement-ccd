@@ -19,6 +19,7 @@ import adminRoutes from "./routes/admin.route.js";
 import companyRoutes from "./routes/company.routes.js";
 import pocRoutes from "./routes/poc.routes.js";
 import studentRoutes from "./routes/student.routes.js";
+import viewerRoutes from "./routes/viewer.routes.js";
 import { logger } from "./utils/logger.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 import { whoami } from "./controllers/me.controller.js";
@@ -113,6 +114,7 @@ app.use(prefixed('/api/admin'), adminRoutes);
 app.use(prefixed('/api/admin'), companyRoutes);
 app.use(prefixed('/api/poc'), pocRoutes);
 app.use(prefixed('/api/student'), studentRoutes);
+app.use(prefixed('/api/viewers'), viewerRoutes);
 app.get(prefixed('/api/users/me'), authMiddleware, whoami);
 
 // =======================================================
