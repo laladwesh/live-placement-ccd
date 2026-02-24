@@ -8,6 +8,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminCompanyDetails from "./pages/AdminCompanyDetails";
 import AdminOffersDashboard from "./pages/AdminOffersDashboard";
 import AdminStudents from "./pages/AdminStudents";
+import ViewersConfirmed from "./pages/ViewersConfirmed";
 import CompanyDetails from "./pages/CompanyDetails";
 import POCDashboard from "./pages/POCDashboard";
 import POCCompanyStudents from "./pages/POCCompanyStudents";
@@ -110,6 +111,11 @@ function App() {
           </PrivateRoute>
         } />
         <Route path="/team" element={<TeamPage />} />
+        <Route path="/viewers/confirmed" element={
+          <PrivateRoute>
+            <ViewersConfirmed />
+          </PrivateRoute>
+        } />
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/auth/callback" element={<AuthCallback />} />
       </Routes>
