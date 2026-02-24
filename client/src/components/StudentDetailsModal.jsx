@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Modal from './Modal';
 import api from '../api/axios';
 
-const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false }) => {
+const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false, isViewer = false }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [data, setData] = useState(null);
@@ -17,7 +17,7 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false }) =>
     try {
       setLoading(true);
       setError(null);
-      const endpoint = isAdmin ? `/admin/students/${studentId}/details` : `/poc/student/${studentId}/details`;
+      const endpoint = isAdmin ? `/admin/students/${studentId}/details` : (isViewer ? `/viewers/student/${studentId}/details` : `/poc/student/${studentId}/details`);
       const response = await api.get(endpoint);
       setData(response.data);
     } catch (err) {
@@ -66,8 +66,12 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false }) =>
                 <span className="font-semibold text-gray-600">Phone:</span>
                 <span className="ml-2 text-gray-900">{data.student.phone || "N/A"}</span>
               </div>
-              {isAdmin && (
+              {(isAdmin || isViewer) && (
                 <>
+                  <div>
+                    <span className="font-semibold text-gray-600">Roll Number:</span>
+                    <span className="ml-2 text-gray-900">{data.student.rollNumber || 'N/A'}</span>
+                  </div>
                   <div>
                     <span className="font-semibold text-gray-600">Programme:</span>
                     <span className="ml-2 text-gray-900">{data.student.programme || 'N/A'}</span>
