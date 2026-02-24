@@ -12,7 +12,7 @@ const UserSchema = new mongoose.Schema({
       message: props => `${props.value} is not a valid 10-digit phone number`
     }
   },
-  role: { type: String, enum: ["student", "poc", "admin", "official"], default: "student" },
+  role: { type: String, enum: ["student", "poc", "admin", "official", "viewer"], default: "student" },
   companyName: { type: String, trim: true }, // For POC role - name of their company
   passwordHash: { type: String }, // only for local login
   isAllowed: { type: Boolean, default: false }, // pre-authorized for oauth
