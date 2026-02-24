@@ -186,7 +186,8 @@ export default function ViewersConfirmed() {
         <StudentDetailsModal 
           isOpen={showStudentModal} 
           onClose={() => { setShowStudentModal(false); setSelectedStudentId(null); }} 
-          studentId={selectedStudentId} 
+          studentId={selectedStudentId}
+          isViewer={true}
         />
       </main>
     </div>
