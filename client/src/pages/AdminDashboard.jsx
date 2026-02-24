@@ -1,5 +1,5 @@
 // src/pages/AdminDashboard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -34,6 +34,12 @@ export default function AdminDashboard() {
   const [departmentsList, setDepartmentsList] = useState([]);
   const [programmesAll, setProgrammesAll] = useState([]);
   const [departmentsAll, setDepartmentsAll] = useState([]);
+  const [companiesList, setCompaniesList] = useState([]);
+  const [companiesAll, setCompaniesAll] = useState([]);
+  const [companyFilter, setCompanyFilter] = useState("");
+  const [tempCompany, setTempCompany] = useState("");
+  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
+  const companyRef = useRef(null);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
@@ -98,6 +104,17 @@ export default function AdminDashboard() {
     };
   }, [socket]);
 
+  // Close company dropdown on outside click
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (companyRef.current && !companyRef.current.contains(e.target)) {
+        setCompanyDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
+
   const fetchUser = async () => {
     try {
       const res = await api.get("/users/me");
@@ -143,26 +160,42 @@ export default function AdminDashboard() {
         (!o.remarks || !o.remarks.toLowerCase().includes("auto-rejected"))
       );
 
-      setConfirmedOffers(confirmedList);
-      setRejectedOffers(rejectedList);
+      // Determine company to apply: prefer overrideFilters.company when provided (Apply button passes this), else use companyFilter state
+      const appliedCompany = (overrideFilters && overrideFilters.company) ? overrideFilters.company : companyFilter;
+      if (appliedCompany && appliedCompany.trim()) {
+        const lowerCompany = appliedCompany.toLowerCase();
+        const filteredConfirmed = confirmedList.filter(o => o.companyId?.name?.toLowerCase().includes(lowerCompany));
+        const filteredRejected = rejectedList.filter(o => o.companyId?.name?.toLowerCase().includes(lowerCompany));
+        setConfirmedOffers(filteredConfirmed);
+        setRejectedOffers(filteredRejected);
+      } else {
+        setConfirmedOffers(confirmedList);
+        setRejectedOffers(rejectedList);
+      }
 
-      // derive programme/department lists from confirmed results for dropdowns
+      // derive programme/department/company lists from confirmed results for dropdowns
       try {
         const progs = new Set();
         const depts = new Set();
+        const comps = new Set();
         (confirmedRes.data.offers || []).forEach(o => {
           const s = o.studentId || {};
+          const c = o.companyId || {};
           if (s.programme) progs.add(s.programme);
           if (s.department) depts.add(s.department);
+          if (c.name) comps.add(c.name);
         });
         const progsArr = Array.from(progs).sort();
         const deptsArr = Array.from(depts).sort();
+        const compsArr = Array.from(comps).sort();
         setProgrammesList(progsArr);
         setDepartmentsList(deptsArr);
+        setCompaniesList(compsArr);
         // Preserve full lists on first load (when no overrideFilters provided)
         if (!overrideFilters || Object.keys(overrideFilters).length === 0) {
           if (programmesAll.length === 0) setProgrammesAll(progsArr);
           if (departmentsAll.length === 0) setDepartmentsAll(deptsArr);
+          if (companiesAll.length === 0) setCompaniesAll(compsArr);
         }
       } catch (e) {
         // ignore
@@ -658,6 +691,33 @@ export default function AdminDashboard() {
                   </select>
                 </div>
 
+                <div className="flex flex-col relative" ref={companyRef}>
+                  <label className="text-xs text-slate-600 mb-1">Company</label>
+                  <input
+                    value={tempCompany}
+                    onChange={(e) => { setTempCompany(e.target.value); setCompanyDropdownOpen(true); }}
+                    onFocus={() => setCompanyDropdownOpen(true)}
+                    placeholder="Search or select a company"
+                    className="px-3 py-2 border rounded-md w-60 relative z-20"
+                  />
+                  {companyDropdownOpen && (
+                    <ul className="absolute left-0 top-full mt-1 max-h-48 w-60 overflow-auto bg-white border rounded shadow-sm">
+                      {( (companiesAll.length ? companiesAll : companiesList).filter(c => c.toLowerCase().includes((tempCompany||'').toLowerCase())) ).map(c => (
+                        <li
+                          key={c}
+                          onClick={() => { setTempCompany(c); setCompanyDropdownOpen(false); }}
+                          className="px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer"
+                        >
+                          {c}
+                        </li>
+                      ))}
+                      {((companiesAll.length ? companiesAll : companiesList).filter(c => c.toLowerCase().includes((tempCompany||'').toLowerCase())).length === 0) && (
+                        <li className="px-3 py-2 text-sm text-slate-400">No matches</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+
                 <div className="flex flex-col">
                   <label className="text-xs text-slate-600 mb-1">CPI Min</label>
                   <input type="number" step="0.01" min="0" max="10" value={tempCpiMin} onChange={(e) => setTempCpiMin(e.target.value)} className="px-3 py-2 border rounded-md w-28" />
@@ -669,8 +729,37 @@ export default function AdminDashboard() {
                 </div>
 
                 <div className="ml-auto flex gap-2">
-                  <button onClick={async () => { setProgrammeFilter(tempProgramme); setDepartmentFilter(tempDepartment); setCpiMin(tempCpiMin); setCpiMax(tempCpiMax); await fetchOffers({ programme: tempProgramme, department: tempDepartment, cpiMin: tempCpiMin, cpiMax: tempCpiMax }); }} className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm">Apply</button>
-                  <button onClick={async () => { setProgrammeFilter(''); setDepartmentFilter(''); setCpiMin(''); setCpiMax(''); setTempProgramme(''); setTempDepartment(''); setTempCpiMin(''); setTempCpiMax(''); await fetchOffers({}); }} className="px-3 py-2 bg-slate-100 rounded-md text-sm">Clear</button>
+                  <button
+                    onClick={async () => {
+                      setProgrammeFilter(tempProgramme);
+                      setDepartmentFilter(tempDepartment);
+                      setCpiMin(tempCpiMin);
+                      setCpiMax(tempCpiMax);
+                      setCompanyFilter(tempCompany);
+                      await fetchOffers({ programme: tempProgramme, department: tempDepartment, cpiMin: tempCpiMin, cpiMax: tempCpiMax, company: tempCompany });
+                    }}
+                    className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm"
+                  >
+                    Apply
+                  </button>
+                  <button
+                    onClick={async () => {
+                      setProgrammeFilter('');
+                      setDepartmentFilter('');
+                      setCpiMin('');
+                      setCpiMax('');
+                      setCompanyFilter('');
+                      setTempProgramme('');
+                      setTempDepartment('');
+                      setTempCpiMin('');
+                      setTempCpiMax('');
+                      setTempCompany('');
+                      await fetchOffers({});
+                    }}
+                    className="px-3 py-2 bg-slate-100 rounded-md text-sm"
+                  >
+                    Clear
+                  </button>
                 </div>
               </div>
             </div>
