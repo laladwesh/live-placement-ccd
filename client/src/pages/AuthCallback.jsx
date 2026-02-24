@@ -38,6 +38,8 @@ export default function AuthCallback() {
           navigate("/poc");
         } else if (user.role === "student") {
           navigate("/student");
+        } else if (user.role === "viewer") {
+          navigate("/viewers/confirmed");
         } else {
           navigate("/dashboard");
         }
