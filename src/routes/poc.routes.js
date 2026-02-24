@@ -18,6 +18,7 @@ const router = express.Router();
 
 // All routes require authentication and POC/admin role
 router.use(authMiddleware);
+router.get("/student/:studentId/details", permit("poc", "admin", "viewer"), getStudentCrossCompanyDetails);
 router.use(permit("poc", "admin"));
 
 // Get POC's assigned companies
@@ -48,6 +49,6 @@ router.post("/companies/:companyId/walkin", addWalkInStudent);
 router.post("/companies/:companyId/complete", markProcessCompleted);
 
 // Get student cross-company details
-router.get("/student/:studentId/details", getStudentCrossCompanyDetails);
+
 
 export default router;
