@@ -30,6 +30,8 @@ export default function OAuthCallback() {
           navigate("/poc", { replace: true });
         } else if (user.role === "student") {
           navigate("/student", { replace: true });
+        } else if (user.role === "viewer") {
+          navigate("/viewers/confirmed", { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
         }
