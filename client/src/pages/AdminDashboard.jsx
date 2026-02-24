@@ -319,6 +319,8 @@ export default function AdminDashboard() {
             )}
             <div className="text-xs text-slate-500">{student?.emailId}</div>
             <div className="text-xs text-slate-500">{student?.phoneNo}</div>
+            <div className="text-xs text-slate-500">{student?.programme}</div>
+            <div className="text-xs text-slate-500">{student?.department}</div>
           </td>
 
           {/* Companies - Show dropdown if multiple */}
