@@ -38,6 +38,8 @@ export default function Login() {
           navigate("/poc", { replace: true });
         } else if (user.role === "student") {
           navigate("/student", { replace: true });
+        } else if (user.role === "viewer") {
+          navigate("/viewers/confirmed", { replace: true });
         } else {
           navigate("/dashboard", { replace: true });
         }
@@ -71,6 +73,8 @@ export default function Login() {
         navigate("/poc");
       } else if (user.role === "student") {
         navigate("/student");
+      } else if (user.role === "viewer") {
+        navigate("/viewers/confirmed");
       } else {
         navigate("/dashboard");
       }
