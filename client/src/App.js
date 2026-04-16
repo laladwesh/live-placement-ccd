@@ -15,6 +15,7 @@ import POCCompanyStudents from "./pages/POCCompanyStudents";
 import StudentDashboard from "./pages/StudentDashboard";
 import StudentShortlistDetails from "./pages/StudentShortlistDetails";
 import TeamPage from "./pages/TeamPage";
+import InternMasterData from "./pages/InternMasterData";
 import PrivateRoute from "./components/PrivateRoute";
 import AuthCallback from "./pages/AuthCallback";
 import Footer from "./components/Footer";
@@ -114,6 +115,11 @@ function App() {
         <Route path="/viewers/confirmed" element={
           <PrivateRoute>
             <ViewersConfirmed />
+          </PrivateRoute>
+        } />
+        <Route path="/intern-master-data" element={
+          <PrivateRoute>
+            <InternMasterData />
           </PrivateRoute>
         } />
         <Route path="/" element={<Navigate to="/login" replace />} />
