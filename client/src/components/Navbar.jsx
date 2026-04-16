@@ -42,6 +42,22 @@ export default function Navbar({ user }) {
                     Admin Dashboard
                   </Link>
                 )}
+                {(user.role === "viewer") && (
+                  <Link
+                    to="/viewers/confirmed"
+                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
+                  >
+                    Viewer Dashboard
+                  </Link>
+                )}
+                {(user.role === "admin" || user.role === "viewer") && (
+                  <Link
+                    to="/intern-master-data"
+                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md"
+                  >
+                    Intern Master Data
+                  </Link>
+                )}
                 {(user.role === "poc" || user.role === "superadmin") && (
                   <Link
                     to="/poc"
@@ -99,6 +115,12 @@ export default function Navbar({ user }) {
               <>
                 {(user.role === "admin" || user.role === "superadmin") && (
                   <Link to="/admin" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Admin Dashboard</Link>
+                )}
+                {(user.role === "viewer") && (
+                  <Link to="/viewers/confirmed" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Viewer Dashboard</Link>
+                )}
+                {(user.role === "admin" || user.role === "viewer") && (
+                  <Link to="/intern-master-data" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Intern Master Data</Link>
                 )}
                 {(user.role === "poc" || user.role === "superadmin") && (
                   <Link to="/poc" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">POC Dashboard</Link>
