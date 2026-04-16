@@ -19,6 +19,7 @@ export default function InternMasterData() {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [companyInput, setCompanyInput] = useState("");
   const [slotSpotInput, setSlotSpotInput] = useState("");
+  const canEdit = user?.role === "admin";
 
   const loadPageData = async () => {
     setLoading(true);
@@ -224,7 +225,9 @@ export default function InternMasterData() {
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Yes</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Company</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Slot / Spot</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    {canEdit && (
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-600 uppercase">Actions</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -252,24 +255,26 @@ export default function InternMasterData() {
                       </td>
                       <td className="px-4 py-3 text-sm text-slate-700">{row.company || "-"}</td>
                       <td className="px-4 py-3 text-sm text-slate-700">{row.slotSpot || "-"}</td>
-                      <td className="px-4 py-3 text-sm">
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => openPlacementModal(row)}
-                            className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700"
-                          >
-                            {row.isGotIntern ? "Update" : "Mark Placed"}
-                          </button>
-                          {row.isGotIntern && (
+                      {canEdit && (
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2">
                             <button
-                              onClick={() => handleMarkNotPlaced(row)}
-                              className="px-3 py-1.5 rounded-md bg-slate-200 text-slate-800 text-xs font-medium hover:bg-slate-300"
+                              onClick={() => openPlacementModal(row)}
+                              className="px-3 py-1.5 rounded-md bg-blue-600 text-white text-xs font-medium hover:bg-blue-700"
                             >
-                              Mark Not Placed
+                              {row.isGotIntern ? "Update" : "Mark Placed"}
                             </button>
-                          )}
-                        </div>
-                      </td>
+                            {row.isGotIntern && (
+                              <button
+                                onClick={() => handleMarkNotPlaced(row)}
+                                className="px-3 py-1.5 rounded-md bg-slate-200 text-slate-800 text-xs font-medium hover:bg-slate-300"
+                              >
+                                Mark Not Placed
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                      )}
                     </tr>
                   ))}
                 </tbody>

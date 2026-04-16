@@ -5,6 +5,6 @@ import { getInternMasterData, updateInternPlacement } from "../controllers/inter
 const router = express.Router();
 
 router.get("/intern-master", authMiddleware, permit("viewer", "admin"), getInternMasterData);
-router.patch("/intern-master/:id/placement", authMiddleware, permit("viewer", "admin"), updateInternPlacement);
+router.patch("/intern-master/:id/placement", authMiddleware, permit("admin"), updateInternPlacement);
 
 export default router;
