@@ -55,7 +55,7 @@ export default function Navbar({ user }) {
                     to="/intern-master-data"
                     className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md"
                   >
-                    Intern Master Data
+                    Intership Data
                   </Link>
                 )}
                 {(user.role === "poc" || user.role === "superadmin") && (
@@ -120,7 +120,7 @@ export default function Navbar({ user }) {
                   <Link to="/viewers/confirmed" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Viewer Dashboard</Link>
                 )}
                 {(user.role === "admin" || user.role === "viewer") && (
-                  <Link to="/intern-master-data" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Intern Master Data</Link>
+                  <Link to="/intern-master-data" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Intership Data</Link>
                 )}
                 {(user.role === "poc" || user.role === "superadmin") && (
                   <Link to="/poc" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">POC Dashboard</Link>
