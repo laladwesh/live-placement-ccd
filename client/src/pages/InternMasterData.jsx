@@ -65,12 +65,6 @@ export default function InternMasterData() {
     return Array.from(new Set(rows.map((row) => row.company).filter(Boolean))).sort();
   }, [rows]);
 
-  const summary = useMemo(() => {
-    const placed = rows.filter((row) => row.isGotIntern).length;
-    const total = rows.length;
-    return { total, placed, unplaced: total - placed };
-  }, [rows]);
-
   const filteredRows = useMemo(() => {
     const s = (search || "").toLowerCase();
 
@@ -90,6 +84,12 @@ export default function InternMasterData() {
       );
     });
   }, [rows, search, programme, department, company, cpiMin, cpiMax]);
+
+  const summary = useMemo(() => {
+    const placed = filteredRows.filter((row) => row.isGotIntern).length;
+    const total = filteredRows.length;
+    return { total, placed, unplaced: total - placed };
+  }, [filteredRows]);
 
   const openPlacementModal = (record) => {
     setSelectedRecord(record);
