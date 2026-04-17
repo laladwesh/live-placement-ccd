@@ -132,6 +132,7 @@ export default function ViewersConfirmed() {
                   <tr className="bg-slate-50/50 border-b border-slate-100">
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">#</th>
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Student Profile</th>
+                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">CPI</th>
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Placement Entity</th>
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Timeline</th>
                     <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-right">Action</th>
@@ -146,6 +147,9 @@ export default function ViewersConfirmed() {
                           <span className="font-semibold text-slate-800 group-hover:text-indigo-600 transition-colors">{o.studentId?.name}</span>
                           <span className="text-xs text-slate-500">{o.studentId?.rollNumber} • {o.studentId?.programme}</span>
                         </div>
+                      </td>
+                      <td className="px-6 py-4 text-sm text-slate-700">
+                        {typeof o.studentId?.cpi === 'number' ? o.studentId.cpi.toFixed(2) : 'N/A'}
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -172,7 +176,7 @@ export default function ViewersConfirmed() {
                     </tr>
                   )) : (
                     <tr>
-                      <td colSpan="5" className="px-6 py-12 text-center text-slate-400">
+                      <td colSpan="6" className="px-6 py-12 text-center text-slate-400">
                         No placement records match your filters.
                       </td>
                     </tr>
