@@ -135,9 +135,7 @@ export default function Login() {
             <div className="font-bold text-base" style={{ color: "#1E2532" }}>
               DDay Portal
             </div>
-            <div className="text-xs" style={{ color: "#8D9096" }}>
-              IIT Guwahati — Career &amp; Counselling Division
-            </div>
+            
           </div>
         </div>
 
