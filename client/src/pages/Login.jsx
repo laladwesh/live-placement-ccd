@@ -276,8 +276,8 @@ export default function Login() {
 
         <p className="mt-5 text-xs text-center" style={{ color: "#8D9096" }}>
           Having trouble?{" "}
-          <a href="mailto:ccd_queries@iitg.ac.in" style={{ color: "#2164E8" }}>
-            ccd_queries@iitg.ac.in
+          <a href="mailto:ccd.techsupport@iitg.ac.in" style={{ color: "#2164E8" }}>
+            ccd.techsupport@iitg.ac.in
           </a>
         </p>
       </div>
