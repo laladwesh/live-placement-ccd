@@ -21,9 +21,9 @@ WORKDIR /app
 # Copy backend package files and install production dependencies
 COPY package.json package-lock.json* ./
 RUN npm install --production --legacy-peer-deps
-# Copy backend source (src/, seed.js, etc.)
+# Copy backend source
 COPY src/ ./src/
-COPY seed.js ./
+COPY scripts/ ./scripts/
 # Copy built client into backend for static serving
 COPY --from=client-build /app/client/build ./client/build
 
