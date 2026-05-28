@@ -1,24 +1,33 @@
-// src/pages/AdminCompanyDetails.jsx
-import React, { useEffect, useState } from "react"; // Corrected file path comment
+﻿// src/pages/AdminCompanyDetails.jsx
+import React, { useEffect, useState } from "react";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 import CompanyCard from "../components/CompanyCard";
 import AddCompanyModal from "../components/AddCompanyModal";
-import EditCompanyModal from "../components/EditCompanyModal"; // Assuming this component exists or will be created
+import EditCompanyModal from "../components/EditCompanyModal";
 import { useSocket } from "../context/SocketContext";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminCompanyDetails() {
+  const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false); // New state for edit modal visibility
-  const [companyToEdit, setCompanyToEdit] = useState(null); // New state to hold company data for editing
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [companyToEdit, setCompanyToEdit] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [syncingCompanies, setSyncingCompanies] = useState(false);
+  const [companySyncResult, setCompanySyncResult] = useState(null);
 
   useEffect(() => {
-    fetchUser();
+    if (!user) {
+      api.get("/users/me").then(res => {
+        setCachedUser(res.data.user);
+        setUser(res.data.user);
+      }).catch(() => { clearCachedUser(); localStorage.removeItem("jwt_token"); navigate("/login"); });
+    }
     fetchCompanies();
   }, []);
 
@@ -50,17 +59,6 @@ export default function AdminCompanyDetails() {
       socket.off("company:update");
     };
   }, [socket]);
-
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-    } catch (err) {
-      console.error("whoami error", err);
-      localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
-    }
-  };
 
   const fetchCompanies = async () => {
     try {
@@ -99,6 +97,20 @@ export default function AdminCompanyDetails() {
     setCompanyToEdit(null); // Clear the company to edit
     fetchCompanies(); // Refresh the list of companies
   };
+  const handleSyncCompaniesFromPortal = async () => {
+    setSyncingCompanies(true);
+    setCompanySyncResult(null);
+    try {
+      const res = await api.post("/admin/sync/companies");
+      setCompanySyncResult(res.data);
+      fetchCompanies();
+    } catch (err) {
+      setCompanySyncResult({ error: err.response?.data?.message || "Sync failed" });
+    } finally {
+      setSyncingCompanies(false);
+    }
+  };
+
   const filteredCompanies = companies.filter(company => {
     const q = (searchTerm || "").trim().toLowerCase();
 
@@ -123,33 +135,22 @@ export default function AdminCompanyDetails() {
   });
 
   if (!user) {
-    return (
-      <div className="min-h-screen">
-        <Navbar user={null} />
-        <div className="max-w-7xl mx-auto p-6">Loading...</div>
-      </div>
-    );
+    return <div className="p-6 text-slate-600">Loading...</div>;
   }
 
-  // Check if user is admin
   if (user.role !== "admin" && user.role !== "superadmin") {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            Access Denied: Admin privileges required
-          </div>
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded p-4 text-red-700">
+          Access Denied: Admin privileges required
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-      
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <>
+    <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-4">
@@ -157,15 +158,27 @@ export default function AdminCompanyDetails() {
               <h1 className="text-3xl font-bold text-slate-900">Company Management</h1>
               {/* <p className="text-slate-600 mt-1">View, add, and manage all companies.</p> */}
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Company
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSyncCompaniesFromPortal}
+                disabled={syncingCompanies}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {syncingCompanies ? "Syncing…" : "Sync All Companies"}
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Company
+              </button>
+            </div>
           </div>
 
           {/* Stats */}
@@ -189,6 +202,14 @@ export default function AdminCompanyDetails() {
               <div className="text-2xl font-bold text-slate-900 mt-1">0</div>
             </div>
           </div> */}
+
+          {companySyncResult && (
+            <div className={`mb-3 px-4 py-2 rounded text-sm ${companySyncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
+              {companySyncResult.error
+                ? companySyncResult.error
+                : `Sync done — ${companySyncResult.total} companies found: ${companySyncResult.created} added, ${companySyncResult.skipped} already present`}
+            </div>
+          )}
 
           {/* Search */}
           <div className="relative">
@@ -231,16 +252,16 @@ export default function AdminCompanyDetails() {
               <CompanyCard
                 key={company._id}
                 company={company}
+                user={user}
                 onUpdate={handleCompanyUpdated}
                 onDelete={handleCompanyDeleted}
-                onEdit={handleEditCompany} // Pass the new handler to CompanyCard
+                onEdit={handleEditCompany}
               />
             ))}
           </div>
         )}
       </main>
 
-      {/* Add Company Modal */}
       {showAddModal && (
         <AddCompanyModal
           onClose={() => setShowAddModal(false)}
@@ -248,17 +269,14 @@ export default function AdminCompanyDetails() {
         />
       )}
 
-      {/* Edit Company Modal - NEW */}
       {showEditModal && companyToEdit && (
         <EditCompanyModal
-          company={companyToEdit} // Pass the company data to the modal
-          onClose={() => {
-            setShowEditModal(false);
-            setCompanyToEdit(null); // Clear the company to edit on close
-          }}
+          company={companyToEdit}
+          onClose={() => { setShowEditModal(false); setCompanyToEdit(null); }}
           onSuccess={handleCompanyEdited}
         />
       )}
-    </div>
+    </>
   );
 }
+

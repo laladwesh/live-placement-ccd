@@ -1,52 +1,44 @@
-// src/pages/AdminStudents.jsx
+﻿// src/pages/AdminStudents.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 import AddStudentToMasterModal from "../components/AddStudentToMasterModal";
-import Navbar from "../components/Navbar";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function AdminStudents() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
-
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-    } catch (err) {
-      console.error("whoami error", err);
-      localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
-    }
-  };
-
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState(null);
 
   useEffect(() => {
-    checkAuth();
-    fetchStudents();
-    fetchUser();
+    if (user) return; // Already have user from cache
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login");
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const checkAuth = async () => {
-    try {
-      const res = await api.get("/users/me");
-      
-      if (res.data.user.role !== "admin") {
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      console.error("Error fetching user:", err);
-      navigate("/login");
-    }
-  };
+  useEffect(() => {
+    if (user && user.role !== "admin") navigate("/dashboard");
+  }, [user]);
+
+  useEffect(() => {
+    fetchStudents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const fetchStudents = async () => {
     setLoading(true);
@@ -111,6 +103,20 @@ export default function AdminStudents() {
     }
   };
 
+  const handleSyncFromPortal = async () => {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await api.post("/admin/sync/students");
+      setSyncResult(res.data);
+      fetchStudents();
+    } catch (err) {
+      setSyncResult({ error: err.response?.data?.message || "Sync failed" });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const downloadSampleCSV = () => {
     const csvContent = `email,name,rollNumber,phoneNo
 student1@iitg.ac.in,Student One,210101001,9876543210
@@ -127,12 +133,9 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
   };
 
   return (
-<>
-    <Navbar user={user} />
-    
-    <div className="min-h-screen bg-slate-50 p-6">
+    <div className="bg-slate-50 p-6">
 
-      <div className="max-w-7xl mx-auto px-8">
+      <div className="px-6">
         
         {/* Header */}
         <div className="mb-6">
@@ -144,16 +147,35 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-semibold text-slate-900">Upload Students CSV</h2>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition flex items-center gap-2"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-              </svg>
-              Add Student Manually
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleSyncFromPortal}
+                disabled={syncing}
+                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {syncing ? "Syncing…" : "Sync from Placement Portal"}
+              </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition flex items-center gap-2"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                Add Student Manually
+              </button>
+            </div>
           </div>
+          {syncResult && (
+            <div className={`mb-4 px-4 py-2 rounded text-sm ${syncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
+              {syncResult.error
+                ? syncResult.error
+                : `Sync done — ${syncResult.total} students: ${syncResult.created} created, ${syncResult.updated} updated`}
+            </div>
+          )}
           
           <div className="space-y-4">
             {/* File Input */}
@@ -259,14 +281,14 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50">
+                <thead className="bg-slate-100">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Email</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Roll Number</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Phone</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Shortlisted</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Placed</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Name</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Email</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Roll Number</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Phone</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Shortlisted</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Placed</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
@@ -318,7 +340,6 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
         />
       )}
     </div>
-
-  </>
   );
 }
+

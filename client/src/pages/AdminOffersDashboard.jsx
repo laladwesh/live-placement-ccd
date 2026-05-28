@@ -1,17 +1,17 @@
-// src/pages/AdminOffersDashboard.jsx
+﻿// src/pages/AdminOffersDashboard.jsx
 import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 import InputModal from "../components/InputModal";
 import { useSocket } from "../context/SocketContext";
 
 export default function AdminOffersDashboard() {
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [loading, setLoading] = useState(true);
   const [pendingOffers, setPendingOffers] = useState([]);
   const [confirmedOffers, setConfirmedOffers] = useState([]);
@@ -33,7 +33,23 @@ export default function AdminOffersDashboard() {
   });
 
   useEffect(() => {
-    fetchUser();
+    if (user) return; // Already have user from cache
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (user && user.role !== "admin") navigate("/dashboard");
+  }, [user]);
+
+  useEffect(() => {
     const initialFetch = async () => {
       setLoading(true);
       await fetchOffers();
@@ -87,21 +103,6 @@ export default function AdminOffersDashboard() {
       socket.off("offer:reverted", handleOfferReverted);
     };
   }, [socket]);
-
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-      
-      // Redirect if not admin
-      if (res.data.user.role !== "admin") {
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      console.error("Error fetching user:", err);
-      navigate("/login");
-    }
-  };
 
   const fetchOffers = useCallback(async () => {
     try {
@@ -416,10 +417,8 @@ export default function AdminOffersDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+      <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -719,6 +718,7 @@ export default function AdminOffersDashboard() {
         label="Reason for Rejection (Optional)"
         placeholder="Enter a reason for rejecting this offer..."
       />
-    </div>
+    </>
   );
 }
+

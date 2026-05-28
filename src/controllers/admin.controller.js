@@ -1,12 +1,24 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
+import axios from "axios";
 import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
 import Company from "../models/company.model.js";
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
-import Shortlist from "../models/shortlist.model.js";
+import Shortlist, { Status } from "../models/shortlist.model.js";
 import { sendOfferApprovalEmail } from "../utils/mailer.js";
 import { logger } from "../utils/logger.js";
 import { emitOfferApproved, emitOfferRejected, emitOfferStatusUpdate, emitStudentPlaced } from "../config/socket.js";
+
+const PLACEMENT_API = process.env.PLACEMENT_PORTAL_API ;
+const SYNC_KEY = process.env.DDAY_SYNC_KEY || "";
+
+function makeSyncHeaders(body) {
+  const sig = SYNC_KEY
+    ? crypto.createHmac("sha256", SYNC_KEY).update(JSON.stringify(body)).digest("hex")
+    : "";
+  return { "x-sync-signature": sig, "Content-Type": "application/json" };
+}
 
 /**
  * Create a user record used by admin.
@@ -298,6 +310,22 @@ export const approveOffer = async (req, res) => {
       logger.error("Failed to send offer approval email:", mailErr);
     }
 
+    // Fire-and-forget write-back to placement portal
+    if (offer.companyId.placementPortalJobId) {
+      const webhookBody = {
+        studentEmail: offer.studentId.emailId,
+        placementPortalJobId: offer.companyId.placementPortalJobId,
+      };
+      axios
+        .post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
+          headers: makeSyncHeaders(webhookBody),
+          timeout: 8000,
+        })
+        .then(() => logger.info(`[sync] Placement portal notified: ${offer.studentId.emailId} placed`))
+        .catch((err) => logger.error("[sync] Placement portal webhook failed:", err.message));
+    } else {
+      logger.warn(`[sync] No placementPortalJobId on company ${offer.companyId.name} — skipping write-back`);
+    }
 
     return res.json({
       success: true,
@@ -482,5 +510,188 @@ export const getStudentDetails = async (req, res) => {
   } catch (err) {
     logger.error("getStudentDetails (admin) error:", err);
     return res.status(500).json({ message: "Server error" });
+  }
+};
+
+// HMAC for outbound GET requests to placement portal (no request body → sign "{}")
+function makeSyncHmacForGet() {
+  return SYNC_KEY
+    ? crypto.createHmac("sha256", SYNC_KEY).update("{}").digest("hex")
+    : "";
+}
+
+// POST /admin/sync/students  — pull all students from placement portal, upsert into dday
+export const syncStudentsFromPortal = async (req, res) => {
+  try {
+    const { data } = await axios.get(`${PLACEMENT_API}/sync/students`, {
+      headers: { "x-sync-signature": makeSyncHmacForGet() },
+      timeout: 30000,
+    });
+    if (data.status !== "success") {
+      return res.status(502).json({ message: "Placement portal returned error" });
+    }
+
+    let created = 0, updated = 0;
+    for (const s of data.data) {
+      const email = s.email?.toLowerCase();
+      if (!email) continue;
+
+      let user = await User.findOne({ emailId: email });
+      if (!user) {
+        const phoneValid = s.phoneNo && /^\d{10}$/.test(s.phoneNo);
+        user = await User.create({
+          name: s.name || email,
+          emailId: email,
+          ...(phoneValid ? { phoneNo: s.phoneNo } : {}),
+          role: "student",
+          isAllowed: true,
+          programme: s.programme || "",
+          department: s.department || "",
+          cpi: typeof s.cpi === "number" ? s.cpi : null,
+        });
+        created++;
+      } else {
+        if (s.name) user.name = s.name;
+        if (s.phoneNo && /^\d{10}$/.test(s.phoneNo)) user.phoneNo = s.phoneNo;
+        if (s.programme) user.programme = s.programme;
+        if (s.department) user.department = s.department;
+        if (typeof s.cpi === "number") user.cpi = s.cpi;
+        user.isAllowed = true;
+        await user.save();
+        updated++;
+      }
+
+      const existingStudent = await Student.findOne({ userId: user._id });
+      if (!existingStudent) {
+        const rollValid = s.rollNumber && /^\d{9}$/.test(s.rollNumber);
+        await Student.create({ userId: user._id, rollNumber: rollValid ? s.rollNumber : "" });
+      } else if (s.rollNumber && /^\d{9}$/.test(s.rollNumber) && !existingStudent.rollNumber) {
+        existingStudent.rollNumber = s.rollNumber;
+        await existingStudent.save();
+      }
+    }
+
+    logger.info(`[sync] Students — total: ${data.data.length}, created: ${created}, updated: ${updated}`);
+    return res.json({ status: "success", total: data.data.length, created, updated });
+  } catch (err) {
+    logger.error("syncStudentsFromPortal error:", err.message);
+    return res.status(500).json({ message: "Sync failed", error: err.message });
+  }
+};
+
+// POST /admin/sync/companies  — pull finalized-shortlist companies from placement portal, append-only
+export const syncCompaniesFromPortal = async (req, res) => {
+  try {
+    const { data } = await axios.get(`${PLACEMENT_API}/sync/companies`, {
+      headers: { "x-sync-signature": makeSyncHmacForGet() },
+      timeout: 15000,
+    });
+    if (data.status !== "success") {
+      return res.status(502).json({ message: "Placement portal returned error" });
+    }
+
+    let created = 0, skipped = 0;
+    for (const entry of data.data) {
+      const { placementPortalJobId, ddayName } = entry;
+      if (!placementPortalJobId) continue;
+
+      // Already synced — skip
+      const alreadySynced = await Company.findOne({ placementPortalJobId });
+      if (alreadySynced) { skipped++; continue; }
+
+      // Handle name collision
+      let name = ddayName;
+      const nameTaken = await Company.findOne({ name });
+      if (nameTaken) name = `${ddayName} (${String(placementPortalJobId).slice(-4)})`;
+
+      await Company.create({ name, placementPortalJobId });
+      created++;
+    }
+
+    logger.info(`[sync] Companies — total: ${data.data.length}, created: ${created}, skipped: ${skipped}`);
+    return res.json({ status: "success", total: data.data.length, created, skipped });
+  } catch (err) {
+    logger.error("syncCompaniesFromPortal error:", err.message);
+    return res.status(500).json({ message: "Sync failed", error: err.message });
+  }
+};
+
+// POST /admin/sync/companies/:companyId/shortlist  — pull interview shortlist for one company, append+dedup
+export const syncShortlistFromPortal = async (req, res) => {
+  try {
+    const { companyId } = req.params;
+
+    const company = await Company.findById(companyId);
+    if (!company) return res.status(404).json({ message: "Company not found" });
+    if (!company.placementPortalJobId) {
+      return res.status(400).json({ message: "Company is not linked to a placement portal job" });
+    }
+
+    const { data } = await axios.get(
+      `${PLACEMENT_API}/sync/shortlist/${company.placementPortalJobId}`,
+      { headers: { "x-sync-signature": makeSyncHmacForGet() }, timeout: 15000 }
+    );
+    if (data.status !== "success") {
+      return res.status(502).json({ message: "Placement portal returned error" });
+    }
+
+    let added = 0, skipped = 0;
+    for (const s of data.data) {
+      // Respect OA policy — only sync students who were OA-present (or OA not required)
+      if (!s.oaPresent) { skipped++; continue; }
+
+      const email = s.email?.toLowerCase();
+      if (!email) continue;
+
+      // Upsert user
+      let user = await User.findOne({ emailId: email });
+      if (!user) {
+        const phoneValid = s.phoneNo && /^\d{10}$/.test(s.phoneNo);
+        user = await User.create({
+          name: s.name || email,
+          emailId: email,
+          ...(phoneValid ? { phoneNo: s.phoneNo } : {}),
+          role: "student",
+          isAllowed: true,
+        });
+      }
+
+      // Ensure Student sidecar
+      let studentDoc = await Student.findOne({ userId: user._id });
+      if (!studentDoc) {
+        const rollValid = s.rollNumber && /^\d{9}$/.test(s.rollNumber);
+        studentDoc = await Student.create({ userId: user._id, rollNumber: rollValid ? s.rollNumber : "" });
+      }
+
+      // Append-only — skip if already shortlisted for this company
+      const exists = await Shortlist.findOne({ studentId: user._id, companyId: company._id });
+      if (exists) { skipped++; continue; }
+
+      await Shortlist.create({
+        companyId: company._id,
+        companyName: company.name,
+        studentId: user._id,
+        studentEmail: email,
+        status: Status.SHORTLISTED,
+      });
+
+      if (!studentDoc.shortlistedCompanies.includes(company._id)) {
+        studentDoc.shortlistedCompanies.push(company._id);
+        await studentDoc.save();
+      }
+
+      if (!company.shortlistedStudents.includes(user._id)) {
+        company.shortlistedStudents.push(user._id);
+      }
+      added++;
+    }
+
+    if (added > 0) await company.save();
+
+    logger.info(`[sync] Shortlist ${companyId} — total: ${data.data.length}, added: ${added}, skipped: ${skipped}`);
+    return res.json({ status: "success", total: data.data.length, added, skipped });
+  } catch (err) {
+    logger.error("syncShortlistFromPortal error:", err.message);
+    return res.status(500).json({ message: "Sync failed", error: err.message });
   }
 };

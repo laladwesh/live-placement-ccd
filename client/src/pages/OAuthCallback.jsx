@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+﻿import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 
@@ -51,3 +51,4 @@ export default function OAuthCallback() {
     </div>
   );
 }
+

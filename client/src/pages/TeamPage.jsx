@@ -1,5 +1,4 @@
-import React, { useState } from "react";
-import Navbar from "../components/Navbar";
+﻿import React, { useState } from "react";
 
 export default function TeamPage() {
   const [imageErrors, setImageErrors] = useState({});
@@ -231,3 +230,4 @@ export default function TeamPage() {
     </div>
   );
 }
+

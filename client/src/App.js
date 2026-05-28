@@ -1,24 +1,25 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
-import Login from "./pages/Login";
-import OAuthCallback from "./pages/OAuthCallback";
-import Dashboard from "./pages/Dashboard";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminCompanyDetails from "./pages/AdminCompanyDetails";
+
+import Layout          from "./components/Layout";
+import Login           from "./pages/Login";
+import OAuthCallback   from "./pages/OAuthCallback";
+import AuthCallback    from "./pages/AuthCallback";
+import Dashboard       from "./pages/Dashboard";
+import AdminDashboard  from "./pages/AdminDashboard";
+import AdminCompanyDetails  from "./pages/AdminCompanyDetails";
 import AdminOffersDashboard from "./pages/AdminOffersDashboard";
-import AdminStudents from "./pages/AdminStudents";
+import AdminStudents   from "./pages/AdminStudents";
 import ViewersConfirmed from "./pages/ViewersConfirmed";
-import CompanyDetails from "./pages/CompanyDetails";
-import POCDashboard from "./pages/POCDashboard";
-import POCCompanyStudents from "./pages/POCCompanyStudents";
-import StudentDashboard from "./pages/StudentDashboard";
+import CompanyDetails  from "./pages/CompanyDetails";
+import POCDashboard    from "./pages/POCDashboard";
+import POCCompanyStudents   from "./pages/POCCompanyStudents";
+import StudentDashboard     from "./pages/StudentDashboard";
 import StudentShortlistDetails from "./pages/StudentShortlistDetails";
-import TeamPage from "./pages/TeamPage";
+import TeamPage        from "./pages/TeamPage";
 import InternMasterData from "./pages/InternMasterData";
-import PrivateRoute from "./components/PrivateRoute";
-import AuthCallback from "./pages/AuthCallback";
-import Footer from "./components/Footer";
+import Footer          from "./components/Footer";
 
 function App() {
   return (
@@ -27,107 +28,42 @@ function App() {
         position="top-right"
         toastOptions={{
           duration: 4000,
-          style: {
-            background: '#363636',
-            color: '#fff',
-          },
-          success: {
-            duration: 3000,
-            iconTheme: {
-              primary: '#10b981',
-              secondary: '#fff',
-            },
-          },
-          error: {
-            duration: 4000,
-            iconTheme: {
-              primary: '#ef4444',
-              secondary: '#fff',
-            },
-          },
+          style: { background: '#1E2532', color: '#fff', fontFamily: 'Lato, sans-serif', fontSize: 14 },
+          success: { duration: 3000, iconTheme: { primary: '#107C10', secondary: '#fff' } },
+          error:   { duration: 4000, iconTheme: { primary: '#D83B01', secondary: '#fff' } },
         }}
       />
-  <BrowserRouter basename={process.env.REACT_APP_BASE_PATH || ''}>
+
+      <BrowserRouter basename={process.env.REACT_APP_BASE_PATH || ''}>
         <Routes>
-          <Route path="/login" element={<Login />} />
+          {/* ── Public ───────────────────────────────── */}
+          <Route path="/login"         element={<Login />} />
           <Route path="/auth/callback" element={<OAuthCallback />} />
-          <Route path="/dashboard" element={
-            <PrivateRoute>
-              <Dashboard />
-            </PrivateRoute>
-          } />
-          <Route path="/admin" element={
-            <PrivateRoute>
-            <AdminDashboard />
-          </PrivateRoute>
-        } />
-        <Route path="/admin/offers" element={
-          <PrivateRoute>
-            <AdminOffersDashboard />
-          </PrivateRoute>
-        } />
-        <Route path="/admin/students" element={
-          <PrivateRoute>
-            <AdminStudents />
-          </PrivateRoute>
-        } />
-        <Route path="/admin/companies/:companyId" element={
-          <PrivateRoute>
-            <CompanyDetails />
-          </PrivateRoute>
-        } />
-        <Route path="/admin/company" element={
-          <PrivateRoute>
-            <AdminCompanyDetails />
-          </PrivateRoute>
-        } />
-        <Route path="/company/:companyId" element={
-          <PrivateRoute>
-            <CompanyDetails />
-          </PrivateRoute>
-        } />
-        <Route path="/poc" element={
-          <PrivateRoute>
-            <POCDashboard />
-          </PrivateRoute>
-        } />
-        <Route path="/poc/company/:companyId" element={
-          <PrivateRoute>
-            <POCCompanyStudents />
-          </PrivateRoute>
-        } />
-        <Route path="/poc/companies/:companyId/students" element={
-          <PrivateRoute>
-            <POCCompanyStudents />
-          </PrivateRoute>
-        } />
-        <Route path="/student" element={
-          <PrivateRoute>
-            <StudentDashboard />
-          </PrivateRoute>
-        } />
-        <Route path="/student/shortlist/:shortlistId" element={
-          <PrivateRoute>
-            <StudentShortlistDetails />
-          </PrivateRoute>
-        } />
-        <Route path="/team" element={<TeamPage />} />
-        <Route path="/viewers/confirmed" element={
-          <PrivateRoute>
-            <ViewersConfirmed />
-          </PrivateRoute>
-        } />
-        <Route path="/intern-master-data" element={
-          <PrivateRoute>
-            <InternMasterData />
-          </PrivateRoute>
-        } />
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/auth/callback" element={<AuthCallback />} />
-      </Routes>
-      
-      <Footer />
-    </BrowserRouter>
+          <Route path="/auth/cb"       element={<AuthCallback />} />
+          <Route path="/team"          element={<TeamPage />} />
+          <Route path="/"              element={<Navigate to="/login" replace />} />
+
+          {/* ── Protected — all wrapped by Layout ────── */}
+          <Route element={<Layout />}>
+            <Route path="/dashboard"                          element={<Dashboard />} />
+            <Route path="/admin"                              element={<AdminDashboard />} />
+            <Route path="/admin/offers"                       element={<AdminOffersDashboard />} />
+            <Route path="/admin/students"                     element={<AdminStudents />} />
+            <Route path="/admin/company"                      element={<AdminCompanyDetails />} />
+            <Route path="/admin/companies/:companyId"         element={<CompanyDetails />} />
+            <Route path="/company/:companyId"                 element={<CompanyDetails />} />
+            <Route path="/poc"                                element={<POCDashboard />} />
+            <Route path="/poc/company/:companyId"             element={<POCCompanyStudents />} />
+            <Route path="/poc/companies/:companyId/students"  element={<POCCompanyStudents />} />
+            <Route path="/student"                            element={<StudentDashboard />} />
+            <Route path="/student/shortlist/:shortlistId"     element={<StudentShortlistDetails />} />
+            <Route path="/viewers/confirmed"                  element={<ViewersConfirmed />} />
+            <Route path="/intern-master-data"                 element={<InternMasterData />} />
+          </Route>
+        </Routes>
+
+        <Footer />
+      </BrowserRouter>
     </>
   );
 }

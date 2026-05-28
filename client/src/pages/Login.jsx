@@ -1,4 +1,4 @@
-// src/pages/Login.jsx
+﻿// src/pages/Login.jsx
 import React, { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
@@ -111,116 +111,179 @@ export default function Login() {
 
   return (
     <div
-  className="relative min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
-  style={{
-    backgroundImage: `url(${iitgimg})`,
-  }}
+      className="relative min-h-screen w-full flex items-center justify-center bg-cover bg-center bg-no-repeat"
+      style={{ backgroundImage: `url(${iitgimg})` }}
     >
-      {/* Light overlay */}
-  <div className="absolute inset-0 bg-white/10"></div>
-      <div className="max-w-md w-full bg-white backdrop-blur-lg rounded-2xl shadow-lg p-8">
-        <h2 className="text-2xl font-semibold text-slate-800 mb-2 text-center">
-          Welcome
+      {/* Semi-transparent overlay matching portal #EEF1F4 */}
+      <div className="absolute inset-0" style={{ background: "rgba(238,241,244,0.55)" }} />
+
+      <div
+        className="relative z-10 w-full max-w-md bg-white p-8"
+        style={{
+          borderRadius: "4px",
+          boxShadow: "0px 0.3px 0.9px rgba(27,33,45,0.10), 0px 1.6px 3.6px rgba(27,33,45,0.13)",
+        }}
+      >
+        {/* Header */}
+        <div className="flex items-center gap-3 mb-6 pb-5" style={{ borderBottom: "1px solid #E9E9EB" }}>
+          <img
+            src="https://www.iitg.ac.in/gate-jam/img/logo.png"
+            alt="IITG"
+            className="h-14 w-14 object-contain flex-shrink-0"
+          />
+          <div>
+            <div className="font-bold text-base" style={{ color: "#1E2532" }}>
+              DDay Portal
+            </div>
+            <div className="text-xs" style={{ color: "#8D9096" }}>
+              IIT Guwahati — Career &amp; Counselling Division
+            </div>
+          </div>
+        </div>
+
+        <h2 className="text-lg font-bold mb-1" style={{ color: "#1E2532" }}>
+          Sign in to your account
         </h2>
-        <p className="text-sm text-slate-500 mb-6 text-center">
-          Sign in to view placement dashboard
+        <p className="text-sm mb-6" style={{ color: "#8D9096" }}>
+          Use your institute credentials or email &amp; password
         </p>
 
-        <div className="space-y-3">
-          {/* Microsoft Button */}
+        {/* OAuth buttons */}
+        <div className="space-y-2 mb-6">
           <button
             onClick={() => oauthLogin("azure")}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-slate-200 hover:shadow-sm transition disabled:opacity-50"
             disabled={!!oauthLoading}
+            className="w-full flex items-center justify-center gap-3 px-4 disabled:opacity-50 transition"
+            style={{
+              height: "36px",
+              border: "1px solid #767A81",
+              borderRadius: "2px",
+              background: "#fff",
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#353B47",
+            }}
           >
             {oauthLoading === "azure" ? (
-              <span className="text-sm font-medium text-slate-700">
-                Redirecting to Microsoft…
-              </span>
+              <span>Redirecting to Microsoft…</span>
             ) : (
               <>
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 23 23"
-                  className="w-5 h-5"
-                >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" className="w-4 h-4 flex-shrink-0">
                   <rect x="1" y="1" width="9" height="9" fill="#f25022" />
                   <rect x="13" y="1" width="9" height="9" fill="#7fba00" />
                   <rect x="1" y="13" width="9" height="9" fill="#00a4ef" />
                   <rect x="13" y="13" width="9" height="9" fill="#ffb900" />
                 </svg>
-                <span className="text-sm font-medium text-slate-700">
-                  Sign in with Microsoft
-                </span>
+                <span>Sign in with Microsoft</span>
               </>
             )}
           </button>
 
-          {/* Google Button */}
           <button
             onClick={() => oauthLogin("google")}
-            className="w-full flex items-center justify-center gap-3 px-4 py-2 rounded-lg border border-slate-200 hover:shadow-sm transition disabled:opacity-50"
             disabled={!!oauthLoading}
+            className="w-full flex items-center justify-center gap-3 px-4 disabled:opacity-50 transition"
+            style={{
+              height: "36px",
+              border: "1px solid #767A81",
+              borderRadius: "2px",
+              background: "#fff",
+              fontSize: "14px",
+              fontWeight: 600,
+              color: "#353B47",
+            }}
           >
             {oauthLoading === "google" ? (
-              "Redirecting to Google…"
+              <span>Redirecting to Google…</span>
             ) : (
               <>
-                <FcGoogle className="w-5 h-5" />
-                <span className="text-sm font-medium text-slate-700">
-                  Sign in with Google
-                </span>
+                <FcGoogle className="w-4 h-4 flex-shrink-0" />
+                <span>Sign in with Google</span>
               </>
             )}
           </button>
         </div>
 
-        <div className="mt-6 border-t pt-6">
-          <form onSubmit={submitLocal} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700">
-                Email
-              </label>
-              <input
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                type="email"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700">
-                Password
-              </label>
-              <input
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                type="password"
-                required
-                className="mt-1 block w-full px-3 py-2 border border-slate-200 rounded-md shadow-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-
-            {err && <div className="text-sm text-red-600">{err}</div>}
-
-            <div>
-              <button
-                type="submit"
-                disabled={loading || !!oauthLoading}
-                className="w-full py-2 px-4 bg-primary text-white rounded-lg hover:bg-blue-600"
-              >
-                {loading ? "Signing in..." : "Sign in"}
-              </button>
-            </div>
-          </form>
-
-          <p className="mt-4 text-xs text-slate-500 text-center">
-            Facing error while logging? contact : <a  href="mailto: ccd_queries@iitg.ac.in" >ccd_queries@iitg.ac.in</a>
-          </p>
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-6">
+          <div className="flex-1 h-px" style={{ background: "#E9E9EB" }} />
+          <span className="text-xs font-semibold" style={{ color: "#8D9096" }}>OR</span>
+          <div className="flex-1 h-px" style={{ background: "#E9E9EB" }} />
         </div>
+
+        {/* Local login form */}
+        <form onSubmit={submitLocal} className="space-y-4">
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: "#353B47" }}>
+              Email
+            </label>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              type="email"
+              required
+              placeholder="you@iitg.ac.in"
+              style={{
+                width: "100%", height: "32px",
+                padding: "0 10px",
+                border: "0.5px solid #767A81",
+                borderRadius: "4px",
+                fontSize: "14px",
+                color: "#353B47",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              onFocus={e => (e.target.style.borderColor = "#2164E8")}
+              onBlur={e => (e.target.style.borderColor = "#767A81")}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-semibold mb-1" style={{ color: "#353B47" }}>
+              Password
+            </label>
+            <input
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              type="password"
+              required
+              style={{
+                width: "100%", height: "32px",
+                padding: "0 10px",
+                border: "0.5px solid #767A81",
+                borderRadius: "4px",
+                fontSize: "14px",
+                color: "#353B47",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+              onFocus={e => (e.target.style.borderColor = "#2164E8")}
+              onBlur={e => (e.target.style.borderColor = "#767A81")}
+            />
+          </div>
+
+          {err && (
+            <div className="text-sm" style={{ color: "#D83B01" }}>{err}</div>
+          )}
+
+          <button
+            type="submit"
+            disabled={loading || !!oauthLoading}
+            className="w-full pp-btn disabled:opacity-50"
+            style={{ height: "36px", fontSize: "14px" }}
+          >
+            {loading ? "Signing in…" : "Sign in"}
+          </button>
+        </form>
+
+        <p className="mt-5 text-xs text-center" style={{ color: "#8D9096" }}>
+          Having trouble?{" "}
+          <a href="mailto:ccd_queries@iitg.ac.in" style={{ color: "#2164E8" }}>
+            ccd_queries@iitg.ac.in
+          </a>
+        </p>
       </div>
     </div>
   );
 }
+

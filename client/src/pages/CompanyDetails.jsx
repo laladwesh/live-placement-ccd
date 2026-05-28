@@ -1,19 +1,19 @@
-// src/pages/CompanyDetails.jsx
+﻿// src/pages/CompanyDetails.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 import AddStudentModal from "../components/AddStudentModal";
 import UploadCSVModal from "../components/UploadCSVModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function CompanyDetails() {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [company, setCompany] = useState(null);
   const [shortlists, setShortlists] = useState([]);
   const [stats, setStats] = useState(null);
@@ -29,15 +29,22 @@ export default function CompanyDetails() {
   });
 
   useEffect(() => {
-    fetchUser();
-  }, []);
+    if (user) { fetchCompanyDetails(); return; }
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [companyId]);
 
   useEffect(() => {
-    if (user) {
-      fetchCompanyDetails();
-    }
+    if (user) fetchCompanyDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, companyId]);
+  }, [user]);
 
   // Socket.IO listeners - Silent background updates
   useEffect(() => {
@@ -135,17 +142,6 @@ export default function CompanyDetails() {
     };
   }, [socket, companyId]);
 
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-    } catch (err) {
-      console.error("whoami error", err);
-      localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
-    }
-  };
-
   const fetchCompanyDetails = async () => {
     try {
       setLoading(true);
@@ -213,32 +209,18 @@ export default function CompanyDetails() {
     return matchesSearch && matchesFilter;
   });
 
-  if (!user) {
+  if (!user || loading) {
     return (
-      <div className="min-h-screen">
-        <Navbar user={null} />
-        <div className="max-w-7xl mx-auto p-6">Loading...</div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-7xl mx-auto p-6 text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 mt-4">Loading company details...</p>
-        </div>
+      <div className="max-w-7xl mx-auto p-6 text-center py-12">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="text-slate-600 mt-4">Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-      
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <>
+    <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -383,14 +365,14 @@ export default function CompanyDetails() {
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
+              <thead className="bg-slate-100">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Student</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Phone</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Stage</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Student</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Email</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Phone</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">Stage</th>
+                  <th className="px-6 py-3 text-right text-xs font-semibold text-slate-800 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-slate-200">
@@ -456,7 +438,7 @@ export default function CompanyDetails() {
         </div>
       </main>
 
-      {/* Modals */}
+      {/* Modals — outside main but inside fragment */}
       {showAddModal && (
         <AddStudentModal
           companyId={companyId}
@@ -484,6 +466,7 @@ export default function CompanyDetails() {
         confirmColor="red"
         icon="danger"
       />
-    </div>
+    </>
   );
 }
+

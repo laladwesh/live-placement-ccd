@@ -1,30 +1,37 @@
 services:
-  mongo:
-    image: mongo:6.0
-    profiles: ["local"]
-    restart: unless-stopped
-    volumes:
-      - mongo-data:/data/db
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
-    ports:
-      - '27017:27017'
-
   app:
     build:
       context: .
       dockerfile: Dockerfile
       args:
         REACT_APP_BASE_PATH: /dday
+    container_name: dday2026-app
     restart: unless-stopped
-    ports:
-      - '5005:5005'
-    env_file:
-      - .env
+    network_mode: host          # container shares host network → can reach 127.0.0.1:27017 (systemd mongod)
     environment:
-      # Ensure container listens on the port exposed to the host
-      - PORT=5005
+      NODE_ENV: production
+      PORT: 5005
+      BASE_PATH: /dday
+      FRONTEND_ROOT: https://iitg.ac.in/dday
+      MONGO_URI: mongodb://127.0.0.1:27017/dday2026   # overrides whatever is in .env
+    env_file:
+      - .env                    # loads JWT_SECRET, OAuth keys, SMTP, etc.
+
+  # Only used if you ever need a containerised Mongo (e.g. local dev without systemd).
+  # Run with:  docker compose --profile with-mongo up
+  mongo:
+    image: mongo:7
+    container_name: dday2026-mongo
+    profiles: ["with-mongo"]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+      start_period: 20s
+    volumes:
+      - mongo_data:/data/db
 
 volumes:
-  mongo-data:
+  mongo_data:

@@ -1,10 +1,10 @@
-// src/pages/POCCompanyStudents.jsx
+﻿// src/pages/POCCompanyStudents.jsx
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 import StudentInterviewRow from "../components/StudentInterviewRow";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 import AddWalkInModal from "../components/AddWalkInModal";
 import StudentDetailsModal from "../components/StudentDetailsModal";
 import ConfirmDialog from "../components/ConfirmDialog";
@@ -16,7 +16,7 @@ export default function POCCompanyStudents() {
   const { companyId } = useParams();
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [company, setCompany] = useState(null);
   const [shortlists, setShortlists] = useState([]);
   const [stats, setStats] = useState(null);
@@ -30,18 +30,16 @@ export default function POCCompanyStudents() {
   const [showDetailsModal, setShowDetailsModal] = useState(false);
 
   useEffect(() => {
-    // Workaround: Force refresh once when entering the page to ensure socket connection works
-    // The user reported socket issues that are resolved by a refresh
-    const currentState = window.history.state || {};
-    if (!currentState.hasRefreshed) {
-      const newState = { ...currentState, hasRefreshed: true };
-      window.history.replaceState(newState, '');
-      window.location.reload();
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUser();
+    if (user) return; // Already have user from cache
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/dday/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -56,9 +54,14 @@ export default function POCCompanyStudents() {
   useEffect(() => {
     if (!socket || !companyId) return;
 
-    // Join company room and also join poc room as a fallback to receive process-change broadcasts
+    // Join company room and poc room; re-join on reconnect
     socket.emit("join:company", companyId);
     socket.emit("join:poc");
+
+    socket.on('connect', () => {
+      socket.emit("join:company", companyId);
+      socket.emit("join:poc");
+    });
 
     // Silent refresh function - no loading screen
     const silentRefresh = async (message) => {
@@ -160,6 +163,7 @@ export default function POCCompanyStudents() {
     return () => {
       socket.emit("leave:company", companyId);
       socket.emit("leave:poc");
+      socket.off("connect");
       socket.off("shortlist:update");
       socket.off("offer:created");
       socket.off("offer:approved");
@@ -172,17 +176,6 @@ export default function POCCompanyStudents() {
       socket.off("company:process-changed");
     };
   }, [socket, companyId, user]);
-
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-    } catch (err) {
-      console.error("whoami error", err);
-      localStorage.removeItem("jwt_token");
-      window.location.href = "/dday/login";
-    }
-  };
 
   const fetchCompanyStudents = async () => {
     try {
@@ -404,31 +397,21 @@ export default function POCCompanyStudents() {
   });
 
   if (!user) {
-    return (
-      <div className="min-h-screen">
-        <Navbar user={null} />
-        <div className="max-w-7xl mx-auto p-6">Loading...</div>
-      </div>
-    );
+    return <div className="p-6 text-slate-600">Loading...</div>;
   }
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-7xl mx-auto p-6 text-center py-12">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="text-slate-600 mt-4">Loading students...</p>
-        </div>
+      <div className="max-w-7xl mx-auto p-6 text-center py-12">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="text-slate-600 mt-4">Loading students...</p>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <>
+      <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <button
@@ -776,6 +759,7 @@ export default function POCCompanyStudents() {
         // confirmColor="purple"
         icon="warning"
       />
-    </div>
+    </>
   );
 }
+

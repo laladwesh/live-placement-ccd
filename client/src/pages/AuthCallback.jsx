@@ -1,4 +1,4 @@
-// src/pages/AuthCallback.jsx
+﻿// src/pages/AuthCallback.jsx
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
@@ -61,3 +61,4 @@ export default function AuthCallback() {
     </div>
   );
 }
+

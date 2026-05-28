@@ -1,30 +1,167 @@
+/* Placement Portal font — Lato */
+@import url('https://fonts.googleapis.com/css2?family=Lato:wght@100;300;400;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* small custom styles */
 html, body, #root {
   height: 100%;
 }
 
 body {
-  @apply bg-slate-50 text-slate-800;
+  font-family: 'Lato', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background-color: #EEF1F4;
+  color: #353B47;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Toast animation */
-@keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+/* ── Placement-portal button patterns ────────────────────────────── */
+
+/* Primary button (.pp-btn) */
+.pp-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 16px;
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #2164E8;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.pp-btn:hover { background-color: #1A52C4; }
+.pp-btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Secondary button (.pp-btn2) */
+.pp-btn2 {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 16px;
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #353B47;
+  background-color: #ffffff;
+  border: 1px solid #767A81;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.pp-btn2:hover { background-color: #EEF1F4; }
+.pp-btn2:disabled { opacity: 0.5; cursor: default; }
+
+/* Danger button (.pp-btn-danger) */
+.pp-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  height: 32px;
+  padding: 0 16px;
+  font-family: 'Lato', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #D83B01;
+  border: none;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+.pp-btn-danger:hover { background-color: #C03200; }
+.pp-btn-danger:disabled { opacity: 0.5; cursor: default; }
+
+/* ── Portal card ────────────────────────────────────────────────── */
+.pp-card {
+  background-color: #ffffff;
+  border-radius: 4px;
+  box-shadow: 0px 0.3px 0.9px rgba(27,33,45,0.10), 0px 1.6px 3.6px rgba(27,33,45,0.13);
 }
 
+/* ── Portal table ───────────────────────────────────────────────── */
+.pp-table th {
+  background-color: #EDEEF0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1E2532;
+  padding: 12px 8px;
+  border-bottom: 2px solid #E9E9EB;
+  text-align: left;
+}
+.pp-table td {
+  font-size: 14px;
+  color: #494D57;
+  padding: 8px;
+  border-bottom: 1px solid #E9E9EB;
+}
+.pp-table tr:hover td { background-color: #EEF1F4; }
+
+/* ── iOS / Safari fixes ─────────────────────────────────────────── */
+
+/* Prevent iOS from auto-zooming inputs (requires font-size >= 16px on focus) */
+input, select, textarea {
+  font-size: 16px;
+}
+
+/* iOS Safari: disable tap highlight flash */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Smooth momentum scrolling on iOS for any overflow-auto container */
+.overflow-auto, .overflow-y-auto, .overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* iOS safe-area support for full-height layouts */
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+/* ── Toast slide-in ─────────────────────────────────────────────── */
+@keyframes slideIn {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
 .animate-slideIn {
   animation: slideIn 0.3s ease-out;
+}
+
+/* ── Sidebar nav link hover (placement portal: lightgray) ────────── */
+.sidebar-navlink:hover {
+  background-color: lightgray !important;
+}
+
+/* ── Nav active underline ───────────────────────────────────────── */
+.pp-nav-link {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 12px;
+  height: 64px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #353B47;
+  border-bottom: 2px solid transparent;
+  text-decoration: none;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.pp-nav-link:hover {
+  color: #2164E8;
+  border-bottom-color: #2164E8;
+}
+.pp-nav-link.active {
+  color: #2164E8;
+  border-bottom-color: #2164E8;
 }

@@ -1,8 +1,8 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import Navbar from '../components/Navbar';
+﻿import React, { useEffect, useState, useMemo } from 'react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import StudentDetailsModal from '../components/StudentDetailsModal';
+import { getCachedUser, setCachedUser } from '../utils/userCache';
 
 export default function ViewersConfirmed() {
   const [offers, setOffers] = useState([]);
@@ -15,7 +15,7 @@ export default function ViewersConfirmed() {
   const [cpiMax, setCpiMax] = useState('');
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
-  const [user, setUser] = useState(null);
+  const [user] = useState(() => getCachedUser());
 
   useEffect(() => {
     const load = async () => {
@@ -23,12 +23,6 @@ export default function ViewersConfirmed() {
       try {
         const res = await api.get('/viewers/confirmed');
         setOffers(res.data.offers || []);
-        try {
-          const me = await api.get('/users/me');
-          setUser(me.data.user);
-        } catch (e) {
-          console.warn('Viewer not authenticated');
-        }
       } catch (err) {
         toast.error('Failed to load offers');
       } finally {
@@ -66,10 +60,7 @@ export default function ViewersConfirmed() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      <Navbar user={user} />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <main className="px-6 py-6">
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
@@ -129,13 +120,13 @@ export default function ViewersConfirmed() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">#</th>
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Student Profile</th>
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">CPI</th>
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Placement Entity</th>
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Timeline</th>
-                    <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-right">Action</th>
+                  <tr className="bg-slate-100 border-b border-slate-200">
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-800">#</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-800">Student Profile</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-800">CPI</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-800">Placement Entity</th>
+                    <th className="px-6 py-3 text-left text-xs font-semibold uppercase tracking-wider text-slate-800">Timeline</th>
+                    <th className="px-6 py-3 text-right text-xs font-semibold uppercase tracking-wider text-slate-800">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -194,7 +185,6 @@ export default function ViewersConfirmed() {
           isViewer={true}
         />
       </main>
-    </div>
   );
 }
 

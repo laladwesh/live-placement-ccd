@@ -10,7 +10,8 @@ const CompanySchema = new mongoose.Schema({
   shortlistedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
   waitlistedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
   placedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
-  isProcessCompleted: { type: Boolean, default: false }
+  isProcessCompleted: { type: Boolean, default: false },
+  placementPortalJobId: { type: String, default: null },
 }, {
   timestamps: true
 });

@@ -1,34 +1,33 @@
-// src/pages/StudentShortlistDetails.jsx
+﻿// src/pages/StudentShortlistDetails.jsx
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 import AlertModal from "../components/AlertModal";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function StudentShortlistDetails() {
   const { shortlistId } = useParams();
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [loading, setLoading] = useState(true);
   const [shortlist, setShortlist] = useState(null);
   const [offer, setOffer] = useState(null);
   const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
 
   useEffect(() => {
-    fetchUser();
+    if (!user) {
+      api.get("/users/me").then(res => {
+        setCachedUser(res.data.user);
+        setUser(res.data.user);
+      }).catch(() => {
+        clearCachedUser();
+        localStorage.removeItem("jwt_token");
+        navigate("/login");
+      });
+    }
     fetchDetails();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shortlistId]);
-
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data);
-    } catch (err) {
-      console.error("Error fetching user:", err);
-      navigate("/login");
-    }
-  };
 
   const fetchDetails = async () => {
     setLoading(true);
@@ -82,23 +81,17 @@ export default function StudentShortlistDetails() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-5xl mx-auto px-4 py-12 text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="text-slate-600 mt-4">Loading details...</p>
-        </div>
+      <div className="px-6 py-12 text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+        <p className="text-slate-600 mt-4">Loading details...</p>
       </div>
     );
   }
 
   if (!shortlist) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-5xl mx-auto px-4 py-12 text-center">
-          <p className="text-slate-600">Shortlist not found</p>
-        </div>
+      <div className="px-6 py-12 text-center">
+        <p className="text-slate-600">Shortlist not found</p>
       </div>
     );
   }
@@ -114,10 +107,8 @@ export default function StudentShortlistDetails() {
   const currentStageIndex = stageTimeline.findIndex(s => s.stage === shortlist.stage);
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <>
+    <main className="px-6 py-6">
         {/* Back Button */}
         <button
           onClick={() => navigate("/student")}
@@ -362,7 +353,6 @@ export default function StudentShortlistDetails() {
         </div>
       </main>
 
-      {/* Error Alert */}
       <AlertModal
         isOpen={errorAlert.show}
         onClose={() => setErrorAlert({ show: false, message: '' })}
@@ -370,6 +360,7 @@ export default function StudentShortlistDetails() {
         message={errorAlert.message}
         type="error"
       />
-    </div>
+    </>
   );
 }
+

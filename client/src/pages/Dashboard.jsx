@@ -1,81 +1,49 @@
-import React, { useEffect, useState } from "react";
+﻿import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function Dashboard() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const [user, setUser] = useState(() => getCachedUser());
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await api.get("/users/me");
-        setUser(res.data.user);
-      } catch (err) {
-        console.error("whoami error", err);
-        localStorage.removeItem("jwt_token");
-        window.location.href = "/login";
-      } finally {
-        setLoading(false);
-      }
-    })();
+    if (user) return;
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login");
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen">
-        <Navbar user={null} />
-        <div className="max-w-4xl mx-auto p-6">Loading...</div>
-      </div>
-    );
-  }
+  if (!user) return <div className="p-6 text-slate-600">Loading...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-      <main className="max-w-5xl mx-auto py-8 px-4">
-        <div className="bg-white shadow rounded-lg p-6 w-[100%]">
-          <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-slate-800">
-              {user.role === "admin"
-                ? "Admin Details"
-                : user.role === "poc"
-                ? "POC Details"
-                : "Student Details"}
-            </h1>
+    <main className="px-6 py-6">
+      <div className="bg-white shadow rounded-lg p-6">
+        <h1 className="text-2xl font-semibold text-slate-800 mb-6">
+          {user.role === "admin" ? "Admin Details" : user.role === "poc" ? "POC Details" : "Student Details"}
+        </h1>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 bg-slate-100 rounded">
+            <div className="text-xs text-slate-500">Name</div>
+            <div className="text-lg font-medium text-slate-800">{user.name}</div>
           </div>
+          <div className="p-4 bg-slate-100 rounded">
+            <div className="text-xs text-slate-500">Email</div>
+            <div className="text-lg font-medium text-slate-800">{user.emailId}</div>
           </div>
-
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4  w-[100%]">
-            <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-500">Name</div>
-              <div className="text-lg font-medium text-slate-800">{user.name}</div>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-500">Email</div>
-              <div className="text-lg font-medium text-slate-800">{user.emailId}</div>
-            </div>
-
-            <div className="p-4 bg-slate-50 rounded-lg">
-              <div className="text-xs text-slate-500">Role</div>
-              <div className="text-lg font-medium text-slate-800">{user.role}</div>
-            </div>
+          <div className="p-4 bg-slate-100 rounded">
+            <div className="text-xs text-slate-500">Role</div>
+            <div className="text-lg font-medium text-slate-800">{user.role}</div>
           </div>
-
-          {/* <div className="mt-6">
-            <h3 className="text-sm font-medium text-slate-700">Account details</h3>
-            <div className="mt-3 text-sm text-slate-600">
-              <div className="flex justify-between py-2 border-b">
-                <div>Joined</div>
-                <div>{user.createdAt ? new Date(user.createdAt).toLocaleString() : "-"}</div>
-              </div>
-            </div>
-          </div> */}
-
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
   );
 }
+

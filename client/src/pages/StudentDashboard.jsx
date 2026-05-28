@@ -1,16 +1,17 @@
-// src/pages/StudentDashboard.jsx
+﻿// src/pages/StudentDashboard.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 //import ShortlistCard from "../components/ShortlistCard";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 import { useSocket } from "../context/SocketContext";
+import Navbar from "../components/Navbar";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   // const [stats, setStats] = useState({
@@ -24,7 +25,19 @@ export default function StudentDashboard() {
   const [filterStage, setFilterStage] = useState("ALL");
 
   useEffect(() => {
-    fetchUser();
+    if (user) return; // Already have user from cache
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/dday/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
     fetchProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -125,21 +138,6 @@ export default function StudentDashboard() {
     };
   }, [socket, user]);
 
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-      
-      // Redirect if not a student
-      if (res.data.user.role !== "student" && res.data.user.role !== "admin") {
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      console.error("Error fetching user:", err);
-      navigate("/dday/login");
-    }
-  };
-
   const fetchProfile = async () => {
     try {
       const res = await api.get("/student/profile");
@@ -183,25 +181,13 @@ export default function StudentDashboard() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-slate-600 mt-4">Loading your dashboard...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <div className="p-6 text-slate-600">Loading...</div>;
   }
 
   // Placed Student View - Only show congratulations message
   if (profile?.isPlaced) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-6">
+      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-6">
           <div className="max-w-2xl w-full">
             {/* Simple Header */}
             <div className="text-center mb-8">
@@ -261,7 +247,6 @@ export default function StudentDashboard() {
             </p>
           </div>
         </div>
-      </div>
     );
   }
 
@@ -270,7 +255,7 @@ export default function StudentDashboard() {
     <div className="min-h-screen bg-slate-50">
       <Navbar user={user} />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8 flex flex-col items-center text-center">
           <h1 className="text-3xl font-bold text-slate-900">Live Interview Dashboard</h1>
@@ -357,16 +342,15 @@ export default function StudentDashboard() {
 
     <div className="hidden md:block overflow-x-auto bg-white rounded-lg shadow-sm">
       <table className="min-w-full divide-y divide-slate-200">
-        <thead className="bg-slate-50">
+        <thead className="bg-slate-100">
           <tr>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">
               Company Name
             </th>
-            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">
               Venue
             </th>
-            
-            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-600 uppercase tracking-wider">
+            <th className="px-6 py-3 text-left text-xs font-semibold text-slate-800 uppercase tracking-wider">
               POCs
             </th>
           </tr>

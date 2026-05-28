@@ -1,10 +1,8 @@
 import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 
 export default function Navbar({ user }) {
   const [menuOpen, setMenuOpen] = useState(false);
-  // console.log("navbar user is: ", user);/
-
   const navigate = useNavigate();
 
   const logout = () => {
@@ -12,130 +10,156 @@ export default function Navbar({ user }) {
     navigate("/login");
   };
 
+  // Build nav links based on role
+  const navLinks = [];
+  if (user) {
+    if (user.role === "admin" || user.role === "superadmin") {
+      navLinks.push({ to: "/admin",           label: "Offer Management" });
+      navLinks.push({ to: "/admin/company",   label: "Companies" });
+      navLinks.push({ to: "/admin/students",  label: "Students" });
+    }
+    if (user.role === "admin" || user.role === "viewer") {
+      navLinks.push({ to: "/intern-master-data", label: "Internship Data" });
+    }
+    if (user.role === "poc" || user.role === "superadmin") {
+      navLinks.push({ to: "/poc", label: "POC Dashboard" });
+    }
+    if (user.role === "student" || user.role === "superadmin") {
+      navLinks.push({ to: "/student", label: "My Shortlists" });
+    }
+    if (user.role === "viewer") {
+      navLinks.push({ to: "/viewers/confirmed", label: "Confirmed Placements" });
+    }
+  }
+
   return (
-    <header className="bg-white  border-b-2 border-blue-100">
+    <header
+      className="bg-white sticky top-0 z-50"
+      style={{ boxShadow: "0px 0.3px 0.9px rgba(27,33,45,0.10), 0px 1.6px 3.6px rgba(27,33,45,0.13)" }}
+    >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between h-20 items-center">
-          <div className="flex items-center space-x-4">
-            <Link to="/" className="flex items-center space-x-3 group">
-              <img 
-                src="https://www.iitg.ac.in/gate-jam/img/logo.png" 
-                alt="IIT Guwahati Logo" 
-                className="h-14 w-14 object-contain rounded-full shadow-md group-hover:shadow-lg transition-shadow"
-              />
-              <div className="flex flex-col">
-                <span className="font-bold text-slate-900 text-lg tracking-tight">Live Placement Sheet</span>
-                <span className="text-slate-600 text-xs font-medium">IIT Guwahati</span>
-              </div>
-            </Link>
-          </div>
+        <div className="flex items-center h-16">
 
-          {/* Desktop links */}
-          <div className="hidden sm:flex items-center space-x-4">
-            {user ? (
-              <>
-                {(user.role === "admin" || user.role === "superadmin") && (
-                  <Link
-                    to="/admin"
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                  >
-                    Admin Dashboard
-                  </Link>
-                )}
-                {(user.role === "viewer") && (
-                  <Link
-                    to="/viewers/confirmed"
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                  >
-                    Viewer Dashboard
-                  </Link>
-                )}
-                {(user.role === "admin" || user.role === "viewer") && (
-                  <Link
-                    to="/intern-master-data"
-                    className="px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-all shadow-sm hover:shadow-md"
-                  >
-                    Intership Data
-                  </Link>
-                )}
-                {(user.role === "poc" || user.role === "superadmin") && (
-                  <Link
-                    to="/poc"
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                  >
-                    POC Dashboard
-                  </Link>
-                )}
-                {(user.role === "student" || user.role === "superadmin") && (
-                  <Link
-                    to="/student"
-                    className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md"
-                  >
-                    Student Dashboard
-                  </Link>
-                )}
-                <div className="text-sm text-slate-700 border-l border-slate-300 pl-4 ml-2">
-                  <div className="font-semibold">{user.name}</div>
-                  <div className="text-xs text-slate-500 uppercase tracking-wide">{user.role}</div>
+          {/* ── Logo ─────────────────────────────── */}
+          <Link to="/" className="flex items-center gap-3 flex-shrink-0 mr-6">
+            <img
+              src="https://www.iitg.ac.in/gate-jam/img/logo.png"
+              alt="IITG Logo"
+              className="h-[52px] w-[52px] object-contain"
+            />
+            <div className="leading-tight">
+              <div
+                className="font-bold text-base"
+                style={{ color: "#1E2532", fontFamily: "Lato, sans-serif" }}
+              >
+                Live Placement Portal
+              </div>
+              <div className="text-xs" style={{ color: "#8D9096" }}>
+                IIT Guwahati — CCD
+              </div>
+            </div>
+          </Link>
+
+          {/* ── Desktop nav links ─────────────────── */}
+          <nav className="hidden sm:flex items-center flex-1 overflow-x-auto">
+            {navLinks.map(link => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  "pp-nav-link" + (isActive ? " active" : "")
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          {/* ── User section ─────────────────────── */}
+          {user ? (
+            <div className="hidden sm:flex items-center gap-3 ml-auto flex-shrink-0 pl-4"
+              style={{ borderLeft: "1px solid #E9E9EB" }}>
+              <div className="text-right leading-tight">
+                <div className="text-sm font-semibold" style={{ color: "#2164E8" }}>
+                  {user.name}
                 </div>
-                <button
-                  onClick={logout}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-semibold hover:bg-red-700 transition-all shadow-sm hover:shadow-md"
-                >
-                  Sign Out
-                </button>
-              </>
-            ) : (
-              <div>
-                <Link to="/login" className="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md">Sign In</Link>
+                <div className="text-xs uppercase tracking-wide" style={{ color: "#8D9096" }}>
+                  {user.role}
+                </div>
               </div>
-            )}
-          </div>
+              <button
+                onClick={logout}
+                className="pp-btn2 flex-shrink-0"
+              >
+                Sign Out
+              </button>
+            </div>
+          ) : (
+            <div className="hidden sm:flex ml-auto pl-4" style={{ borderLeft: "1px solid #E9E9EB" }}>
+              <Link to="/login" className="pp-btn">Sign In</Link>
+            </div>
+          )}
 
-          {/* Mobile menu button */}
-          <div className="flex items-center sm:hidden">
-            <button
-              className="inline-flex items-center justify-center p-2 rounded-md text-slate-600 hover:bg-slate-100"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen(!menuOpen)}
-            >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-              </svg>
-            </button>
-          </div>
+          {/* ── Mobile hamburger ─────────────────── */}
+          <button
+            className="sm:hidden ml-auto p-2 rounded"
+            style={{ color: "#494D57" }}
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-expanded={menuOpen}
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d={menuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"}
+              />
+            </svg>
+          </button>
         </div>
       </div>
 
-      {/* Mobile dropdown */}
+      {/* ── Mobile dropdown ───────────────────────── */}
       {menuOpen && (
-        <div className="sm:hidden bg-white border-t border-slate-100">
-          <div className="px-4 py-3 space-y-2">
+        <div className="sm:hidden bg-white border-t" style={{ borderColor: "#E9E9EB" }}>
+          <div className="px-4 py-3 space-y-1">
+            {navLinks.map(link => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                onClick={() => setMenuOpen(false)}
+                className={({ isActive }) =>
+                  `block px-3 py-2 text-sm font-semibold rounded transition ${
+                    isActive
+                      ? "text-[#2164E8] bg-[#EFF6FC]"
+                      : "text-[#353B47] hover:bg-[#EEF1F4]"
+                  }`
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+
             {user ? (
-              <>
-                {(user.role === "admin" || user.role === "superadmin") && (
-                  <Link to="/admin" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Admin Dashboard</Link>
-                )}
-                {(user.role === "viewer") && (
-                  <Link to="/viewers/confirmed" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Viewer Dashboard</Link>
-                )}
-                {(user.role === "admin" || user.role === "viewer") && (
-                  <Link to="/intern-master-data" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Intership Data</Link>
-                )}
-                {(user.role === "poc" || user.role === "superadmin") && (
-                  <Link to="/poc" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">POC Dashboard</Link>
-                )}
-                {(user.role === "student" || user.role === "superadmin") && (
-                  <Link to="/student" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Student Dashboard</Link>
-                )}
-                <div className="pt-2 border-t border-slate-100">
-                  <div className="text-sm font-semibold text-slate-900">{user.name}</div>
-                  <div className="text-xs text-slate-500 uppercase">{user.role}</div>
-                  <button onClick={logout} className="mt-2 w-full text-left px-3 py-2 rounded-md bg-red-600 text-white">Sign Out</button>
+              <div className="pt-3 mt-2" style={{ borderTop: "1px solid #E9E9EB" }}>
+                <div className="px-3 mb-2">
+                  <div className="text-sm font-semibold" style={{ color: "#2164E8" }}>{user.name}</div>
+                  <div className="text-xs uppercase" style={{ color: "#8D9096" }}>{user.role}</div>
                 </div>
-              </>
+                <button
+                  onClick={logout}
+                  className="w-full text-left px-3 py-2 text-sm font-semibold rounded transition hover:bg-[#EEF1F4]"
+                  style={{ color: "#353B47" }}
+                >
+                  Sign Out
+                </button>
+              </div>
             ) : (
-              <Link to="/login" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:bg-slate-50">Sign In</Link>
+              <Link
+                to="/login"
+                className="block px-3 py-2 text-sm font-semibold"
+                style={{ color: "#2164E8" }}
+              >
+                Sign In
+              </Link>
             )}
           </div>
         </div>

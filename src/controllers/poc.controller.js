@@ -1,4 +1,6 @@
 // backend/src/controllers/poc.controller.js
+import crypto from "crypto";
+import axios from "axios";
 import Company from "../models/company.model.js";
 import Shortlist, { Status, Stage, InterviewStatus } from "../models/shortlist.model.js";
 import Offer, { OfferStatus } from "../models/offer.model.js";
@@ -7,6 +9,12 @@ import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
 import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate, emitOfferReverted } from "../config/socket.js";
 import { emitCompanyProcessChanged } from "../config/socket.js";
+
+const PLACEMENT_API = process.env.PLACEMENT_PORTAL_API ;
+const SYNC_KEY = process.env.DDAY_SYNC_KEY || "";
+function makeSyncHmacForGet() {
+  return SYNC_KEY ? crypto.createHmac("sha256", SYNC_KEY).update("{}").digest("hex") : "";
+}
 
 /**
  * Get POC's assigned companies
@@ -725,10 +733,29 @@ export const addWalkInStudent = async (req, res) => {
       }
     }
 
+    // OA eligibility check — only when company is linked to placement portal
+    if (company.placementPortalJobId) {
+      try {
+        const { data: oaData } = await axios.get(`${PLACEMENT_API}/sync/oa-check`, {
+          params: { email: emailLower, jobId: company.placementPortalJobId },
+          headers: { "x-sync-signature": makeSyncHmacForGet() },
+          timeout: 5000,
+        });
+        if (oaData.oaRequired && !oaData.oaPresent) {
+          return res.status(403).json({
+            message: "Student did not appear for the OA and is not eligible to walk in",
+          });
+        }
+      } catch (oaErr) {
+        // Log but do not block walk-in if placement portal is unreachable
+        logger.warn(`OA eligibility check failed for ${emailLower}: ${oaErr.message}`);
+      }
+    }
+
     // Check if already shortlisted
-    const existing = await Shortlist.findOne({ 
-      studentId: user._id, 
-      companyId: companyId 
+    const existing = await Shortlist.findOne({
+      studentId: user._id,
+      companyId: companyId
     });
 
     if (existing) {

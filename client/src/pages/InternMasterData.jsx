@@ -1,13 +1,13 @@
-import React, { useEffect, useMemo, useState } from "react";
+﻿import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
-import Navbar from "../components/Navbar";
 import Modal from "../components/Modal";
 import api from "../api/axios";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function InternMasterData() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -27,29 +27,40 @@ export default function InternMasterData() {
   const loadPageData = async () => {
     setLoading(true);
     try {
-      const meRes = await api.get("/users/me");
-      const me = meRes.data.user;
-      setUser(me);
-
-      if (me.role !== "admin" && me.role !== "viewer") {
-        navigate("/dashboard", { replace: true });
-        return;
-      }
-
       const internRes = await api.get("/viewers/intern-master");
       setRows(internRes.data.data || []);
     } catch (err) {
       console.error("Error loading intern master data:", err);
-      toast.error("Failed to load intership data");
-      localStorage.removeItem("jwt_token");
-      navigate("/login", { replace: true });
+      toast.error("Failed to load internship data");
     } finally {
       setLoading(false);
     }
   };
 
+  // Fetch user from cache; if missing hit API once
   useEffect(() => {
-    loadPageData();
+    if (user) {
+      if (user.role !== "admin" && user.role !== "viewer") {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      loadPageData();
+      return;
+    }
+    api.get("/users/me").then(res => {
+      const me = res.data.user;
+      setCachedUser(me);
+      setUser(me);
+      if (me.role !== "admin" && me.role !== "viewer") {
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      loadPageData();
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login", { replace: true });
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -151,10 +162,8 @@ export default function InternMasterData() {
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans">
-      <Navbar user={user} />
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    <>
+    <main className="px-6 py-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
@@ -377,7 +386,7 @@ export default function InternMasterData() {
           </div>
         </form>
       </Modal>
-    </div>
+    </>
   );
 }
 
@@ -400,3 +409,4 @@ function FilterGroup({ label, value, onChange, options }) {
     </div>
   );
 }
+

@@ -1,35 +1,40 @@
 // src/components/CompanyCard.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import EditCompanyModal from "./EditCompanyModal";
 import ConfirmDialog from "./ConfirmDialog";
 import AlertModal from "./AlertModal";
 import api from "../api/axios";
+import { getCachedUser } from "../utils/userCache";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export default function CompanyCard({ company, onUpdate, onDelete }) {
+// user is read from localStorage cache — no API call per card
+export default function CompanyCard({ company, onUpdate, onDelete, user: userProp }) {
   const navigate = useNavigate();
   const [showEditModal, setShowEditModal] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [errorAlert, setErrorAlert] = useState({ show: false, message: '' });
   const [downloading, setDownloading] = useState(false);
-  const [user, setUser] = useState(null);
+  const [syncingShortlist, setSyncingShortlist] = useState(false);
+  const [shortlistSyncResult, setShortlistSyncResult] = useState(null);
+  // Prefer prop passed by parent; fall back to cache (never hits API)
+  const user = userProp ?? getCachedUser();
 
-  useEffect(() => {
-    let mounted = true;
-    const fetchUser = async () => {
-      try {
-        const res = await api.get('/users/me');
-        if (mounted) setUser(res.data.user || null);
-      } catch (err) {
-        // ignore - user may be unauthenticated in some views
-      }
-    };
-    fetchUser();
-    return () => { mounted = false; };
-  }, []);
+  const handleSyncShortlist = async () => {
+    setSyncingShortlist(true);
+    setShortlistSyncResult(null);
+    try {
+      const res = await api.post(`/admin/sync/companies/${company._id}/shortlist`);
+      setShortlistSyncResult(res.data);
+      if (onUpdate) onUpdate();
+    } catch (err) {
+      setShortlistSyncResult({ error: err.response?.data?.message || "Sync failed" });
+    } finally {
+      setSyncingShortlist(false);
+    }
+  };
 
   const handleDownloadPDF = async () => {
     try {
@@ -265,6 +270,15 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
           </div>
         )}
 
+        {/* Shortlist sync result */}
+        {shortlistSyncResult && (
+          <div className={`mt-3 px-3 py-1.5 rounded text-xs ${shortlistSyncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
+            {shortlistSyncResult.error
+              ? shortlistSyncResult.error
+              : `${shortlistSyncResult.added} added, ${shortlistSyncResult.skipped} skipped`}
+          </div>
+        )}
+
         {/* Actions */}
         <div className="mt-4 pt-4 border-t flex gap-2">
           <button 
@@ -295,6 +309,19 @@ export default function CompanyCard({ company, onUpdate, onDelete }) {
             </svg>
             Act as POC
           </button>
+          {company.placementPortalJobId && (user?.role === "admin" || user?.role === "superadmin") && (
+            <button
+              onClick={handleSyncShortlist}
+              disabled={syncingShortlist}
+              className="flex-1 px-3 py-2 text-sm bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition font-medium flex items-center justify-center gap-1 disabled:opacity-50"
+              title="Sync interview shortlist from placement portal"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {syncingShortlist ? "Syncing…" : "Sync Shortlist"}
+            </button>
+          )}
         </div>
       </div>
 

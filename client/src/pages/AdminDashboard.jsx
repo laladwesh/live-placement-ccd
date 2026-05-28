@@ -1,10 +1,10 @@
-// src/pages/AdminDashboard.jsx
+﻿// src/pages/AdminDashboard.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import Navbar from "../components/Navbar";
 import ConfirmDialog from "../components/ConfirmDialog";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 import InputModal from "../components/InputModal";
 import StudentDetailsModal from "../components/StudentDetailsModal";
 import { useSocket } from "../context/SocketContext";
@@ -12,7 +12,7 @@ import { useSocket } from "../context/SocketContext";
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [loading, setLoading] = useState(true);
   const [pendingOffers, setPendingOffers] = useState([]);
   const [confirmedOffers, setConfirmedOffers] = useState([]);
@@ -55,7 +55,23 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    fetchUser();
+    if (user) return; // Already have user from cache
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (user && user.role !== "admin") navigate("/dashboard");
+  }, [user]);
+
+  useEffect(() => {
     fetchOffers();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -114,21 +130,6 @@ export default function AdminDashboard() {
     document.addEventListener('click', handleClick);
     return () => document.removeEventListener('click', handleClick);
   }, []);
-
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-      
-      // Redirect if not admin
-      if (res.data.user.role !== "admin") {
-        navigate("/dashboard");
-      }
-    } catch (err) {
-      console.error("Error fetching user:", err);
-      navigate("/login");
-    }
-  };
 
   const fetchOffers = async (overrideFilters = null) => {
     setLoading(true);
@@ -493,12 +494,10 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-
+    <>
       {/* Navigation Cards Section */}
-      <div className="w-full bg-slate-50 py-6 flex justify-center shadow-sm">
-        <div className="max-w-7xl w-full px-8">
+      {/* <div className="w-full bg-slate-50 py-6 flex justify-center shadow-sm">
+        <div className="w-full px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <button
               onClick={() => navigate("/admin/students")}
@@ -517,10 +516,10 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Offers Management Section */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">Offer Management</h1>
@@ -908,6 +907,7 @@ export default function AdminDashboard() {
         label="Reason for Rejection (Optional)"
         placeholder="Enter a reason for rejecting this offer..."
       />
-    </div>
+    </>
   );
 }
+

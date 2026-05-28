@@ -1,14 +1,17 @@
 import express from "express";
 import multer from "multer";
-import { 
-  createUser, 
-  getPendingOffers, 
-  getConfirmedOffers, 
-  approveOffer, 
+import {
+  createUser,
+  getPendingOffers,
+  getConfirmedOffers,
+  approveOffer,
   rejectOffer,
-  getStudentDetails
+  getStudentDetails,
+  setCompanyProcessComplete,
+  syncStudentsFromPortal,
+  syncCompaniesFromPortal,
+  syncShortlistFromPortal,
 } from "../controllers/admin.controller.js";
-import { setCompanyProcessComplete } from "../controllers/admin.controller.js";
 import {
   uploadStudentsCSV,
   getAllStudents,
@@ -43,5 +46,10 @@ router.post("/companies/:companyId/complete", authMiddleware, permit("admin"), s
 
 // Admin view: get student cross-company details (includes academic fields)
 router.get('/students/:studentId/details', authMiddleware, permit('admin'), getStudentDetails);
+
+// Placement portal sync
+router.post("/sync/students", authMiddleware, permit("admin"), syncStudentsFromPortal);
+router.post("/sync/companies", authMiddleware, permit("admin"), syncCompaniesFromPortal);
+router.post("/sync/companies/:companyId/shortlist", authMiddleware, permit("admin"), syncShortlistFromPortal);
 
 export default router;

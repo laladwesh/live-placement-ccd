@@ -1,20 +1,29 @@
-// src/pages/POCDashboard.jsx
+﻿// src/pages/POCDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
 import { useSocket } from "../context/SocketContext";
-import Navbar from "../components/Navbar";
+import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function POCDashboard() {
   const navigate = useNavigate();
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => getCachedUser());
   const [companies, setCompanies] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const { socket } = useSocket();
 
   useEffect(() => {
-    fetchUser();
+    if (user) return; // Already have user from cache
+    api.get("/users/me").then(res => {
+      setCachedUser(res.data.user);
+      setUser(res.data.user);
+    }).catch(() => {
+      clearCachedUser();
+      localStorage.removeItem("jwt_token");
+      navigate("/login");
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -44,17 +53,6 @@ export default function POCDashboard() {
     }
   }, [socket, user]);
 
-  const fetchUser = async () => {
-    try {
-      const res = await api.get("/users/me");
-      setUser(res.data.user);
-    } catch (err) {
-      console.error("whoami error", err);
-      localStorage.removeItem("jwt_token");
-      window.location.href = "/login";
-    }
-  };
-
   const fetchCompanies = async () => {
     try {
       setLoading(true);
@@ -68,23 +66,15 @@ export default function POCDashboard() {
   };
 
   if (!user) {
-    return (
-      <div className="min-h-screen">
-        <Navbar user={null} />
-        <div className="max-w-7xl mx-auto p-6">Loading...</div>
-      </div>
-    );
+    return <div className="p-6 text-slate-600">Loading...</div>;
   }
 
   // Check if user is POC or admin
   if (user.role !== "poc" && user.role !== "admin" && user.role !== "superadmin") {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <Navbar user={user} />
-        <div className="max-w-7xl mx-auto p-6">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
-            Access Denied: POC privileges required
-          </div>
+      <div className="max-w-7xl mx-auto p-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-700">
+          Access Denied: POC privileges required
         </div>
       </div>
     );
@@ -102,10 +92,7 @@ export default function POCDashboard() {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-      
-      <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-slate-900">POC Dashboard</h1>
@@ -185,7 +172,7 @@ export default function POCDashboard() {
             ))}
           </div>
         )}
-      </main>
-    </div>
+    </main>
   );
 }
+
