@@ -9,7 +9,7 @@ const TENURES = {
     ],
     coordinators: [
       { name: "Bibek Nath",           department: "CL",  email: "n.bibek@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/bibek-nath-944254170/",   photo: "/dday/Bibek.jpeg" },
-      { name: "Hari Chakravathy",     department: "ECE", email: "c.nomula@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/nhc1866/",                photo: "/dday/Hari.jpeg" },
+      { name: "Hari Chakravarthy",     department: "ECE", email: "c.nomula@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/nhc1866/",                photo: "/dday/Hari.jpeg" },
       { name: "Kabya Ranjan Chaubey", department: "EEE", email: "c.kabya@iitg.ac.in",          linkedin: "https://www.linkedin.com/in/kbchaubey25/",            photo: "/dday/Kabya.jpeg" },
       { name: "Raman Agrawal",        department: "EEE", email: "raman.agrawal@iitg.ac.in",    linkedin: "https://www.linkedin.com/in/raman-agrawal-7a24bb326", photo: "/dday/Raman.jpeg" },
     ],
