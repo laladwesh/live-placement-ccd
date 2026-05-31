@@ -44,7 +44,7 @@ function LeadCard({ lead, index, total }) {
         <span className="bg-black text-white px-3 py-1 text-xs font-bold tracking-widest uppercase mb-8 inline-block shadow-[4px_4px_0px_0px_rgba(59,130,246,1)]">
           Lead Coordinator{isMulti ? ` #${index + 1}` : ""}
         </span>
-        <div className={`border-4 border-black mb-6 overflow-hidden grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${isMulti ? "w-36 h-36" : "aspect-square w-full max-w-[280px]"}`}>
+        <div className={`border-4 border-black mb-6 overflow-hidden grayscale contrast-125 group-hover:grayscale-0 transition-all duration-500 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] ${isMulti ? "w-56 h-56" : "aspect-square w-full max-w-[280px]"}`}>
           <img src={lead.photo} className="w-full h-full object-cover" alt={lead.name} />
         </div>
         <h2 className={`font-black leading-none mb-2 uppercase break-words tracking-tighter ${isMulti ? "text-3xl" : "text-5xl"}`}>
