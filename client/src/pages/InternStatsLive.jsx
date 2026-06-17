@@ -137,7 +137,7 @@ export default function InternStatsLive() {
             disabled={loading}
             className="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Refreshing…" : "↺ Refresh"}
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
           <div className="relative">
             <input
