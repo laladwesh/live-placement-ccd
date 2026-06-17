@@ -167,7 +167,7 @@ export default function InternMasterData() {
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
           <div>
             <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Intership <span className="text-indigo-600">Data</span>
+              Internship <span className="text-indigo-600">Data</span>
             </h1>
             <p className="text-slate-500 mt-1 font-medium">Viewing {filteredRows.length} records</p>
           </div>
