@@ -9,20 +9,23 @@ const NAV = {
     { to: '/admin',              label: 'Offer Management', end: true },
     { to: '/admin/company',      label: 'Companies'                   },
     { to: '/admin/students',     label: 'Students'                    },
-    { to: '/intern-master-data', label: 'Internship Data'             },
+    { to: '/intern-stats-live',  label: 'Live Intern Data'            },
+    { to: '/intern-master-data', label: 'Prev Intern Data'            },
   ],
   superadmin: [
     { to: '/admin',              label: 'Offer Management', end: true },
     { to: '/admin/company',      label: 'Companies'                   },
     { to: '/admin/students',     label: 'Students'                    },
     { to: '/poc',                label: 'POC View'                    },
-    { to: '/intern-master-data', label: 'Internship Data'             },
+    { to: '/intern-stats-live',  label: 'Live Intern Data'            },
+    { to: '/intern-master-data', label: 'Prev Intern Data'            },
   ],
   poc:    [{ to: '/poc',                label: 'My Companies'         }],
   student:[{ to: '/student',            label: 'My Shortlists'        }],
   viewer: [
     { to: '/viewers/confirmed',  label: 'Confirmed Placements'        },
-    { to: '/intern-master-data', label: 'Internship Data'             },
+    { to: '/intern-stats-live',  label: 'Live Intern Data'            },
+    { to: '/intern-master-data', label: 'Prev Intern Data'            },
   ],
 };
 
