@@ -19,6 +19,7 @@ export default function Navbar({ user }) {
       navLinks.push({ to: "/admin/students",  label: "Students" });
     }
     if (user.role === "admin" || user.role === "viewer") {
+      navLinks.push({ to: "/intern-stats-live", label: "Intern Stats (Live)" });
       navLinks.push({ to: "/intern-master-data", label: "Internship Data" });
     }
     if (user.role === "poc" || user.role === "superadmin") {

@@ -19,6 +19,8 @@ import StudentDashboard     from "./pages/StudentDashboard";
 import StudentShortlistDetails from "./pages/StudentShortlistDetails";
 import TeamPage        from "./pages/TeamPage";
 import InternMasterData from "./pages/InternMasterData";
+import InternStatsLive from "./pages/InternStatsLive";
+import InternStatsLiveDetail from "./pages/InternStatsLiveDetail";
 import Footer          from "./components/Footer";
 
 function App() {
@@ -59,6 +61,8 @@ function App() {
             <Route path="/student/shortlist/:shortlistId"     element={<StudentShortlistDetails />} />
             <Route path="/viewers/confirmed"                  element={<ViewersConfirmed />} />
             <Route path="/intern-master-data"                 element={<InternMasterData />} />
+            <Route path="/intern-stats-live"                  element={<InternStatsLive />} />
+            <Route path="/intern-stats-live/:rollNumber"      element={<InternStatsLiveDetail />} />
           </Route>
         </Routes>
 
