@@ -45,6 +45,9 @@ export default function POCCompanyStudents() {
   useEffect(() => {
     if (user) {
       fetchCompanyStudents();
+      // One-time refresh after 3s — catches any updates that arrive between initial load and socket connecting
+      const t = setTimeout(() => fetchCompanyStudents(), 3000);
+      return () => clearTimeout(t);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, companyId]);
