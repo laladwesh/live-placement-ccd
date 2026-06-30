@@ -19,5 +19,6 @@ const CompanySchema = new mongoose.Schema({
 });
 
 CompanySchema.index({ name: 1 });
+CompanySchema.index({ placementYear: 1 });
 
 export default mongoose.model("Company", CompanySchema);

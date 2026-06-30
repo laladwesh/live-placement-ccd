@@ -136,8 +136,8 @@ export const getShortlistDetails = async (req, res) => {
     let offer = null;
     if (shortlist.isOffered) {
       offer = await Offer.findOne({
-        student: studentId,
-        company: shortlist.companyId._id
+        studentId: studentId,
+        companyId: shortlist.companyId._id
       }).populate("acceptedBy", "name emailId");
     }
 

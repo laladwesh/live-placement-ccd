@@ -11,8 +11,6 @@ const JWT_SECRET = process.env.JWT_SECRET || "dev_jwt_secret";
  */
 export const authMiddleware = async (req, res, next) => {
   try {
-    console.log(" AUTH CHECK:", req.method, req.path);
-    
     const authHeader = req.headers?.authorization;
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       // console.log("   ❌ No Bearer token");
@@ -64,7 +62,6 @@ export const permit = (...allowedRoles) => (req, res, next) => {
       return res.status(403).json({ message: "Forbidden" });
     }
     
-    console.log("    ALLOWED");
     next();
   } catch (err) {
     console.error("permit error:", err?.message || err);

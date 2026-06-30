@@ -48,7 +48,7 @@ const OfferSchema = new mongoose.Schema({
 });
 
 // Indexes for efficient querying
-OfferSchema.index({ studentId: 1 });
+OfferSchema.index({ studentId: 1, companyId: 1 }, { unique: true }); // prevents duplicate offers
 OfferSchema.index({ companyId: 1 });
 OfferSchema.index({ approvalStatus: 1 });
 OfferSchema.index({ offerStatus: 1 });

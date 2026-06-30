@@ -86,17 +86,16 @@ export const getPendingOffers = async (req, res) => {
       .populate('companyId', 'name venue')
       .sort({ createdAt: -1 });
 
-    // Enrich with rollNumber from Student model
-    const enrichedOffers = await Promise.all(
-      pendingOffers.map(async (offer) => {
-        const student = await Student.findOne({ userId: offer.studentId._id });
-        const offerObj = offer.toObject();
-        if (student) {
-          offerObj.studentId.rollNumber = student.rollNumber;
-        }
-        return offerObj;
-      })
-    );
+    // Batch-load Student docs (one query instead of N) to get rollNumber
+    const userIds = pendingOffers.map(o => o.studentId._id);
+    const studentDocs = await Student.find({ userId: { $in: userIds } }).select('userId rollNumber').lean();
+    const rollMap = new Map(studentDocs.map(s => [s.userId.toString(), s.rollNumber]));
+
+    const enrichedOffers = pendingOffers.map(offer => {
+      const offerObj = offer.toObject();
+      offerObj.studentId.rollNumber = rollMap.get(offer.studentId._id.toString()) || "";
+      return offerObj;
+    });
 
     return res.json({
       success: true,
@@ -154,21 +153,19 @@ export const getConfirmedOffers = async (req, res) => {
       .populate('approvedBy', 'name emailId')
       .sort({ approvedAt: -1, createdAt: -1 });
 
-    // Enrich with rollNumber from Student model and ensure academic fields present
-    const enrichedOffers = await Promise.all(
-      confirmedOffers.map(async (offer) => {
-        const student = await Student.findOne({ userId: offer.studentId._id });
-        const offerObj = offer.toObject();
-        if (student) {
-          offerObj.studentId.rollNumber = student.rollNumber;
-        }
-        // Ensure programme/department/cpi keys exist on response student
-        offerObj.studentId.programme = offerObj.studentId.programme || null;
-        offerObj.studentId.department = offerObj.studentId.department || null;
-        offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
-        return offerObj;
-      })
-    );
+    // Batch-load Student docs (one query instead of N) to get rollNumber
+    const confUserIds = confirmedOffers.map(o => o.studentId._id);
+    const confStudentDocs = await Student.find({ userId: { $in: confUserIds } }).select('userId rollNumber').lean();
+    const confRollMap = new Map(confStudentDocs.map(s => [s.userId.toString(), s.rollNumber]));
+
+    const enrichedOffers = confirmedOffers.map(offer => {
+      const offerObj = offer.toObject();
+      offerObj.studentId.rollNumber = confRollMap.get(offer.studentId._id.toString()) || "";
+      offerObj.studentId.programme = offerObj.studentId.programme || null;
+      offerObj.studentId.department = offerObj.studentId.department || null;
+      offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
+      return offerObj;
+    });
 
     return res.json({
       success: true,
@@ -198,153 +195,133 @@ export const approveOffer = async (req, res) => {
       return res.status(404).json({ message: "Offer not found" });
     }
 
-    if (offer.approvalStatus !== ApprovalStatus.PENDING) {
-      return res.status(400).json({ 
-        message: `Offer is already ${offer.approvalStatus.toLowerCase()}` 
-      });
+    // Atomically flip the offer from PENDING → APPROVED so two concurrent admins can't both win
+    const approvedOffer = await Offer.findOneAndUpdate(
+      { _id: offerId, approvalStatus: ApprovalStatus.PENDING },
+      { $set: { approvalStatus: ApprovalStatus.APPROVED, approvedBy: adminId, approvedAt: new Date(), offerStatus: "ACCEPTED" } },
+      { new: true }
+    ).populate('studentId', 'name emailId phoneNo').populate('companyId', 'name venue');
+
+    if (!approvedOffer) {
+      return res.status(400).json({ message: "Offer is already processed or no longer pending" });
     }
 
-    // Check if student is already placed
-    // Note: offer.studentId is populated, so we need to use ._id
-    const student = await Student.findOne({ userId: offer.studentId._id });
-    if(!student){
-      return res.status(404).json({message: "Student not found"});
-    }
-    if (student && student.isPlaced) {
-      return res.status(400).json({ 
-        message: "Student is already placed and cannot receive this offer" 
-      });
+    // Atomically mark student as placed only if not already placed (race guard)
+    const student = await Student.findOneAndUpdate(
+      { userId: approvedOffer.studentId._id, isPlaced: false },
+      { $set: { isPlaced: true, placedCompany: approvedOffer.companyId._id } },
+      { new: true }
+    );
+
+    if (!student) {
+      // Student was already placed by a concurrent approval — roll back the offer
+      await Offer.findByIdAndUpdate(offerId, { $set: { approvalStatus: ApprovalStatus.PENDING, approvedBy: null, approvedAt: null, offerStatus: "PENDING" } });
+      return res.status(409).json({ message: "Student is already placed — offer rolled back to pending" });
     }
 
-    // Approve the offer
-    offer.approvalStatus = ApprovalStatus.APPROVED;
-    offer.approvedBy = adminId;
-    offer.approvedAt = new Date();
-    offer.offerStatus = "ACCEPTED"; // Mark as accepted since admin approved
-    await offer.save();
-    
-    // Update Student data as well - mark as placed
-    student.isPlaced = true;
-    student.placedCompany = offer.companyId._id; // Use _id since companyId is also populated
-    await student.save();
-
-    logger.info(`Student ${offer.studentId.emailId} marked as placed at ${offer.companyId.name}`);
+    logger.info(`Student ${approvedOffer.studentId.emailId} marked as placed at ${approvedOffer.companyId.name}`);
 
     // AUTO-REJECT ALL OTHER PENDING OFFERS FOR THIS STUDENT
     const otherPendingOffers = await Offer.find({
-      studentId: offer.studentId._id,
-      _id: { $ne: offer._id }, // Exclude the approved offer
+      studentId: approvedOffer.studentId._id,
+      _id: { $ne: approvedOffer._id },
       approvalStatus: ApprovalStatus.PENDING
     }).populate('companyId', 'name');
 
-    // Reject all other pending offers
     for (const otherOffer of otherPendingOffers) {
       otherOffer.approvalStatus = ApprovalStatus.REJECTED;
-      otherOffer.remarks = `${otherOffer.remarks || ''}\nAuto-rejected: Student placed at ${offer.companyId.name}`;
+      otherOffer.remarks = `${otherOffer.remarks || ''}\nAuto-rejected: Student placed at ${approvedOffer.companyId.name}`;
       await otherOffer.save();
 
-      // Update shortlist to remove offered flag
       await Shortlist.findOneAndUpdate(
-        { studentId: offer.studentId._id, companyId: otherOffer.companyId._id },
+        { studentId: approvedOffer.studentId._id, companyId: otherOffer.companyId._id },
         { isOffered: false }
       );
 
-      logger.info(`Auto-rejected offer from ${otherOffer.companyId.name} for ${offer.studentId.emailId} (placed at ${offer.companyId.name})`);
+      logger.info(`Auto-rejected offer from ${otherOffer.companyId.name} for ${approvedOffer.studentId.emailId} (placed at ${approvedOffer.companyId.name})`);
     }
 
     // UPDATE ALL SHORTLISTS FOR THIS STUDENT (mark as placed)
     await Shortlist.updateMany(
-      { studentId: offer.studentId._id },
-      { 
-        $set: { 
-          studentPlacedCompany: offer.companyId.name,
-          isStudentPlaced: true 
-        }
-      }
+      { studentId: approvedOffer.studentId._id },
+      { $set: { studentPlacedCompany: approvedOffer.companyId.name, isStudentPlaced: true } }
     );
 
     // GET ALL COMPANIES WHERE THIS STUDENT IS SHORTLISTED (for real-time notification)
-    const studentShortlists = await Shortlist.find({ 
-      studentId: offer.studentId._id 
+    const studentShortlists = await Shortlist.find({
+      studentId: approvedOffer.studentId._id
     }).select('companyId');
     const shortlistedCompanyIds = studentShortlists.map(s => s.companyId);
 
     // ADD STUDENT TO COMPANY'S PLACED STUDENTS LIST
     await Company.findByIdAndUpdate(
-      offer.companyId._id,
-      { $addToSet: { placedStudents: offer.studentId._id } } // addToSet prevents duplicates
+      approvedOffer.companyId._id,
+      { $addToSet: { placedStudents: approvedOffer.studentId._id } }
     );
 
-    logger.info(`Admin ${req.user.emailId} approved offer for ${offer.studentId.emailId} at ${offer.companyId.name}`);
+    logger.info(`Admin ${req.user.emailId} approved offer for ${approvedOffer.studentId.emailId} at ${approvedOffer.companyId.name}`);
     logger.info(`Auto-rejected ${otherPendingOffers.length} other pending offers for this student`);
 
-    // EMIT STUDENT PLACED EVENT TO ALL COMPANIES WHERE STUDENT IS SHORTLISTED
-    // This will notify POCs in real-time that the student got placed elsewhere
     emitStudentPlaced(
-      offer.studentId._id.toString(),
-      offer.companyId._id.toString(),
-      offer.companyId.name,
+      approvedOffer.studentId._id.toString(),
+      approvedOffer.companyId._id.toString(),
+      approvedOffer.companyId.name,
       shortlistedCompanyIds
     );
 
-    // Emit socket events to notify all relevant parties
     emitOfferApproved(
-      offer.studentId._id.toString(),
-      offer.companyId._id.toString(),
+      approvedOffer.studentId._id.toString(),
+      approvedOffer.companyId._id.toString(),
       {
-        offerId: offer._id,
-        companyId: offer.companyId._id,
-        companyName: offer.companyId.name,
-        studentId: offer.studentId._id,
-        studentName: offer.studentId.name,
+        offerId: approvedOffer._id,
+        companyId: approvedOffer.companyId._id,
+        companyName: approvedOffer.companyId.name,
+        studentId: approvedOffer.studentId._id,
+        studentName: approvedOffer.studentId.name,
         approvalStatus: ApprovalStatus.APPROVED
       }
     );
 
-    // Also emit status update for real-time dashboard refresh
     emitOfferStatusUpdate({
-      offerId: offer._id,
-      studentId: offer.studentId._id.toString(),
-      companyId: offer.companyId._id.toString(),
+      offerId: approvedOffer._id,
+      studentId: approvedOffer.studentId._id.toString(),
+      companyId: approvedOffer.companyId._id.toString(),
       approvalStatus: ApprovalStatus.APPROVED,
       action: 'approved'
     });
 
     try {
       await sendOfferApprovalEmail({
-        to: offer.studentId.emailId,
-        studentName: offer.studentId.name,
-        companyName: offer.companyId.name,
+        to: approvedOffer.studentId.emailId,
+        studentName: approvedOffer.studentId.name,
+        companyName: approvedOffer.companyId.name,
       });
-
-      logger.info(
-        `Offer approval email sent to ${offer.studentId.emailId} for ${offer.companyId.name}`
-      );
+      logger.info(`Offer approval email sent to ${approvedOffer.studentId.emailId} for ${approvedOffer.companyId.name}`);
     } catch (mailErr) {
       logger.error("Failed to send offer approval email:", mailErr);
     }
 
     // Fire-and-forget write-back to placement portal
-    if (offer.companyId.placementPortalJobId) {
+    if (approvedOffer.companyId.placementPortalJobId) {
       const webhookBody = {
-        studentEmail: offer.studentId.emailId,
-        placementPortalJobId: offer.companyId.placementPortalJobId,
+        studentEmail: approvedOffer.studentId.emailId,
+        placementPortalJobId: approvedOffer.companyId.placementPortalJobId,
       };
       axios
         .post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
           headers: makeSyncHeaders(webhookBody),
           timeout: 8000,
         })
-        .then(() => logger.info(`[sync] Placement portal notified: ${offer.studentId.emailId} placed`))
+        .then(() => logger.info(`[sync] Placement portal notified: ${approvedOffer.studentId.emailId} placed`))
         .catch((err) => logger.error("[sync] Placement portal webhook failed:", err.message));
     } else {
-      logger.warn(`[sync] No placementPortalJobId on company ${offer.companyId.name} — skipping write-back`);
+      logger.warn(`[sync] No placementPortalJobId on company ${approvedOffer.companyId.name} — skipping write-back`);
     }
 
     return res.json({
       success: true,
       message: "Offer approved and sent to student",
-      offer
+      offer: approvedOffer
     });
   } catch (err) {
     logger.error("approveOffer error", err);

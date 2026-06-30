@@ -116,6 +116,13 @@ export const placeStudentDirect = async (req, res) => {
       return res.status(404).json({ message: "Student record not found" });
     }
 
+    // Check if already placed at a DIFFERENT company in this season
+    if (studentDoc.isPlaced) {
+      return res.status(409).json({
+        message: `${userDoc.name} is already placed at another company in the ${company.placementYear} season`,
+      });
+    }
+
     // Student must belong to the same placement year as the company
     if (studentDoc.placementYear !== company.placementYear) {
       const studentSeason = studentDoc.placementYear ?? "current season";

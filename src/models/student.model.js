@@ -11,7 +11,7 @@ const StudentSchema = new mongoose.Schema({
     type: String,
     trim: true,
     validate: {
-      validator: v => /^\d{9}$/.test(v),
+      validator: v => v === "" || /^\d{9}$/.test(v),
       message: props => `${props.value} is not a valid 9-digit roll number`
     },
     default: ""
@@ -43,5 +43,6 @@ const StudentSchema = new mongoose.Schema({
 // Index for quick lookups
 StudentSchema.index({ userId: 1 });
 StudentSchema.index({ isPlaced: 1 });
+StudentSchema.index({ placementYear: 1 });
 
 export default mongoose.model("Student", StudentSchema);

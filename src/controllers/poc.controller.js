@@ -528,10 +528,15 @@ export const revertOffer = async (req, res) => {
       });
     }
 
-    // Don't allow reverting if offer was already accepted/rejected by student
+    // Don't allow reverting admin-approved offers or student-responded offers
+    if (offer.approvalStatus === "APPROVED") {
+      return res.status(400).json({
+        message: "Cannot revert an offer that has already been approved by admin"
+      });
+    }
     if (offer.offerStatus === "ACCEPTED" || offer.offerStatus === "REJECTED") {
-      return res.status(400).json({ 
-        message: `Cannot revert offer - student has already ${offer.offerStatus.toLowerCase()} it` 
+      return res.status(400).json({
+        message: `Cannot revert offer - student has already ${offer.offerStatus.toLowerCase()} it`
       });
     }
 

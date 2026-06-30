@@ -43,20 +43,19 @@ export const getConfirmedForViewer = async (req, res) => {
       .populate('approvedBy', 'name emailId')
       .sort({ approvedAt: -1, createdAt: -1 });
 
-    // Enrich with rollNumber from Student model and ensure academic fields present
-    const enrichedOffers = await Promise.all(
-      confirmedOffers.map(async (offer) => {
-        const student = await Student.findOne({ userId: offer.studentId._id });
-        const offerObj = offer.toObject();
-        if (student) {
-          offerObj.studentId.rollNumber = student.rollNumber;
-        }
-        offerObj.studentId.programme = offerObj.studentId.programme || null;
-        offerObj.studentId.department = offerObj.studentId.department || null;
-        offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
-        return offerObj;
-      })
-    );
+    // Batch-load Student docs (one query instead of N) to get rollNumber
+    const vUserIds = confirmedOffers.map(o => o.studentId._id);
+    const vStudentDocs = await Student.find({ userId: { $in: vUserIds } }).select('userId rollNumber').lean();
+    const vRollMap = new Map(vStudentDocs.map(s => [s.userId.toString(), s.rollNumber]));
+
+    const enrichedOffers = confirmedOffers.map(offer => {
+      const offerObj = offer.toObject();
+      offerObj.studentId.rollNumber = vRollMap.get(offer.studentId._id.toString()) || "";
+      offerObj.studentId.programme = offerObj.studentId.programme || null;
+      offerObj.studentId.department = offerObj.studentId.department || null;
+      offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
+      return offerObj;
+    });
 
     return res.json({ success: true, count: enrichedOffers.length, offers: enrichedOffers });
   } catch (err) {
