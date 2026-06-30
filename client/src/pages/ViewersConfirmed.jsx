@@ -17,11 +17,20 @@ export default function ViewersConfirmed() {
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [user] = useState(() => getCachedUser());
 
+  // Year filter
+  const [seasons, setSeasons] = useState([]);
+  const [selectedYear, setSelectedYear] = useState('current');
+
+  // Load archived seasons for the dropdown
+  useEffect(() => {
+    api.get('/viewers/seasons').then(res => setSeasons(res.data.seasons || [])).catch(() => {});
+  }, []);
+
   useEffect(() => {
     const load = async () => {
       setLoading(true);
       try {
-        const res = await api.get('/viewers/confirmed');
+        const res = await api.get(`/viewers/confirmed?year=${encodeURIComponent(selectedYear)}`);
         setOffers(res.data.offers || []);
       } catch (err) {
         toast.error('Failed to load offers');
@@ -30,7 +39,7 @@ export default function ViewersConfirmed() {
       }
     };
     load();
-  }, []);
+  }, [selectedYear]);
 
   const programmes = useMemo(() => Array.from(new Set(offers.map(o => o.studentId?.programme).filter(Boolean))).sort(), [offers]);
   const departments = useMemo(() => Array.from(new Set(offers.map(o => o.studentId?.department).filter(Boolean))).sort(), [offers]);
@@ -69,11 +78,27 @@ export default function ViewersConfirmed() {
             </h1>
             <p className="text-slate-500 mt-1 font-medium">Viewing {filtered.length} confirmed placements</p>
           </div>
+          <div className="flex items-center gap-3">
+            {/* Year filter */}
+            <div className="flex flex-col">
+              <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Season</label>
+              <select
+                value={selectedYear}
+                onChange={e => { setSelectedYear(e.target.value); setProgramme(''); setDepartment(''); setCompany(''); }}
+                className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+              >
+                <option value="current">Current Season</option>
+                {seasons.map(s => (
+                  <option key={s.year} value={s.year}>{s.label || `Placement ${s.year}`}</option>
+                ))}
+                <option value="all">All Seasons</option>
+              </select>
+            </div>
           <div className="relative group">
-            <input 
-              value={search} 
-              onChange={e => setSearch(e.target.value)} 
-              placeholder="Search students or companies..." 
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search students or companies..."
               className="w-full md:w-80 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
             />
             <div className="absolute left-3 top-3 text-slate-400">
@@ -81,6 +106,7 @@ export default function ViewersConfirmed() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
+          </div>
           </div>
         </div>
 

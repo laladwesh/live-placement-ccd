@@ -28,6 +28,13 @@ export default function PrevPlacementData() {
   const [addingCompany, setAddingCompany] = useState(false);
   const addCompanyInputRef = useRef(null);
 
+  // ── place-student modal ────────────────────────────────
+  const [placeStudentOpen, setPlaceStudentOpen] = useState(false);
+  const [placeTargetCompany, setPlaceTargetCompany] = useState(null);
+  const [placeEmail, setPlaceEmail] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const placeEmailRef = useRef(null);
+
   // ── pending offers ─────────────────────────────────────
   const [pendingOffers, setPendingOffers] = useState([]);
   const [pendingLoading, setPendingLoading] = useState(false);
@@ -152,6 +159,32 @@ export default function PrevPlacementData() {
       toast.error(err.response?.data?.message || "Failed to add company");
     } finally {
       setAddingCompany(false);
+    }
+  };
+
+  const openPlaceStudent = (company) => {
+    setPlaceTargetCompany(company);
+    setPlaceEmail("");
+    setPlaceStudentOpen(true);
+    setTimeout(() => placeEmailRef.current?.focus(), 50);
+  };
+
+  const handlePlaceStudent = async (e) => {
+    e.preventDefault();
+    if (!placeEmail.trim()) { toast.error("Student email is required"); return; }
+    setPlacing(true);
+    try {
+      const res = await api.post("/prev-placement/place-student", {
+        companyId: placeTargetCompany._id,
+        studentEmail: placeEmail.trim(),
+      });
+      toast.success(res.data.message);
+      setPlaceStudentOpen(false);
+      loadOffers(selectedYear);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to place student");
+    } finally {
+      setPlacing(false);
     }
   };
 
@@ -343,6 +376,7 @@ export default function PrevPlacementData() {
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
                       <Th>#</Th><Th>Company</Th><Th>Venue</Th><Th>Description</Th><Th>POCs</Th>
+                      {canEdit && <Th>Action</Th>}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -363,6 +397,16 @@ export default function PrevPlacementData() {
                             ))
                           }
                         </Td>
+                        {canEdit && (
+                          <td className="px-5 py-3.5">
+                            <button
+                              onClick={() => openPlaceStudent(c)}
+                              className="px-3 py-1.5 text-xs font-semibold rounded-md bg-emerald-600 text-white hover:bg-emerald-700 transition-colors whitespace-nowrap"
+                            >
+                              + Place Student
+                            </button>
+                          </td>
+                        )}
                       </tr>
                     ))}
                   </tbody>
@@ -521,6 +565,51 @@ export default function PrevPlacementData() {
       {/* ══════════════════════════════════════
           Add Company Modal
       ══════════════════════════════════════ */}
+      {/* ══════════════════════════════════════
+          Place Student Modal
+      ══════════════════════════════════════ */}
+      {placeStudentOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">
+            <h2 className="text-lg font-bold text-slate-900 mb-1">Place Student at {placeTargetCompany?.name}</h2>
+            <p className="text-sm text-slate-500 mb-5">
+              Enter the student's email. They will be marked as placed and receive a confirmation email immediately.
+            </p>
+            <form onSubmit={handlePlaceStudent} className="space-y-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Student Email *</label>
+                <input
+                  ref={placeEmailRef}
+                  type="email"
+                  value={placeEmail}
+                  onChange={e => setPlaceEmail(e.target.value)}
+                  placeholder="e.g. student@iitg.ac.in"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  required
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => { setPlaceStudentOpen(false); setPlaceEmail(""); }}
+                  className="px-4 py-2 text-sm font-semibold text-slate-600 border border-slate-200 rounded-lg hover:bg-slate-50"
+                  disabled={placing}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-semibold rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50"
+                  disabled={placing}
+                >
+                  {placing ? "Placing…" : "Confirm & Send Email"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {addCompanyOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6">

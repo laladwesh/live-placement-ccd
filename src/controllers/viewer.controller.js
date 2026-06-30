@@ -1,7 +1,18 @@
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
 import Student from "../models/student.model.js";
 import Company from "../models/company.model.js";
+import PlacementSeason from "../models/placement-season.model.js";
 import { logger } from "../utils/logger.js";
+
+export const getSeasonsForViewer = async (req, res) => {
+  try {
+    const seasons = await PlacementSeason.find({ isPrevActive: true }).sort({ year: -1 }).lean();
+    return res.json({ seasons });
+  } catch (err) {
+    logger.error("getSeasonsForViewer error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
 
 /**
  * GET /api/viewers/confirmed
@@ -10,7 +21,21 @@ import { logger } from "../utils/logger.js";
  */
 export const getConfirmedForViewer = async (req, res) => {
   try {
+    // ?year=current (default) → current season only
+    // ?year=2025-26           → that archived season
+    // ?year=all               → everything
+    const { year } = req.query;
+    let companyIds = null;
+    if (!year || year === "current") {
+      const cos = await Company.find({ placementYear: null }).select("_id").lean();
+      companyIds = cos.map(c => c._id);
+    } else if (year !== "all") {
+      const cos = await Company.find({ placementYear: year }).select("_id").lean();
+      companyIds = cos.map(c => c._id);
+    }
+
     const offerQuery = { approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] } };
+    if (companyIds) offerQuery.companyId = { $in: companyIds };
 
     const confirmedOffers = await Offer.find(offerQuery)
       .populate('studentId', 'name emailId phoneNo programme department cpi')
