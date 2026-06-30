@@ -242,11 +242,11 @@ export default function PrevPlacementData() {
         </h1>
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center">
           <p className="text-slate-500 font-medium mb-2">No archived seasons yet.</p>
-          <p className="text-slate-400 text-sm">
+          {/* <p className="text-slate-400 text-sm">
             When a placement season concludes, create a <code className="bg-slate-100 px-1 rounded">PlacementSeason</code> document
             in MongoDB Compass with <code className="bg-slate-100 px-1 rounded">isPrevActive: true</code> and bulk-set
             <code className="bg-slate-100 px-1 rounded ml-1">placementYear: "YYYY-YY"</code> on all companies from that season.
-          </p>
+          </p> */}
         </div>
       </main>
     );

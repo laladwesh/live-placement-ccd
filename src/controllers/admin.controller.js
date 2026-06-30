@@ -74,7 +74,14 @@ export const createUser = async (req, res) => {
  */
 export const getPendingOffers = async (req, res) => {
   try {
-    const pendingOffers = await Offer.find({ approvalStatus: ApprovalStatus.PENDING })
+    // Only show pending offers for current-season companies (placementYear: null)
+    const currentCompanies = await Company.find({ placementYear: null }).select('_id').lean();
+    const currentCompanyIds = currentCompanies.map(c => c._id);
+
+    const pendingOffers = await Offer.find({
+      approvalStatus: ApprovalStatus.PENDING,
+      companyId: { $in: currentCompanyIds },
+    })
       .populate('studentId', 'name emailId phoneNo')
       .populate('companyId', 'name venue')
       .sort({ createdAt: -1 });
@@ -130,8 +137,15 @@ export const getConfirmedOffers = async (req, res) => {
       }
     }
 
+    // Only show offers for current-season companies (placementYear: null)
+    const currentCompanyObjs = await Company.find({ placementYear: null }).select('_id').lean();
+    const currentCompanyIds = currentCompanyObjs.map(c => c._id);
+
     // Build offer query
-    const offerQuery = { approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] } };
+    const offerQuery = {
+      approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] },
+      companyId: { $in: currentCompanyIds },
+    };
     if (matchingUserIds) offerQuery.studentId = { $in: matchingUserIds };
 
     const confirmedOffers = await Offer.find(offerQuery)
