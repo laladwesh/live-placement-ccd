@@ -12,6 +12,8 @@ const CompanySchema = new mongoose.Schema({
   placedStudents: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Student user IDs
   isProcessCompleted: { type: Boolean, default: false },
   placementPortalJobId: { type: String, default: null },
+  // null = current/active season. Set to e.g. "2025-26" via Compass bulk-update when archiving.
+  placementYear: { type: String, default: null },
 }, {
   timestamps: true
 });

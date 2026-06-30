@@ -92,15 +92,21 @@ export const uploadStudentsCSV = async (req, res) => {
             isPlaced: false,
             shortlistedCompanies: [],
             waitlistedCompanies: [],
-            placedCompany: null
+            placedCompany: null,
+            placementYear: null
           });
           await studentDoc.save();
         } else {
-          // Update roll number if provided
-          if (studentRollNumber) {
-            studentDoc.rollNumber = studentRollNumber;
-            await studentDoc.save();
+          // If archived from a prior season, reactivate for the current season
+          if (studentDoc.placementYear !== null && studentDoc.placementYear !== undefined) {
+            studentDoc.placementYear = null;
+            studentDoc.isPlaced = false;
+            studentDoc.shortlistedCompanies = [];
+            studentDoc.waitlistedCompanies = [];
+            studentDoc.placedCompany = null;
           }
+          if (studentRollNumber) studentDoc.rollNumber = studentRollNumber;
+          await studentDoc.save();
         }
 
         updated.push({ email: studentEmail, name: studentName });
@@ -170,7 +176,7 @@ export const uploadStudentsCSV = async (req, res) => {
  */
 export const getAllStudents = async (req, res) => {
   try {
-    const students = await Student.find()
+    const students = await Student.find({ placementYear: null })
       .populate('userId', 'name emailId phoneNo role')
       .populate('shortlistedCompanies', 'name')
       .populate('waitlistedCompanies', 'name')
@@ -225,8 +231,31 @@ export const addStudentManually = async (req, res) => {
     // Check if user already exists
     const existingUser = await User.findOne({ emailId: studentEmail });
     if (existingUser) {
-      return res.status(409).json({ 
-        message: `Student with email ${studentEmail} already exists` 
+      if (existingUser.role !== "student") {
+        return res.status(409).json({ message: `${studentEmail} already exists as ${existingUser.role}` });
+      }
+      const existingStudent = await Student.findOne({ userId: existingUser._id });
+      // Active student — block duplicate
+      if (!existingStudent || existingStudent.placementYear === null) {
+        return res.status(409).json({ message: `Student with email ${studentEmail} already exists (active)` });
+      }
+      // Archived student — reactivate for current season
+      existingUser.name = studentName;
+      if (studentPhoneNo) existingUser.phoneNo = studentPhoneNo;
+      await existingUser.save();
+      existingStudent.placementYear = null;
+      existingStudent.isPlaced = false;
+      existingStudent.shortlistedCompanies = [];
+      existingStudent.waitlistedCompanies = [];
+      existingStudent.placedCompany = null;
+      if (studentRollNumber) existingStudent.rollNumber = studentRollNumber;
+      await existingStudent.save();
+      await existingStudent.populate('userId', 'name emailId phoneNo role');
+      logger.info(`Archived student reactivated by ${req.user.emailId}: ${studentEmail}`);
+      return res.status(200).json({
+        success: true,
+        message: "Archived student reactivated for current season",
+        student: existingStudent
       });
     }
 

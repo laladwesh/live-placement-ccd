@@ -565,6 +565,15 @@ export const syncStudentsFromPortal = async (req, res) => {
       if (!existingStudent) {
         const rollValid = s.rollNumber && /^\d{9}$/.test(s.rollNumber);
         await Student.create({ userId: user._id, rollNumber: rollValid ? s.rollNumber : "" });
+      } else if (existingStudent.placementYear !== null && existingStudent.placementYear !== undefined) {
+        // Archived student re-appearing in sync — reactivate for new season
+        existingStudent.placementYear = null;
+        existingStudent.isPlaced = false;
+        existingStudent.shortlistedCompanies = [];
+        existingStudent.waitlistedCompanies = [];
+        existingStudent.placedCompany = null;
+        if (s.rollNumber && /^\d{9}$/.test(s.rollNumber)) existingStudent.rollNumber = s.rollNumber;
+        await existingStudent.save();
       } else if (s.rollNumber && /^\d{9}$/.test(s.rollNumber) && !existingStudent.rollNumber) {
         existingStudent.rollNumber = s.rollNumber;
         await existingStudent.save();
@@ -661,6 +670,15 @@ export const syncShortlistFromPortal = async (req, res) => {
       if (!studentDoc) {
         const rollValid = s.rollNumber && /^\d{9}$/.test(s.rollNumber);
         studentDoc = await Student.create({ userId: user._id, rollNumber: rollValid ? s.rollNumber : "" });
+      } else if (studentDoc.placementYear !== null && studentDoc.placementYear !== undefined) {
+        // Archived student being shortlisted in a new season — reactivate
+        studentDoc.placementYear = null;
+        studentDoc.isPlaced = false;
+        studentDoc.shortlistedCompanies = [];
+        studentDoc.waitlistedCompanies = [];
+        studentDoc.placedCompany = null;
+        if (s.rollNumber && /^\d{9}$/.test(s.rollNumber)) studentDoc.rollNumber = s.rollNumber;
+        await studentDoc.save();
       }
 
       // Append-only — skip if already shortlisted for this company

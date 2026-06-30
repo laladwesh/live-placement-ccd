@@ -22,6 +22,7 @@ import studentRoutes from "./routes/student.routes.js";
 import viewerRoutes from "./routes/viewer.routes.js";
 import internMasterRoutes from "./routes/intern-master.routes.js";
 import internStatsRoutes from "./routes/intern-stats.routes.js";
+import prevPlacementRoutes from "./routes/prev-placement.routes.js";
 import { logger } from "./utils/logger.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 import { whoami } from "./controllers/me.controller.js";
@@ -119,6 +120,7 @@ app.use(prefixed('/api/student'), studentRoutes);
 app.use(prefixed('/api/viewers'), viewerRoutes);
 app.use(prefixed('/api/viewers'), internMasterRoutes);
 app.use(prefixed('/api'), internStatsRoutes);
+app.use(prefixed('/api'), prevPlacementRoutes);
 app.get(prefixed('/api/users/me'), authMiddleware, whoami);
 
 // =======================================================

@@ -18,7 +18,7 @@ export const createCompany = async (req, res) => {
     // console.log("   User:", req.user.emailId, "| Role:", req.user.role);
     // console.log("   Body:", JSON.stringify(req.body, null, 2));
     
-    const { name, venue, description, maxRounds, pocIds = [], newPocs = [] } = req.body;
+    const { name, venue, description, maxRounds, pocIds = [], newPocs = [], placementYear = null } = req.body;
 
     if (!name || !name.trim()) {
       return res.status(400).json({ message: "Company name is required" });
@@ -81,7 +81,9 @@ export const createCompany = async (req, res) => {
       POCs: allPocIds,
       shortlistedStudents: [],
       waitlistedStudents: [],
-      placedStudents: []
+      placedStudents: [],
+      // null = current season. Pass e.g. "2025-26" to pin to a prev season.
+      placementYear: placementYear || null,
     });
 
     await company.save();
@@ -110,7 +112,9 @@ export const createCompany = async (req, res) => {
  */
 export const getAllCompanies = async (req, res) => {
   try {
-    const companies = await Company.find()
+    // Only return current-season companies (placementYear === null).
+    // Archived seasons have placementYear set via Compass and appear only in /api/prev-placement.
+    const companies = await Company.find({ placementYear: null })
       .populate('POCs', 'name emailId phoneNo')
       .sort({ createdAt: -1 });
 
