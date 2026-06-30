@@ -306,7 +306,7 @@ export default function StudentDashboard() {
         {/* Shortlists Table */}
 {filteredShortlists.length === 0 ? (
   <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-    <div className="text-6xl mb-4">📭</div>
+    <div className="text-6xl mb-4">Team CCD Believes In You.</div>
     <h3 className="text-xl font-semibold text-slate-900 mb-2">
       {searchTerm || filterStage !== "ALL" ? "No matching applications" : "No applications yet"}
     </h3>
