@@ -178,6 +178,38 @@ export const placeStudentDirect = async (req, res) => {
 };
 
 /**
+ * GET /api/prev-placement/export?year=2025-26
+ * Returns all students for that year with placement status — for CSV export.
+ */
+export const exportStudentsForYear = async (req, res) => {
+  try {
+    const { year } = req.query;
+    if (!year) return res.status(400).json({ message: "year query param required" });
+
+    const students = await Student.find({ placementYear: year })
+      .populate("userId", "name emailId cpi programme department")
+      .populate("placedCompany", "name")
+      .lean();
+
+    const rows = students.map(s => ({
+      name: s.userId?.name || "",
+      rollNumber: s.rollNumber || "",
+      status: s.isPlaced ? "Placed" : "Unplaced",
+      company: s.isPlaced ? (s.placedCompany?.name || "") : "",
+      cpi: s.userId?.cpi ?? "",
+      department: s.userId?.department || "",
+      programme: s.userId?.programme || "",
+      email: s.userId?.emailId || "",
+    }));
+
+    return res.json({ rows });
+  } catch (err) {
+    logger.error("exportStudentsForYear error", err);
+    return res.status(500).json({ message: "Server error" });
+  }
+};
+
+/**
  * GET /api/prev-placement/pending?year=2025-26
  * Pending offers for companies in the archived season — so admin can approve/reject late offers.
  * Reuses the existing approve/reject endpoints on /api/admin/offers/:id/approve|reject.

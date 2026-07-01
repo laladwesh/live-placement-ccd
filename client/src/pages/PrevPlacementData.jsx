@@ -46,6 +46,9 @@ export default function PrevPlacementData() {
   const [offersLoading, setOffersLoading] = useState(false);
   const [offerSearch, setOfferSearch] = useState("");
 
+  // ── export ─────────────────────────────────────────────
+  const [exporting, setExporting] = useState(false);
+
   // ── auth guard ─────────────────────────────────────────
   useEffect(() => {
     if (user) {
@@ -218,6 +221,45 @@ export default function PrevPlacementData() {
     }
   };
 
+  const handleExportCSV = async () => {
+    if (!selectedYear) return;
+    setExporting(true);
+    try {
+      const res = await api.get(`/prev-placement/export?year=${encodeURIComponent(selectedYear)}`);
+      const rows = res.data.rows || [];
+      if (rows.length === 0) { toast.error("No student data found for this year"); return; }
+
+      const headers = ["Name", "Roll Number", "Status", "Company", "CPI", "Branch", "Programme", "Email"];
+      const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+      const csvLines = [
+        headers.join(","),
+        ...rows.map(r => [
+          escape(r.name),
+          escape(r.rollNumber),
+          escape(r.status),
+          escape(r.company),
+          escape(r.cpi),
+          escape(r.department),
+          escape(r.programme),
+          escape(r.email),
+        ].join(",")),
+      ];
+
+      const blob = new Blob([csvLines.join("\n")], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `placements_${selectedYear}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success(`Exported ${rows.length} students`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  };
+
   // ── derived ────────────────────────────────────────────
   const q = companySearch.toLowerCase();
   const filteredCompanies = companies.filter(c =>
@@ -298,20 +340,31 @@ export default function PrevPlacementData() {
           )}
         </div>
 
-        {/* ── Year selector ── */}
-        <div className="flex flex-col">
-          <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Season</label>
-          <select
-            value={selectedYear || ""}
-            onChange={e => setSelectedYear(e.target.value)}
-            className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+        <div className="flex items-end gap-3">
+          {/* ── Year selector ── */}
+          <div className="flex flex-col">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Season</label>
+            <select
+              value={selectedYear || ""}
+              onChange={e => setSelectedYear(e.target.value)}
+              className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm"
+            >
+              {seasons.map(s => (
+                <option key={s.year} value={s.year}>
+                  {s.label || `Placement ${s.year}`}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* ── Export CSV ── */}
+          <button
+            onClick={handleExportCSV}
+            disabled={exporting || !selectedYear}
+            className="px-4 py-2 text-sm font-semibold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-50 transition-colors shadow-sm whitespace-nowrap"
           >
-            {seasons.map(s => (
-              <option key={s.year} value={s.year}>
-                {s.label || `Placement ${s.year}`}
-              </option>
-            ))}
-          </select>
+            {exporting ? "Exporting…" : "Export CSV"}
+          </button>
         </div>
       </div>
 
