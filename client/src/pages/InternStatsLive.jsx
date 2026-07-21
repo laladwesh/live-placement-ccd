@@ -18,6 +18,7 @@ export default function InternStatsLive() {
   const [companyFilter, setCompanyFilter] = useState("");
   const [cpiMin, setCpiMin] = useState("");
   const [cpiMax, setCpiMax] = useState("");
+  const [gotIntern, setGotIntern] = useState(""); // "" | "yes" | "no"
 
   // "last fetched X seconds ago" ticker
   const [secondsAgo, setSecondsAgo] = useState(null);
@@ -90,6 +91,8 @@ export default function InternStatsLive() {
       if (companyFilter && !(row.company || "").toLowerCase().includes(companyFilter.toLowerCase())) return false;
       if (cpiMin && (row.cpi == null || Number(row.cpi) < Number(cpiMin))) return false;
       if (cpiMax && (row.cpi == null || Number(row.cpi) > Number(cpiMax))) return false;
+      if (gotIntern === "yes" && !row.isGotIntern) return false;
+      if (gotIntern === "no"  &&  row.isGotIntern) return false;
       if (!s) return true;
       return (
         (row.name || "").toLowerCase().includes(s) ||
@@ -99,10 +102,10 @@ export default function InternStatsLive() {
         (row.company || "").toLowerCase().includes(s)
       );
     });
-  }, [rows, search, department, companyFilter, cpiMin, cpiMax]);
+  }, [rows, search, department, companyFilter, cpiMin, cpiMax, gotIntern]);
 
   const resetFilters = () => {
-    setSearch(""); setDepartment(""); setCompanyFilter(""); setCpiMin(""); setCpiMax("");
+    setSearch(""); setDepartment(""); setCompanyFilter(""); setCpiMin(""); setCpiMax(""); setGotIntern("");
   };
 
   const freshnessBadge = () => {
@@ -161,6 +164,18 @@ export default function InternStatsLive() {
           <FilterGroup label="Department" value={department} onChange={setDepartment} options={departments} />
           <FilterGroup label="Company" value={companyFilter} onChange={setCompanyFilter} options={companies} />
           <div className="flex flex-col">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Got Intern</label>
+            <select
+              value={gotIntern}
+              onChange={e => setGotIntern(e.target.value)}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
+            >
+              <option value="">All</option>
+              <option value="yes">Yes — Got Intern</option>
+              <option value="no">No — Not Placed</option>
+            </select>
+          </div>
+          <div className="flex flex-col">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CPI Range</label>
             <div className="flex items-center gap-2">
               <input
@@ -180,7 +195,7 @@ export default function InternStatsLive() {
               />
             </div>
           </div>
-          <div className="flex items-end lg:col-span-2">
+          <div className="flex items-end">
             <button
               onClick={resetFilters}
               className="w-full py-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors"

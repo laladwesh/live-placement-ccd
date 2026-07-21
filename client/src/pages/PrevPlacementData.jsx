@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -48,6 +48,14 @@ export default function PrevPlacementData() {
 
   // ── export ─────────────────────────────────────────────
   const [exporting, setExporting] = useState(false);
+
+  // ── confirmed-tab filters ──────────────────────────────
+  const [cfSearch, setCfSearch] = useState("");
+  const [cfProgramme, setCfProgramme] = useState("");
+  const [cfDepartment, setCfDepartment] = useState("");
+  const [cfCompany, setCfCompany] = useState("");
+  const [cfCpiMin, setCfCpiMin] = useState("");
+  const [cfCpiMax, setCfCpiMax] = useState("");
 
   // ── auth guard ─────────────────────────────────────────
   useEffect(() => {
@@ -140,6 +148,7 @@ export default function PrevPlacementData() {
     loadPending(selectedYear);
     setCompanySearch("");
     setOfferSearch("");
+    setCfSearch(""); setCfProgramme(""); setCfDepartment(""); setCfCompany(""); setCfCpiMin(""); setCfCpiMax("");
     setActiveTab("companies");
   }, [selectedYear, loadCompanies, loadOffers, loadPending]);
 
@@ -280,6 +289,30 @@ export default function PrevPlacementData() {
   });
 
   const placedStudents = confirmedOffers.filter(o => o.offerStatus === "ACCEPTED");
+
+  // Confirmed-tab filter options (computed from placed students)
+  const cfProgrammes  = useMemo(() => [...new Set(placedStudents.map(o => o.studentId?.programme).filter(Boolean))].sort(), [placedStudents]);
+  const cfDepartments = useMemo(() => [...new Set(placedStudents.map(o => o.studentId?.department).filter(Boolean))].sort(), [placedStudents]);
+  const cfCompanies   = useMemo(() => [...new Set(placedStudents.map(o => o.companyId?.name).filter(Boolean))].sort(), [placedStudents]);
+
+  const filteredPlaced = useMemo(() => {
+    const s = cfSearch.toLowerCase();
+    return placedStudents.filter(o => {
+      const st = o.studentId || {};
+      if (cfProgramme  && st.programme  !== cfProgramme)  return false;
+      if (cfDepartment && st.department !== cfDepartment)  return false;
+      if (cfCompany    && !(o.companyId?.name || "").toLowerCase().includes(cfCompany.toLowerCase())) return false;
+      if (cfCpiMin     && (st.cpi == null || st.cpi < Number(cfCpiMin))) return false;
+      if (cfCpiMax     && (st.cpi == null || st.cpi > Number(cfCpiMax))) return false;
+      if (!s) return true;
+      return (
+        (st.name    || "").toLowerCase().includes(s) ||
+        (st.emailId || "").toLowerCase().includes(s) ||
+        (st.rollNumber || "").toLowerCase().includes(s) ||
+        (o.companyId?.name || "").toLowerCase().includes(s)
+      );
+    });
+  }, [placedStudents, cfSearch, cfProgramme, cfDepartment, cfCompany, cfCpiMin, cfCpiMax]);
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -537,22 +570,63 @@ export default function PrevPlacementData() {
       ══════════════════════════════════════ */}
       {activeTab === "confirmed" && (
         <>
-          <SearchBar value={offerSearch} onChange={setOfferSearch} placeholder="Search by name, roll, email, or company…" />
+          {/* Search + filters */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-4">
+            <div className="relative flex-1 w-full">
+              <input
+                type="text"
+                placeholder="Search by name, roll, email, or company…"
+                value={cfSearch}
+                onChange={e => setCfSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl bg-white focus:ring-2 focus:ring-indigo-500 outline-none text-sm"
+              />
+              <svg className="w-4 h-4 absolute left-3 top-3 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+              <CfFilterGroup label="Programme"  value={cfProgramme}  onChange={setCfProgramme}  options={cfProgrammes} />
+              <CfFilterGroup label="Department" value={cfDepartment} onChange={setCfDepartment} options={cfDepartments} />
+              <CfFilterGroup label="Company"    value={cfCompany}    onChange={setCfCompany}    options={cfCompanies} />
+              <div className="flex flex-col">
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CPI Range</label>
+                <div className="flex items-center gap-2">
+                  <input type="number" placeholder="Min" value={cfCpiMin} onChange={e => setCfCpiMin(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white outline-none" />
+                  <span className="text-slate-300">–</span>
+                  <input type="number" placeholder="Max" value={cfCpiMax} onChange={e => setCfCpiMax(e.target.value)}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white outline-none" />
+                </div>
+              </div>
+              <div className="flex items-end">
+                <button
+                  onClick={() => { setCfSearch(""); setCfProgramme(""); setCfDepartment(""); setCfCompany(""); setCfCpiMin(""); setCfCpiMax(""); }}
+                  className="w-full py-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          </div>
+
           {offersLoading ? (
             <Spinner label="Loading offers…" />
-          ) : filterOffers(placedStudents).length === 0 ? (
-            <Empty label={offerSearch ? "No placements match your search" : `No confirmed placements for ${selectedYear}`} />
+          ) : filteredPlaced.length === 0 ? (
+            <Empty label={cfSearch || cfProgramme || cfDepartment || cfCompany || cfCpiMin || cfCpiMax ? "No placements match your filters" : `No confirmed placements for ${selectedYear}`} />
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <Th>#</Th><Th>Student</Th><Th>Company</Th><Th>Venue</Th><Th>Placed At</Th>
+                      <Th>#</Th><Th>Student</Th><Th>Programme / Branch</Th><Th>CPI</Th><Th>Company</Th><Th>Venue</Th><Th>Placed At</Th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {filterOffers(placedStudents).map((o, i) => (
+                    {filteredPlaced.map((o, i) => (
                       <tr key={o._id} className="hover:bg-slate-50/60 transition-colors">
                         <Td className="font-mono text-slate-400">{i + 1}</Td>
                         <Td>
@@ -560,6 +634,11 @@ export default function PrevPlacementData() {
                           <div className="text-xs font-mono text-slate-500">{o.studentId?.rollNumber}</div>
                           <div className="text-xs text-slate-400">{o.studentId?.emailId}</div>
                         </Td>
+                        <Td>
+                          <div className="text-sm text-slate-700">{o.studentId?.programme || "—"}</div>
+                          <div className="text-xs text-slate-400">{o.studentId?.department || "—"}</div>
+                        </Td>
+                        <Td>{typeof o.studentId?.cpi === "number" ? o.studentId.cpi.toFixed(2) : "—"}</Td>
                         <Td><span className="font-medium text-indigo-700">{o.companyId?.name}</span></Td>
                         <Td>{o.companyId?.venue || "—"}</Td>
                         <Td>{fmtDate(o.approvedAt)}</Td>
@@ -568,7 +647,7 @@ export default function PrevPlacementData() {
                   </tbody>
                 </table>
               </div>
-              <Footer left={`${filterOffers(placedStudents).length} of ${placedStudents.length} placements`} />
+              <Footer left={`${filteredPlaced.length} of ${placedStudents.length} placements`} />
             </div>
           )}
         </>
@@ -735,6 +814,21 @@ function Spinner({ label }) {
 }
 function Empty({ label }) {
   return <div className="py-16 text-center bg-white rounded-2xl border border-slate-100 text-slate-400">{label}</div>;
+}
+function CfFilterGroup({ label, value, onChange, options }) {
+  return (
+    <div className="flex flex-col">
+      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{label}</label>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
+      >
+        <option value="">All {label}s</option>
+        {options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+      </select>
+    </div>
+  );
 }
 function SearchBar({ value, onChange, placeholder, nomb = false }) {
   return (

@@ -63,12 +63,21 @@ export const getPrevOffers = async (req, res) => {
       companyId: { $in: companyIds },
       approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] },
     })
-      .populate("studentId", "name emailId rollNumber phoneNo")
+      .populate("studentId", "name emailId phoneNo programme department cpi")
       .populate("companyId", "name venue placementYear")
       .sort({ createdAt: -1 })
       .lean();
 
-    return res.json({ offers });
+    // Batch-load rollNumbers from Student sidecar
+    const userIds = offers.map(o => o.studentId?._id).filter(Boolean);
+    const studentDocs = await Student.find({ userId: { $in: userIds } }).select("userId rollNumber").lean();
+    const rollMap = new Map(studentDocs.map(s => [s.userId.toString(), s.rollNumber]));
+    const enriched = offers.map(o => ({
+      ...o,
+      studentId: o.studentId ? { ...o.studentId, rollNumber: rollMap.get(o.studentId._id.toString()) || "" } : o.studentId,
+    }));
+
+    return res.json({ offers: enriched });
   } catch (err) {
     logger.error("getPrevOffers error", err);
     return res.status(500).json({ message: "Server error" });
