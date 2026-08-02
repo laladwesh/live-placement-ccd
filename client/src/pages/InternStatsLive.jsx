@@ -210,15 +210,18 @@ export default function InternStatsLive() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
         <div className="bg-white rounded-lg border border-slate-200 p-4">
           <div className="text-sm text-slate-500">Total Students</div>
-          <div className="text-2xl font-bold text-slate-900">{meta.count}</div>
+          <div className="text-2xl font-bold text-slate-900">{filteredRows.length}</div>
+          {filteredRows.length !== meta.count && <div className="text-xs text-slate-400 mt-0.5">of {meta.count} total</div>}
         </div>
         <div className="bg-white rounded-lg border border-emerald-200 p-4">
           <div className="text-sm text-emerald-600">Got Intern</div>
-          <div className="text-2xl font-bold text-emerald-700">{meta.placed_count}</div>
+          <div className="text-2xl font-bold text-emerald-700">{filteredRows.filter(r => r.isGotIntern).length}</div>
+          {filteredRows.length !== meta.count && <div className="text-xs text-slate-400 mt-0.5">of {meta.placed_count} total</div>}
         </div>
         <div className="bg-white rounded-lg border border-amber-200 p-4">
           <div className="text-sm text-amber-600">Not Placed</div>
-          <div className="text-2xl font-bold text-amber-700">{meta.unplaced_count}</div>
+          <div className="text-2xl font-bold text-amber-700">{filteredRows.filter(r => !r.isGotIntern).length}</div>
+          {filteredRows.length !== meta.count && <div className="text-xs text-slate-400 mt-0.5">of {meta.unplaced_count} total</div>}
         </div>
       </div>
 
