@@ -179,8 +179,8 @@ export default function InternStatsLiveDetail() {
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Company</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Designation</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Registered</th>
-                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">OA Appeared</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">OA Shortlisted</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">OA Appeared</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Interview Call</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Selected</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Current Stage</th>
@@ -192,8 +192,8 @@ export default function InternStatsLiveDetail() {
                         <td className="px-5 py-3.5 text-sm font-medium text-slate-900">{entry.company}</td>
                         <td className="px-5 py-3.5 text-sm text-slate-600">{entry.job_designation}</td>
                         <td className="px-5 py-3.5 text-center"><Check value={entry.stages.registered} /></td>
-                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages.oa_appeared} /></td>
                         <td className="px-5 py-3.5 text-center"><Check value={entry.stages.oa_shortlisted} /></td>
+                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages.oa_appeared} /></td>
                         <td className="px-5 py-3.5 text-center"><Check value={entry.stages.interview_call} /></td>
                         <td className="px-5 py-3.5 text-center"><Check value={entry.stages.selected} /></td>
                         <td className="px-5 py-3.5"><StageBadge stage={entry.current_stage} /></td>
