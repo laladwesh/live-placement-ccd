@@ -85,8 +85,11 @@ export default function InternStatsLive() {
   const companies = useMemo(() =>
     Array.from(new Set(rows.map(r => r.company).filter(Boolean))).sort(), [rows]);
 
+  // Normalize programme names — intern portal sometimes sends "B.Tech" instead of "BTech"
+  const normProgramme = (p) => p ? p.replace(/\./g, "").trim() : p;
+
   const programmes = useMemo(() =>
-    Array.from(new Set(rows.map(r => r.programme).filter(Boolean))).sort(), [rows]);
+    Array.from(new Set(rows.map(r => normProgramme(r.programme)).filter(Boolean))).sort(), [rows]);
 
   const filteredRows = useMemo(() => {
     const s = search.toLowerCase();
@@ -97,7 +100,7 @@ export default function InternStatsLive() {
       if (cpiMax && (row.cpi == null || Number(row.cpi) > Number(cpiMax))) return false;
       if (gotIntern === "yes" && !row.isGotIntern) return false;
       if (gotIntern === "no"  &&  row.isGotIntern) return false;
-      if (selectedProgrammes.length > 0 && !selectedProgrammes.includes(row.programme)) return false;
+      if (selectedProgrammes.length > 0 && !selectedProgrammes.includes(normProgramme(row.programme))) return false;
       if (!s) return true;
       return (
         (row.name || "").toLowerCase().includes(s) ||
