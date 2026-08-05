@@ -19,8 +19,7 @@ export default function InternStatsLive() {
   const [cpiMin, setCpiMin] = useState("");
   const [cpiMax, setCpiMax] = useState("");
   const [gotIntern, setGotIntern] = useState(""); // "" | "yes" | "no"
-  const [ugPg, setUgPg] = useState("");           // "" | "UG" | "PG"
-  const [programmeFilter, setProgrammeFilter] = useState("");
+  const [selectedProgrammes, setSelectedProgrammes] = useState([]);
 
   // "last fetched X seconds ago" ticker
   const [secondsAgo, setSecondsAgo] = useState(null);
@@ -98,12 +97,7 @@ export default function InternStatsLive() {
       if (cpiMax && (row.cpi == null || Number(row.cpi) > Number(cpiMax))) return false;
       if (gotIntern === "yes" && !row.isGotIntern) return false;
       if (gotIntern === "no"  &&  row.isGotIntern) return false;
-      if (programmeFilter && row.programme !== programmeFilter) return false;
-      if (ugPg) {
-        const isUG = ["BTech", "BDes"].includes(row.programme);
-        if (ugPg === "UG" && !isUG) return false;
-        if (ugPg === "PG" &&  isUG) return false;
-      }
+      if (selectedProgrammes.length > 0 && !selectedProgrammes.includes(row.programme)) return false;
       if (!s) return true;
       return (
         (row.name || "").toLowerCase().includes(s) ||
@@ -113,10 +107,10 @@ export default function InternStatsLive() {
         (row.company || "").toLowerCase().includes(s)
       );
     });
-  }, [rows, search, department, companyFilter, cpiMin, cpiMax, gotIntern, ugPg, programmeFilter]);
+  }, [rows, search, department, companyFilter, cpiMin, cpiMax, gotIntern, selectedProgrammes]);
 
   const resetFilters = () => {
-    setSearch(""); setDepartment(""); setCompanyFilter(""); setCpiMin(""); setCpiMax(""); setGotIntern(""); setUgPg(""); setProgrammeFilter("");
+    setSearch(""); setDepartment(""); setCompanyFilter(""); setCpiMin(""); setCpiMax(""); setGotIntern(""); setSelectedProgrammes([]);
   };
 
   const freshnessBadge = () => {
@@ -171,24 +165,10 @@ export default function InternStatsLive() {
 
       {/* ── Filters ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Row 1 */}
+        {/* Row 1: dropdowns */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
           <FilterGroup label="Department" value={department} onChange={setDepartment} options={departments} />
           <FilterGroup label="Company"    value={companyFilter} onChange={setCompanyFilter} options={companies} />
-          <FilterGroup label="Programme"  value={programmeFilter} onChange={setProgrammeFilter} options={programmes} />
-          <div className="flex flex-col">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">UG / PG</label>
-            <select
-              value={ugPg}
-              onChange={e => { setUgPg(e.target.value); setProgrammeFilter(""); }}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
-            >
-              <option value="">All</option>
-              <option value="UG">UG (BTech / BDes)</option>
-              <option value="PG">PG (MTech / MSc / MA / MBA / MSR)</option>
-            </select>
-          </div>
-          {/* Row 2 */}
           <div className="flex flex-col">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Got Intern</label>
             <select
@@ -201,7 +181,7 @@ export default function InternStatsLive() {
               <option value="no">No — Not Placed</option>
             </select>
           </div>
-          <div className="flex flex-col sm:col-span-2 lg:col-span-1">
+          <div className="flex flex-col">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CPI Range</label>
             <div className="flex items-center gap-2">
               <input type="number" placeholder="Min" value={cpiMin} onChange={e => setCpiMin(e.target.value)}
@@ -211,11 +191,40 @@ export default function InternStatsLive() {
                 className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors" />
             </div>
           </div>
-          <div className="flex items-end lg:col-span-2">
-            <button onClick={resetFilters} className="w-full py-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
-              Reset Filters
+        </div>
+
+        {/* Row 2: Programme multi-select pills */}
+        <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-100">
+          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">Programme:</span>
+          {programmes.length === 0
+            ? <span className="text-xs text-slate-400 italic">No data yet</span>
+            : programmes.map(p => {
+                const active = selectedProgrammes.includes(p);
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setSelectedProgrammes(prev =>
+                      active ? prev.filter(x => x !== p) : [...prev, p]
+                    )}
+                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                      active
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                );
+              })
+          }
+          {selectedProgrammes.length > 0 && (
+            <button onClick={() => setSelectedProgrammes([])} className="ml-1 text-xs text-slate-400 hover:text-rose-500 transition-colors">
+              clear
             </button>
-          </div>
+          )}
+          <button onClick={resetFilters} className="ml-auto text-sm font-semibold text-slate-400 hover:text-indigo-600 transition-colors">
+            Reset All
+          </button>
         </div>
       </div>
 
