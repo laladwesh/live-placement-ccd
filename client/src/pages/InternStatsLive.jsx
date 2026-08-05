@@ -19,6 +19,8 @@ export default function InternStatsLive() {
   const [cpiMin, setCpiMin] = useState("");
   const [cpiMax, setCpiMax] = useState("");
   const [gotIntern, setGotIntern] = useState(""); // "" | "yes" | "no"
+  const [ugPg, setUgPg] = useState("");           // "" | "UG" | "PG"
+  const [programmeFilter, setProgrammeFilter] = useState("");
 
   // "last fetched X seconds ago" ticker
   const [secondsAgo, setSecondsAgo] = useState(null);
@@ -84,6 +86,9 @@ export default function InternStatsLive() {
   const companies = useMemo(() =>
     Array.from(new Set(rows.map(r => r.company).filter(Boolean))).sort(), [rows]);
 
+  const programmes = useMemo(() =>
+    Array.from(new Set(rows.map(r => r.programme).filter(Boolean))).sort(), [rows]);
+
   const filteredRows = useMemo(() => {
     const s = search.toLowerCase();
     return rows.filter(row => {
@@ -93,6 +98,12 @@ export default function InternStatsLive() {
       if (cpiMax && (row.cpi == null || Number(row.cpi) > Number(cpiMax))) return false;
       if (gotIntern === "yes" && !row.isGotIntern) return false;
       if (gotIntern === "no"  &&  row.isGotIntern) return false;
+      if (programmeFilter && row.programme !== programmeFilter) return false;
+      if (ugPg) {
+        const isUG = ["BTech", "BDes"].includes(row.programme);
+        if (ugPg === "UG" && !isUG) return false;
+        if (ugPg === "PG" &&  isUG) return false;
+      }
       if (!s) return true;
       return (
         (row.name || "").toLowerCase().includes(s) ||
@@ -102,10 +113,10 @@ export default function InternStatsLive() {
         (row.company || "").toLowerCase().includes(s)
       );
     });
-  }, [rows, search, department, companyFilter, cpiMin, cpiMax, gotIntern]);
+  }, [rows, search, department, companyFilter, cpiMin, cpiMax, gotIntern, ugPg, programmeFilter]);
 
   const resetFilters = () => {
-    setSearch(""); setDepartment(""); setCompanyFilter(""); setCpiMin(""); setCpiMax(""); setGotIntern("");
+    setSearch(""); setDepartment(""); setCompanyFilter(""); setCpiMin(""); setCpiMax(""); setGotIntern(""); setUgPg(""); setProgrammeFilter("");
   };
 
   const freshnessBadge = () => {
@@ -160,9 +171,24 @@ export default function InternStatsLive() {
 
       {/* ── Filters ── */}
       <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Row 1 */}
           <FilterGroup label="Department" value={department} onChange={setDepartment} options={departments} />
-          <FilterGroup label="Company" value={companyFilter} onChange={setCompanyFilter} options={companies} />
+          <FilterGroup label="Company"    value={companyFilter} onChange={setCompanyFilter} options={companies} />
+          <FilterGroup label="Programme"  value={programmeFilter} onChange={setProgrammeFilter} options={programmes} />
+          <div className="flex flex-col">
+            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">UG / PG</label>
+            <select
+              value={ugPg}
+              onChange={e => { setUgPg(e.target.value); setProgrammeFilter(""); }}
+              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
+            >
+              <option value="">All</option>
+              <option value="UG">UG (BTech / BDes)</option>
+              <option value="PG">PG (MTech / MSc / MA / MBA / MSR)</option>
+            </select>
+          </div>
+          {/* Row 2 */}
           <div className="flex flex-col">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Got Intern</label>
             <select
@@ -175,31 +201,18 @@ export default function InternStatsLive() {
               <option value="no">No — Not Placed</option>
             </select>
           </div>
-          <div className="flex flex-col">
+          <div className="flex flex-col sm:col-span-2 lg:col-span-1">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CPI Range</label>
             <div className="flex items-center gap-2">
-              <input
-                type="number"
-                placeholder="Min"
-                value={cpiMin}
-                onChange={e => setCpiMin(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors"
-              />
-              <span className="text-slate-300">-</span>
-              <input
-                type="number"
-                placeholder="Max"
-                value={cpiMax}
-                onChange={e => setCpiMax(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors"
-              />
+              <input type="number" placeholder="Min" value={cpiMin} onChange={e => setCpiMin(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors" />
+              <span className="text-slate-300">–</span>
+              <input type="number" placeholder="Max" value={cpiMax} onChange={e => setCpiMax(e.target.value)}
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors" />
             </div>
           </div>
-          <div className="flex items-end">
-            <button
-              onClick={resetFilters}
-              className="w-full py-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
-            >
+          <div className="flex items-end lg:col-span-2">
+            <button onClick={resetFilters} className="w-full py-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors">
               Reset Filters
             </button>
           </div>
