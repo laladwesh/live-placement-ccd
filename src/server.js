@@ -107,7 +107,7 @@ app.use((req, res, next) => {
   })(req, res, next);
 });
 
-// mount API routes under /api (respect BASE_PATH)
+// mount API routes under /api 
 const prefixed = (p) => (BASE_PATH ? `${BASE_PATH}${p}` : p);
 app.use(prefixed('/api/auth'), authRoutes);
 
