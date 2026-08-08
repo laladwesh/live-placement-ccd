@@ -2,7 +2,6 @@
 import express from "express";
 import { authMiddleware, permit } from "../middleware/auth.middleware.js";
 import {
-  createCompany,
   getAllCompanies,
   getCompanyById,
   updateCompany,
@@ -23,8 +22,8 @@ const router = express.Router();
 router.use(authMiddleware);
 router.use(permit("admin"));
 
-// Company CRUD
-router.post("/companies", createCompany);
+// Company CRUD — companies only ever arrive via /admin/sync/companies (pulled from
+// the Placement Portal); there is intentionally no manual "create company" route.
 router.get("/companies", getAllCompanies);
 router.get("/companies/:id", getCompanyById);
 router.patch("/companies/:id", updateCompany);

@@ -2,7 +2,6 @@
 import React, { useEffect, useState } from "react";
 import api from "../api/axios";
 import CompanyCard from "../components/CompanyCard";
-import AddCompanyModal from "../components/AddCompanyModal";
 import EditCompanyModal from "../components/EditCompanyModal";
 import { useSocket } from "../context/SocketContext";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
@@ -14,7 +13,6 @@ export default function AdminCompanyDetails() {
   const [user, setUser] = useState(() => getCachedUser());
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [companyToEdit, setCompanyToEdit] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -70,11 +68,6 @@ export default function AdminCompanyDetails() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleCompanyAdded = () => {
-    setShowAddModal(false);
-    fetchCompanies();
   };
 
   const handleCompanyUpdated = () => {
@@ -169,17 +162,12 @@ export default function AdminCompanyDetails() {
                 </svg>
                 {syncingCompanies ? "Syncing…" : "Sync All Companies"}
               </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Add Company
-              </button>
             </div>
           </div>
+          <p className="text-slate-500 text-sm mt-1">
+            Companies are only added by syncing from the Placement Portal — assign POCs to a
+            company once it appears here (Edit → Assign POCs).
+          </p>
 
           {/* Stats */}
           {/* <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -243,7 +231,9 @@ export default function AdminCompanyDetails() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
             </svg>
             <p className="text-slate-600 mt-4">
-              {searchTerm ? "No companies match your search" : "No companies yet. Add your first company!"}
+              {searchTerm
+                ? "No companies match your search"
+                : "No companies yet. Use \"Sync All Companies\" to pull them from the Placement Portal."}
             </p>
           </div>
         ) : (
@@ -261,13 +251,6 @@ export default function AdminCompanyDetails() {
           </div>
         )}
       </main>
-
-      {showAddModal && (
-        <AddCompanyModal
-          onClose={() => setShowAddModal(false)}
-          onSuccess={handleCompanyAdded}
-        />
-      )}
 
       {showEditModal && companyToEdit && (
         <EditCompanyModal
