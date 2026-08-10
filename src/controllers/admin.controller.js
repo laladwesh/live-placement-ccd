@@ -312,8 +312,24 @@ export const approveOffer = async (req, res) => {
           headers: makeSyncHeaders(webhookBody),
           timeout: 8000,
         })
-        .then(() => logger.info(`[sync] Placement portal notified: ${approvedOffer.studentId.emailId} placed`))
-        .catch((err) => logger.error("[sync] Placement portal webhook failed:", err.message));
+        .then((r) =>
+          logger.info(
+            `[sync] Placement portal notified: ${approvedOffer.studentId.emailId} placed ` +
+              `(HTTP ${r.status}: ${JSON.stringify(r.data)})`
+          )
+        )
+        .catch((err) =>
+          // Log the real reason: HTTP status + response body when the portal
+          // replied (401 = DDAY_SYNC_KEY mismatch, 404 = student/job not found),
+          // or the network error code (ECONNREFUSED = wrong PLACEMENT_PORTAL_API).
+          logger.error(
+            `[sync] Placement portal webhook failed for ${approvedOffer.studentId.emailId} ` +
+              `→ ${PLACEMENT_API}/sync/offer-approved : ` +
+              (err.response
+                ? `HTTP ${err.response.status} ${JSON.stringify(err.response.data)}`
+                : `${err.code || ""} ${err.message}`)
+          )
+        );
     } else {
       logger.warn(`[sync] No placementPortalJobId on company ${approvedOffer.companyId.name} — skipping write-back`);
     }
