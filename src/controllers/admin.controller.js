@@ -301,11 +301,16 @@ export const approveOffer = async (req, res) => {
       logger.error("Failed to send offer approval email:", mailErr);
     }
 
-    // Fire-and-forget write-back to placement portal
-    if (approvedOffer.companyId.placementPortalJobId) {
+    // Fire-and-forget write-back to placement portal. Always fire — even when the
+    // company has no placementPortalJobId (i.e. it wasn't created via "Sync All
+    // Companies"): we send the company name as a fallback so the placement portal
+    // can still mark the student placed (with the company shown), instead of
+    // silently skipping the write-back.
+    {
       const webhookBody = {
         studentEmail: approvedOffer.studentId.emailId,
-        placementPortalJobId: approvedOffer.companyId.placementPortalJobId,
+        placementPortalJobId: approvedOffer.companyId.placementPortalJobId || null,
+        companyName: approvedOffer.companyId.name || "",
       };
       axios
         .post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
@@ -320,7 +325,7 @@ export const approveOffer = async (req, res) => {
         )
         .catch((err) =>
           // Log the real reason: HTTP status + response body when the portal
-          // replied (401 = DDAY_SYNC_KEY mismatch, 404 = student/job not found),
+          // replied (401 = DDAY_SYNC_KEY mismatch, 404 = student not found),
           // or the network error code (ECONNREFUSED = wrong PLACEMENT_PORTAL_API).
           logger.error(
             `[sync] Placement portal webhook failed for ${approvedOffer.studentId.emailId} ` +
@@ -330,8 +335,6 @@ export const approveOffer = async (req, res) => {
                 : `${err.code || ""} ${err.message}`)
           )
         );
-    } else {
-      logger.warn(`[sync] No placementPortalJobId on company ${approvedOffer.companyId.name} — skipping write-back`);
     }
 
     return res.json({
