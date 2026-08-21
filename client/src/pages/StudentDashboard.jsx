@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import api from "../api/axios";
 //import ShortlistCard from "../components/ShortlistCard";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
-import Navbar from "../components/Navbar";
 
 export default function StudentDashboard() {
   const navigate = useNavigate();
@@ -162,10 +161,7 @@ export default function StudentDashboard() {
 
   // Unplaced Student View - Show full dashboard
   return (
-    <div className="min-h-screen bg-slate-50">
-      <Navbar user={user} />
-
-      <main className="px-6 py-6">
+    <main className="px-6 py-6">
         {/* Header */}
         <div className="mb-8 flex flex-col items-center text-center">
           <h1 className="text-3xl font-bold text-slate-900">Live Interview Dashboard</h1>
@@ -290,7 +286,6 @@ export default function StudentDashboard() {
     </div>
   </>
 )}
-      </main>
-    </div>
+    </main>
   );
 }

@@ -25,8 +25,8 @@
   "scope": "/dday",
   "display": "standalone",
   "orientation": "portrait-primary",
-  "theme_color": "#4f46e5",
-  "background_color": "#f8fafc",
+  "theme_color": "#14213D",
+  "background_color": "#F4F2F1",
   "lang": "en-IN",
   "categories": ["education", "productivity"]
 }
