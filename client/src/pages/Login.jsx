@@ -2,9 +2,22 @@
 import React, { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import { FcGoogle } from "react-icons/fc";
-import { SiMicrosoft } from "react-icons/si";
 import iitgimg from "../assets/iitg2.jpeg";
+
+const MicrosoftIcon = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="15" height="15" fill="currentColor" aria-hidden="true">
+    <rect x="1" y="1" width="10" height="10" />
+    <rect x="12" y="1" width="10" height="10" />
+    <rect x="1" y="12" width="10" height="10" />
+    <rect x="12" y="12" width="10" height="10" />
+  </svg>
+);
+
+const GoogleIcon = () => (
+  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/>
+  </svg>
+);
 export default function Login() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -166,12 +179,7 @@ export default function Login() {
               <span>Redirecting to Microsoft…</span>
             ) : (
               <>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" className="w-4 h-4 flex-shrink-0">
-                  <rect x="1" y="1" width="9" height="9" fill="#f25022" />
-                  <rect x="13" y="1" width="9" height="9" fill="#7fba00" />
-                  <rect x="1" y="13" width="9" height="9" fill="#00a4ef" />
-                  <rect x="13" y="13" width="9" height="9" fill="#ffb900" />
-                </svg>
+                <MicrosoftIcon />
                 <span>Sign in with Microsoft</span>
               </>
             )}
@@ -195,7 +203,7 @@ export default function Login() {
               <span>Redirecting to Google…</span>
             ) : (
               <>
-                <FcGoogle className="w-4 h-4 flex-shrink-0" />
+                <GoogleIcon />
                 <span>Sign in with Google</span>
               </>
             )}

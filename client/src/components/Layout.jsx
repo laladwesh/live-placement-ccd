@@ -2,43 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { NavLink, Outlet, useNavigate, Navigate, Link } from 'react-router-dom';
 import { getCachedUser, fetchCurrentUser, clearCachedUser } from '../utils/userCache';
 import api from '../api/axios';
+import {
+  FileTextOutlined,
+  BankOutlined,
+  TeamOutlined,
+  BarChartOutlined,
+  DatabaseOutlined,
+  EyeOutlined,
+  CheckCircleOutlined,
+  MenuOutlined,
+  CloseOutlined,
+  LogoutOutlined,
+  UserOutlined,
+} from '@ant-design/icons';
 
-// ── Role → nav items (text only, matching placement portal) ──────
+// ── Role → nav items ──────────────────────────────────────────────
 const NAV = {
   admin: [
-    { to: '/admin',              label: 'Offer Management', end: true },
-    { to: '/admin/company',      label: 'Companies'                   },
-    { to: '/admin/students',     label: 'Students'                    },
-    { to: '/prev-placement',     label: 'Prev Placement Data'         },
-    { to: '/intern-stats-live',  label: 'Live Intern Data'            },
-    { to: '/intern-master-data', label: 'Prev Intern Data'            },
+    { to: '/admin',              label: 'Offer Management', end: true, Icon: FileTextOutlined  },
+    { to: '/admin/company',      label: 'Companies',                   Icon: BankOutlined      },
+    { to: '/admin/students',     label: 'Students',                    Icon: TeamOutlined      },
+    { to: '/prev-placement',     label: 'Prev Placement Data',         Icon: DatabaseOutlined  },
+    { to: '/intern-stats-live',  label: 'Live Intern Data',            Icon: BarChartOutlined  },
+    { to: '/intern-master-data', label: 'Prev Intern Data',            Icon: DatabaseOutlined  },
   ],
   superadmin: [
-    { to: '/admin',              label: 'Offer Management', end: true },
-    { to: '/admin/company',      label: 'Companies'                   },
-    { to: '/admin/students',     label: 'Students'                    },
-    { to: '/poc',                label: 'POC View'                    },
-    { to: '/prev-placement',     label: 'Prev Placement Data'         },
-    { to: '/intern-stats-live',  label: 'Live Intern Data'            },
-    { to: '/intern-master-data', label: 'Prev Intern Data'            },
+    { to: '/admin',              label: 'Offer Management', end: true, Icon: FileTextOutlined  },
+    { to: '/admin/company',      label: 'Companies',                   Icon: BankOutlined      },
+    { to: '/admin/students',     label: 'Students',                    Icon: TeamOutlined      },
+    { to: '/poc',                label: 'POC View',                    Icon: EyeOutlined       },
+    { to: '/prev-placement',     label: 'Prev Placement Data',         Icon: DatabaseOutlined  },
+    { to: '/intern-stats-live',  label: 'Live Intern Data',            Icon: BarChartOutlined  },
+    { to: '/intern-master-data', label: 'Prev Intern Data',            Icon: DatabaseOutlined  },
   ],
-  poc:    [{ to: '/poc',                label: 'My Companies'         }],
-  student:[{ to: '/student',            label: 'My Shortlists'        }],
+  poc:    [{ to: '/poc',                label: 'My Companies',         Icon: BankOutlined      }],
+  student:[{ to: '/student',            label: 'My Shortlists',        Icon: FileTextOutlined  }],
   viewer: [
-    { to: '/viewers/confirmed',  label: 'Confirmed Placements'        },
-    { to: '/intern-stats-live',  label: 'Live Intern Data'            },
-    { to: '/intern-master-data', label: 'Prev Intern Data'            },
+    { to: '/viewers/confirmed',  label: 'Confirmed Placements',        Icon: CheckCircleOutlined },
+    { to: '/intern-stats-live',  label: 'Live Intern Data',            Icon: BarChartOutlined    },
+    { to: '/intern-master-data', label: 'Prev Intern Data',            Icon: DatabaseOutlined    },
   ],
 };
 
 function initials(name = '') {
   return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2) || '?';
 }
-
-// ── Hamburger / close icons ──────────────────────────────────────
-const MenuIcon  = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16"/></svg>;
-const CloseIcon = () => <svg width="24" height="24" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>;
-const LogoutIcon = () => <svg width="14" height="14" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>;
 
 // ── Sidebar — exact placement portal style ───────────────────────
 function Sidebar({ user, open, onClose, onLogout }) {
@@ -89,11 +97,11 @@ function Sidebar({ user, open, onClose, onLogout }) {
             style={{
               position: 'absolute', top: 12, right: 10,
               color: '#8D9096', background: 'none', border: 'none',
-              cursor: 'pointer', padding: 4,
+              cursor: 'pointer', padding: 4, fontSize: 18,
             }}
             onClick={onClose}
           >
-            <CloseIcon />
+            <CloseOutlined />
           </button>
 
           <img
@@ -111,9 +119,9 @@ function Sidebar({ user, open, onClose, onLogout }) {
 
         {/* Nav items — matches .navmenuitem + .navtext pattern */}
         <ul style={{ width: '100%', backgroundColor: 'white', listStyle: 'none', padding: 0, margin: 0 }}>
-          {links.map(link => (
+          {links.map(({ to, label, end, Icon }) => (
             <li
-              key={link.to}
+              key={to}
               style={{
                 display: 'flex',
                 justifyContent: 'flex-start',
@@ -123,8 +131,8 @@ function Sidebar({ user, open, onClose, onLogout }) {
               }}
             >
               <NavLink
-                to={link.to}
-                end={link.end}
+                to={to}
+                end={end}
                 onClick={onClose}
                 style={({ isActive }) => ({
                   textDecoration: 'none',
@@ -135,6 +143,7 @@ function Sidebar({ user, open, onClose, onLogout }) {
                   height: '100%',
                   display: 'flex',
                   alignItems: 'center',
+                  gap: 10,
                   padding: '0 14px 0 18px',
                   marginLeft: 8,
                   marginRight: 8,
@@ -144,10 +153,14 @@ function Sidebar({ user, open, onClose, onLogout }) {
                   userSelect: 'none',
                   WebkitTapHighlightColor: 'transparent',
                 })}
-                // Hover via class since inline styles can't do :hover
                 className="sidebar-navlink"
               >
-                {link.label}
+                {({ isActive }) => (
+                  <>
+                    {Icon && <Icon style={{ fontSize: 16, opacity: isActive ? 1 : 0.65, flexShrink: 0 }} />}
+                    {label}
+                  </>
+                )}
               </NavLink>
             </li>
           ))}
@@ -257,11 +270,11 @@ export default function Layout() {
           {/* Mobile: hamburger + portal name */}
           <div className="flex lg:hidden items-center gap-2">
             <button
-              style={{ color: '#353B47', background: 'none', border: 'none', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center' }}
+              style={{ color: '#353B47', background: 'none', border: 'none', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 20 }}
               onClick={() => setSidebarOpen(true)}
               onTouchStart={() => {}}
             >
-              <MenuIcon />
+              <MenuOutlined />
             </button>
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1E2532' }}>DDay Portal</span>
           </div>
@@ -271,7 +284,7 @@ export default function Layout() {
 
           {/* Right side: user info + sign out */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {/* User name — matches portal blue style */}
+            {/* User name */}
             <div
               style={{
                 display: 'flex',
@@ -282,9 +295,7 @@ export default function Layout() {
                 fontWeight: 600,
               }}
             >
-              <svg width="16" height="16" fill="#14213D" viewBox="0 0 24 24">
-                <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
-              </svg>
+              <UserOutlined style={{ fontSize: 16 }} />
               <span className="hidden sm:inline">{user.name}</span>
               <span className="hidden sm:inline" style={{ color: '#8D9096', fontSize: 12, fontWeight: 400, textTransform: 'uppercase' }}>
                 ({user.role})
@@ -314,7 +325,7 @@ export default function Layout() {
                 flexShrink: 0,
               }}
             >
-              <LogoutIcon /> Sign Out
+              <LogoutOutlined style={{ fontSize: 13 }} /> Sign Out
             </button>
           </div>
         </header>

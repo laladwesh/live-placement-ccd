@@ -8,6 +8,17 @@ import api from "../api/axios";
 import { getCachedUser } from "../utils/userCache";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import {
+  EnvironmentOutlined,
+  DownloadOutlined,
+  EditOutlined,
+  DeleteOutlined,
+  SettingOutlined,
+  EyeOutlined,
+  UserAddOutlined,
+  SyncOutlined,
+  UserOutlined,
+} from "@ant-design/icons";
 
 // user is read from localStorage cache — no API call per card
 export default function CompanyCard({ company, onUpdate, onDelete, user: userProp }) {
@@ -190,10 +201,7 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
             <h3 className="text-lg font-semibold text-slate-900 mb-1">{company.name}</h3>
             {company.venue && (
               <p className="text-sm text-slate-500 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
+                <EnvironmentOutlined />
                 {company.venue}
               </p>
             )}
@@ -202,31 +210,28 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
             <button
               onClick={handleDownloadPDF}
               disabled={downloading}
-              className="text-slate-400 hover:text-green-600 transition disabled:opacity-50"
+              className="text-slate-400 hover:text-slate-600 transition disabled:opacity-50"
               title="Download Student List (PDF)"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 2 }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
+              <DownloadOutlined />
             </button>
             <button
               onClick={() => setShowEditModal(true)}
-              className="text-slate-400 hover:text-blue-600 transition"
+              className="text-slate-400 hover:text-slate-600 transition"
               title="Edit"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 2 }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
+              <EditOutlined />
             </button>
             <button
               onClick={() => setShowDeleteConfirm(true)}
               disabled={deleting}
-              className="text-slate-400 hover:text-red-600 transition disabled:opacity-50"
+              className="text-slate-400 hover:text-slate-600 transition disabled:opacity-50"
               title="Delete"
+              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 2 }}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
+              <DeleteOutlined />
             </button>
           </div>
         </div>
@@ -257,7 +262,7 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
             <div className="space-y-1">
               {company.POCs.map(poc => (
                 <div key={poc._id} className="flex items-center gap-2 text-sm">
-                  <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-xs font-medium">
+                  <div style={{ width: 24, height: 24, background: '#E9E2DF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#14213D', fontSize: 13, fontWeight: 600 }}>
                     {poc.name?.charAt(0).toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
@@ -281,32 +286,20 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
 
         {/* Actions */}
         <div className="mt-4 pt-4 border-t flex gap-2">
-          <button 
+          <button
             onClick={() => navigate(`/admin/companies/${company._id}`)}
             className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition font-medium flex items-center justify-center gap-1"
             title="Manage shortlist and upload CSV"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+            <SettingOutlined />
             Manage Company
           </button>
-            <button 
-              onClick={() => {
-                if (user?.role === 'admin' || user?.role === 'superadmin') {
-                  navigate(`/poc/companies/${company._id}/students`);
-                } else {
-                  navigate(`/poc/companies/${company._id}/students`);
-                }
-              }}
-              className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition font-medium flex items-center justify-center gap-1"
-              title="View and manage students as POC"
-            >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-            </svg>
+          <button
+            onClick={() => navigate(`/poc/companies/${company._id}/students`)}
+            className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition font-medium flex items-center justify-center gap-1"
+            title="View and manage students as POC"
+          >
+            <EyeOutlined />
             Act as POC
           </button>
           <button
@@ -314,10 +307,7 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
             className="flex-1 px-3 py-2 text-sm bg-amber-50 text-amber-700 rounded hover:bg-amber-100 transition font-medium flex items-center justify-center gap-1"
             title="Assign existing or new POCs to this company"
           >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 8v6m3-3h-6" />
-            </svg>
+            <UserAddOutlined />
             {company.POCs?.length ? "Assign POCs" : "Assign POC"}
           </button>
           {company.placementPortalJobId && (user?.role === "admin" || user?.role === "superadmin") && (
@@ -327,9 +317,7 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
               className="flex-1 px-3 py-2 text-sm bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition font-medium flex items-center justify-center gap-1 disabled:opacity-50"
               title="Sync interview shortlist from placement portal"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              <SyncOutlined spin={syncingShortlist} />
               {syncingShortlist ? "Syncing…" : "Sync Shortlist"}
             </button>
           )}
