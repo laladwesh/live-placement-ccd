@@ -17,8 +17,18 @@ export const OfferStatus = {
 
 const OfferSchema = new mongoose.Schema({
   studentId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
-  companyId: { type: mongoose.Schema.Types.ObjectId, ref: "Company", required: true },
-  
+  // Off-campus placements (synced from the placement portal) have no DDay
+  // Company doc behind them, so companyId is only required for on-campus
+  // offers — see isOffCampus/offCampusCompanyName below.
+  companyId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Company",
+    required: function () { return !this.isOffCampus; },
+  },
+  isOffCampus: { type: Boolean, default: false },
+  offCampusCompanyName: { type: String, default: "" },
+  offCampusRole: { type: String, default: "" },
+
   // Admin approval workflow
   approvalStatus: { 
     type: String, 

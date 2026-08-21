@@ -26,16 +26,26 @@ export const getConfirmedForViewer = async (req, res) => {
     // ?year=all               → everything
     const { year } = req.query;
     let companyIds = null;
+    let isCurrentSeason = false;
     if (!year || year === "current") {
       const cos = await Company.find({ placementYear: null }).select("_id").lean();
       companyIds = cos.map(c => c._id);
+      isCurrentSeason = true;
     } else if (year !== "all") {
       const cos = await Company.find({ placementYear: year }).select("_id").lean();
       companyIds = cos.map(c => c._id);
     }
 
     const offerQuery = { approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] } };
-    if (companyIds) offerQuery.companyId = { $in: companyIds };
+    if (companyIds && isCurrentSeason) {
+      // Off-campus offers (synced from the placement portal) have no Company
+      // doc / season to scope by — surface them under "current" (and "all",
+      // which already has no companyId filter at all) but not a specific
+      // archived year, since there's no way to attribute them to one.
+      offerQuery.$or = [{ companyId: { $in: companyIds } }, { isOffCampus: true }];
+    } else if (companyIds) {
+      offerQuery.companyId = { $in: companyIds };
+    }
 
     const confirmedOffers = await Offer.find(offerQuery)
       .populate('studentId', 'name emailId phoneNo programme department cpi')
@@ -54,6 +64,12 @@ export const getConfirmedForViewer = async (req, res) => {
       offerObj.studentId.programme = offerObj.studentId.programme || null;
       offerObj.studentId.department = offerObj.studentId.department || null;
       offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
+      // Off-campus offers have no companyId doc — shape a stand-in so every
+      // existing "offer.companyId.name / .venue" read on the frontend keeps
+      // working unmodified.
+      if (offerObj.isOffCampus && !offerObj.companyId) {
+        offerObj.companyId = { name: offerObj.offCampusCompanyName || "Off-Campus", venue: "Off-Campus" };
+      }
       return offerObj;
     });
 

@@ -171,9 +171,18 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
           </div>
           {syncResult && (
             <div className={`mb-4 px-4 py-2 rounded text-sm ${syncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
-              {syncResult.error
-                ? syncResult.error
-                : `Sync done — ${syncResult.total} students: ${syncResult.created} created, ${syncResult.updated} updated`}
+              {syncResult.error ? (
+                syncResult.error
+              ) : (
+                <>
+                  {`Sync done — ${syncResult.total} students: ${syncResult.created} created, ${syncResult.updated} updated`}
+                  {syncResult.offCampus && (
+                    syncResult.offCampus.error
+                      ? ` | Off-campus placements: sync failed (${syncResult.offCampus.error})`
+                      : ` | Off-campus placements: ${syncResult.offCampus.created} added, ${syncResult.offCampus.updated} updated`
+                  )}
+                </>
+              )}
             </div>
           )}
           

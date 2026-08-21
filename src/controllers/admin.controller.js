@@ -140,10 +140,15 @@ export const getConfirmedOffers = async (req, res) => {
     const currentCompanyObjs = await Company.find({ placementYear: null }).select('_id').lean();
     const currentCompanyIds = currentCompanyObjs.map(c => c._id);
 
-    // Build offer query
+    // Build offer query — on-campus offers scoped to current-season companies,
+    // PLUS all off-campus offers (synced from the placement portal, which have
+    // no Company doc / season concept to scope by).
     const offerQuery = {
       approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] },
-      companyId: { $in: currentCompanyIds },
+      $or: [
+        { companyId: { $in: currentCompanyIds } },
+        { isOffCampus: true },
+      ],
     };
     if (matchingUserIds) offerQuery.studentId = { $in: matchingUserIds };
 
@@ -164,6 +169,12 @@ export const getConfirmedOffers = async (req, res) => {
       offerObj.studentId.programme = offerObj.studentId.programme || null;
       offerObj.studentId.department = offerObj.studentId.department || null;
       offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
+      // Off-campus offers have no companyId doc — shape a stand-in so every
+      // existing "offer.companyId.name / .venue" read on the frontend keeps
+      // working unmodified.
+      if (offerObj.isOffCampus && !offerObj.companyId) {
+        offerObj.companyId = { name: offerObj.offCampusCompanyName || "Off-Campus", venue: "Off-Campus" };
+      }
       return offerObj;
     });
 
@@ -302,15 +313,14 @@ export const approveOffer = async (req, res) => {
     }
 
     // Fire-and-forget write-back to placement portal. Always fire — even when the
-    // company has no placementPortalJobId (i.e. it wasn't created via "Sync All
-    // Companies"): we send the company name as a fallback so the placement portal
-    // can still mark the student placed (with the company shown), instead of
-    // silently skipping the write-back.
+    // company has no placementPortalJobId (not created via "Sync All Companies"):
+    // the portal will reply 400 and we log the reason, instead of silently
+    // skipping. A proper placement requires a real placementPortalJobId (= the
+    // placement-portal job id) so the portal can set job_placed → company.
     {
       const webhookBody = {
         studentEmail: approvedOffer.studentId.emailId,
         placementPortalJobId: approvedOffer.companyId.placementPortalJobId || null,
-        companyName: approvedOffer.companyId.name || "",
       };
       axios
         .post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
@@ -591,9 +601,98 @@ export const syncStudentsFromPortal = async (req, res) => {
     }
 
     logger.info(`[sync] Students — total: ${data.data.length}, created: ${created}, updated: ${updated}`);
-    return res.json({ status: "success", total: data.data.length, created, updated });
+
+    // Chain the off-campus placement pull right after the roster sync, so
+    // "Sync from Placement Portal" in one click also brings placed status
+    // through — off-campus placements have no DDay Company/Offer behind them
+    // otherwise, so they'd never show up in Confirmed Offers on their own.
+    // Failure here shouldn't fail the roster sync that already succeeded —
+    // report it separately instead.
+    let offCampus = null;
+    try {
+      offCampus = await pullOffCampusPlacements();
+    } catch (offCampusErr) {
+      logger.error("Off-campus placement sync (chained) failed:", offCampusErr.message);
+      offCampus = { error: offCampusErr.message };
+    }
+
+    return res.json({ status: "success", total: data.data.length, created, updated, offCampus });
   } catch (err) {
     logger.error("syncStudentsFromPortal error:", err.message);
+    return res.status(500).json({ message: "Sync failed", error: err.message });
+  }
+};
+
+// Pulls off-campus placements from the placement portal and applies them.
+// Unlike on-campus offers there's no DDay-side approval step for these — the
+// placement already happened outside DDay, so the synced Offer is created
+// straight into APPROVED/ACCEPTED (isOffCampus: true, no companyId), and the
+// student is marked placed the same way approveOffer does (minus the
+// Company/Shortlist/email side-effects, which only make sense for on-campus).
+// Plain async function (not a route handler) so it can be called both
+// standalone and chained onto syncStudentsFromPortal.
+async function pullOffCampusPlacements() {
+  const { data } = await axios.get(`${PLACEMENT_API}/sync/off-campus-placements`, {
+    headers: { "x-sync-signature": makeSyncHmacForGet() },
+    timeout: 15000,
+  });
+  if (data.status !== "success") {
+    throw new Error("Placement portal returned error for /sync/off-campus-placements");
+  }
+
+  let created = 0, updated = 0, skippedNoUser = 0;
+  for (const entry of data.data) {
+    const email = entry.email?.toLowerCase();
+    if (!email) continue;
+
+    const user = await User.findOne({ emailId: email });
+    if (!user) {
+      // Student roster sync must have run first (chained before this in
+      // syncStudentsFromPortal, so this should only happen if called standalone).
+      skippedNoUser++;
+      continue;
+    }
+
+    const existing = await Offer.findOne({ studentId: user._id, isOffCampus: true });
+    if (existing) {
+      existing.offCampusCompanyName = entry.companyName || existing.offCampusCompanyName;
+      existing.offCampusRole = entry.role || existing.offCampusRole;
+      if (entry.placedAt) existing.approvedAt = new Date(entry.placedAt);
+      await existing.save();
+      updated++;
+    } else {
+      await Offer.create({
+        studentId: user._id,
+        isOffCampus: true,
+        offCampusCompanyName: entry.companyName || "",
+        offCampusRole: entry.role || "",
+        approvalStatus: ApprovalStatus.APPROVED,
+        offerStatus: "ACCEPTED",
+        approvedAt: entry.placedAt ? new Date(entry.placedAt) : new Date(),
+      });
+      created++;
+    }
+
+    // Same race-safe guard as approveOffer — placedCompany stays unset since
+    // there's no DDay Company doc for an off-campus employer.
+    await Student.findOneAndUpdate(
+      { userId: user._id, isPlaced: false },
+      { $set: { isPlaced: true } }
+    );
+  }
+
+  logger.info(`[sync] Off-campus placements — total: ${data.data.length}, created: ${created}, updated: ${updated}, skippedNoUser: ${skippedNoUser}`);
+  return { total: data.data.length, created, updated, skippedNoUser };
+}
+
+// POST /admin/sync/off-campus — standalone trigger (kept for manual/API use;
+// the normal path is via syncStudentsFromPortal below, which chains this in).
+export const syncOffCampusPlacementsFromPortal = async (req, res) => {
+  try {
+    const result = await pullOffCampusPlacements();
+    return res.json({ status: "success", ...result });
+  } catch (err) {
+    logger.error("syncOffCampusPlacementsFromPortal error:", err.message);
     return res.status(500).json({ message: "Sync failed", error: err.message });
   }
 };

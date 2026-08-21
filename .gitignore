@@ -173,7 +173,7 @@ vite.config.ts.timestamp-*
 .vite/
 
 .DS_Store
-
+/.claude
 seed.js
 scripts/dummy.js
 scripts/seed.js
