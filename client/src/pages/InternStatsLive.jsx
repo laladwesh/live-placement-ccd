@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Table, Input, Select, Button, Tag, Space } from "antd";
+import { SearchOutlined, ReloadOutlined } from "@ant-design/icons";
 import toast from "react-hot-toast";
 import api from "../api/axios";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
@@ -129,216 +131,169 @@ export default function InternStatsLive() {
     );
   };
 
+  const columns = [
+    { title: '#', width: 50, render: (_, __, i) => <span style={{ fontSize: 12, color: '#8D9096' }}>{i + 1}</span> },
+    { title: 'IITG Email', dataIndex: 'iitgEmail', render: v => v || '—' },
+    { title: 'Roll', dataIndex: 'rollNumber', render: v => <span style={{ fontFamily: 'monospace' }}>{v || '—'}</span> },
+    { title: 'Name', dataIndex: 'name', render: v => <span style={{ fontWeight: 600, color: '#161B22' }}>{v || '—'}</span> },
+    { title: 'CPI', dataIndex: 'cpi', width: 65, render: v => typeof v === 'number' ? v.toFixed(2) : '—' },
+    { title: 'Dept', dataIndex: 'department', render: v => v || '—' },
+    { title: 'Email', dataIndex: 'email', render: v => v || '—' },
+    { title: 'Mobile', dataIndex: 'mobile', render: v => v || '—' },
+    {
+      title: 'Got Intern', dataIndex: 'isGotIntern', width: 90,
+      render: v => v
+        ? <Tag color="success">Yes</Tag>
+        : <Tag color="error">No</Tag>,
+    },
+    { title: 'Company', dataIndex: 'company', render: v => v || '—' },
+    { title: 'Slot / Spot', dataIndex: 'slotSpot', render: v => v || '—' },
+  ];
+
   return (
     <main className="px-6 py-6">
       {/* ── Header ── */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-            Intern Stats <span className="text-indigo-600">Live</span>
-          </h1>
-          <p className="text-slate-500 mt-1 font-medium">
-            {loading ? "Loading..." : `Showing ${filteredRows.length} of ${rows.length} records`}
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#161B22', margin: 0 }}>Intern Stats — Live</h1>
+          <p style={{ fontSize: 13, color: '#666B72', marginTop: 4 }}>
+            {loading ? 'Loading…' : `Showing ${filteredRows.length} of ${rows.length} records`}
           </p>
         </div>
-        <div className="flex items-center gap-3 flex-wrap">
+        <Space wrap>
           {freshnessBadge()}
-          <button
+          <Button
+            type="primary"
+            icon={<ReloadOutlined />}
+            loading={loading}
             onClick={() => fetchData(true)}
-            disabled={loading}
-            className="px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
           >
-            {loading ? "Refreshing…" : "Refresh"}
-          </button>
-          <div className="relative">
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search students or companies…"
-              className="w-72 pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all outline-none"
-            />
-            <div className="absolute left-3 top-3 text-slate-400">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
+            Refresh
+          </Button>
+          <Input
+            prefix={<SearchOutlined style={{ color: '#8D9096' }} />}
+            placeholder="Search students or companies…"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            allowClear
+            style={{ width: 260 }}
+          />
+        </Space>
+      </div>
+
+      {/* ── Summary cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div style={{ background: '#fff', border: '1px solid #E4E1E0', padding: 16 }}>
+          <div style={{ fontSize: 13, color: '#666B72' }}>Total Students</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#161B22' }}>{filteredRows.length}</div>
+          {filteredRows.length !== meta.count && <div style={{ fontSize: 11, color: '#8D9096' }}>of {meta.count} total</div>}
+        </div>
+        <div style={{ background: '#fff', border: '1px solid #B7EB8F', padding: 16 }}>
+          <div style={{ fontSize: 13, color: '#389e0d' }}>Got Intern</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#237804' }}>{filteredRows.filter(r => r.isGotIntern).length}</div>
+          {filteredRows.length !== meta.count && <div style={{ fontSize: 11, color: '#8D9096' }}>of {meta.placed_count} total</div>}
+        </div>
+        <div style={{ background: '#fff', border: '1px solid #FFD591', padding: 16 }}>
+          <div style={{ fontSize: 13, color: '#d46b08' }}>Not Placed</div>
+          <div style={{ fontSize: 28, fontWeight: 700, color: '#ad4e00' }}>{filteredRows.filter(r => !r.isGotIntern).length}</div>
+          {filteredRows.length !== meta.count && <div style={{ fontSize: 11, color: '#8D9096' }}>of {meta.unplaced_count} total</div>}
         </div>
       </div>
 
       {/* ── Filters ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6 mb-8">
-        {/* Row 1: dropdowns */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-5">
-          <FilterGroup label="Department" value={department} onChange={setDepartment} options={departments} />
-          <FilterGroup label="Company"    value={companyFilter} onChange={setCompanyFilter} options={companies} />
-          <div className="flex flex-col">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Got Intern</label>
-            <select
-              value={gotIntern}
-              onChange={e => setGotIntern(e.target.value)}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
-            >
-              <option value="">All</option>
-              <option value="yes">Yes — Got Intern</option>
-              <option value="no">No — Not Placed</option>
-            </select>
-          </div>
-          <div className="flex flex-col">
-            <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CPI Range</label>
-            <div className="flex items-center gap-2">
-              <input type="number" placeholder="Min" value={cpiMin} onChange={e => setCpiMin(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors" />
-              <span className="text-slate-300">–</span>
-              <input type="number" placeholder="Max" value={cpiMax} onChange={e => setCpiMax(e.target.value)}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:bg-white transition-colors" />
-            </div>
-          </div>
-        </div>
-
-        {/* Row 2: Programme multi-select pills */}
-        <div className="flex flex-wrap items-center gap-2 pt-4 border-t border-slate-100">
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-400 mr-1">Programme:</span>
-          {programmes.length === 0
-            ? <span className="text-xs text-slate-400 italic">No data yet</span>
-            : programmes.map(p => {
-                const active = selectedProgrammes.includes(p);
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setSelectedProgrammes(prev =>
-                      active ? prev.filter(x => x !== p) : [...prev, p]
-                    )}
-                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                      active
-                        ? "bg-indigo-600 text-white border-indigo-600"
-                        : "bg-slate-50 text-slate-600 border-slate-200 hover:border-indigo-400 hover:text-indigo-600"
-                    }`}
-                  >
-                    {p}
-                  </button>
-                );
-              })
-          }
-          {selectedProgrammes.length > 0 && (
-            <button onClick={() => setSelectedProgrammes([])} className="ml-1 text-xs text-slate-400 hover:text-rose-500 transition-colors">
-              clear
-            </button>
-          )}
-          <button onClick={resetFilters} className="ml-auto text-sm font-semibold text-slate-400 hover:text-indigo-600 transition-colors">
-            Reset All
-          </button>
-        </div>
+      <div className="mb-4 flex flex-wrap gap-2 items-end p-3" style={{ background: '#F4F2F1', border: '1px solid #E4E1E0' }}>
+        <Select
+          value={department || undefined}
+          onChange={v => setDepartment(v || '')}
+          placeholder="Department" allowClear style={{ width: 160 }}
+          options={departments.map(d => ({ label: d, value: d }))}
+        />
+        <Select
+          value={companyFilter || undefined}
+          onChange={v => setCompanyFilter(v || '')}
+          placeholder="Company" allowClear showSearch style={{ width: 200 }}
+          options={companies.map(c => ({ label: c, value: c }))}
+        />
+        <Select
+          value={gotIntern || undefined}
+          onChange={v => setGotIntern(v || '')}
+          placeholder="Got Intern" allowClear style={{ width: 150 }}
+          options={[
+            { label: 'Yes — Got Intern', value: 'yes' },
+            { label: 'No — Not Placed', value: 'no' },
+          ]}
+        />
+        <Input
+          value={cpiMin} onChange={e => setCpiMin(e.target.value)}
+          placeholder="CPI Min" style={{ width: 80 }} type="number"
+        />
+        <Input
+          value={cpiMax} onChange={e => setCpiMax(e.target.value)}
+          placeholder="CPI Max" style={{ width: 80 }} type="number"
+        />
+        <Button onClick={resetFilters}>Reset</Button>
       </div>
 
-      {/* ── Summary cards — from response meta, not filtered rows ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-        <div className="bg-white rounded-lg border border-slate-200 p-4">
-          <div className="text-sm text-slate-500">Total Students</div>
-          <div className="text-2xl font-bold text-slate-900">{filteredRows.length}</div>
-          {filteredRows.length !== meta.count && <div className="text-xs text-slate-400 mt-0.5">of {meta.count} total</div>}
-        </div>
-        <div className="bg-white rounded-lg border border-emerald-200 p-4">
-          <div className="text-sm text-emerald-600">Got Intern</div>
-          <div className="text-2xl font-bold text-emerald-700">{filteredRows.filter(r => r.isGotIntern).length}</div>
-          {filteredRows.length !== meta.count && <div className="text-xs text-slate-400 mt-0.5">of {meta.placed_count} total</div>}
-        </div>
-        <div className="bg-white rounded-lg border border-amber-200 p-4">
-          <div className="text-sm text-amber-600">Not Placed</div>
-          <div className="text-2xl font-bold text-amber-700">{filteredRows.filter(r => !r.isGotIntern).length}</div>
-          {filteredRows.length !== meta.count && <div className="text-xs text-slate-400 mt-0.5">of {meta.unplaced_count} total</div>}
-        </div>
+      {/* Programme pills */}
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <span style={{ fontSize: 11, fontWeight: 700, color: '#8D9096', textTransform: 'uppercase', letterSpacing: 1 }}>Programme:</span>
+        {programmes.length === 0
+          ? <span style={{ fontSize: 12, color: '#8D9096', fontStyle: 'italic' }}>No data yet</span>
+          : programmes.map(p => {
+              const active = selectedProgrammes.includes(p);
+              return (
+                <button
+                  key={p}
+                  onClick={() => setSelectedProgrammes(prev =>
+                    active ? prev.filter(x => x !== p) : [...prev, p]
+                  )}
+                  style={{
+                    padding: '2px 12px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    border: `1px solid ${active ? '#14213D' : '#E4E1E0'}`,
+                    background: active ? '#14213D' : '#fff',
+                    color: active ? '#fff' : '#33383F',
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {p}
+                </button>
+              );
+            })
+        }
+        {selectedProgrammes.length > 0 && (
+          <button
+            onClick={() => setSelectedProgrammes([])}
+            style={{ fontSize: 12, color: '#8D9096', background: 'none', border: 'none', cursor: 'pointer' }}
+          >
+            clear
+          </button>
+        )}
       </div>
 
       {/* ── Table ── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-        {loading ? (
-          <div className="flex flex-col items-center justify-center py-20">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4" />
-            <p className="text-slate-500 font-medium">Fetching live intern data…</p>
-          </div>
-        ) : error ? (
-          <div className="p-10 text-center">
-            <p className="text-rose-600 font-semibold mb-2">Could not load data</p>
-            <p className="text-slate-500 text-sm">{error}</p>
-            <button
-              onClick={() => fetchData(true)}
-              className="mt-4 px-4 py-2 text-sm font-semibold rounded-lg bg-indigo-600 text-white hover:bg-indigo-700"
-            >
-              Retry
-            </button>
-          </div>
-        ) : filteredRows.length === 0 ? (
-          <div className="p-10 text-center text-slate-500">No records found for selected filters.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 border-b border-slate-100">
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">#</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">IITG Email</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Roll</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Name</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">CPI</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Department</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Email</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Mobile</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Got Intern</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Company</th>
-                  <th className="px-6 py-4 text-[11px] font-bold uppercase tracking-widest text-slate-400">Slot / Spot</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredRows.map((row, idx) => (
-                  <tr
-                    key={row.rollNumber || idx}
-                    onClick={() => navigate(`/intern-stats-live/${row.rollNumber}`)}
-                    className="hover:bg-indigo-50/60 transition-colors cursor-pointer"
-                  >
-                    <td className="px-6 py-4 text-sm text-slate-400 font-mono">{idx + 1}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{row.iitgEmail || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700 font-mono">{row.rollNumber || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-slate-900 font-medium">{row.name || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">
-                      {typeof row.cpi === "number" ? row.cpi.toFixed(2) : "-"}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{row.department || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{row.email || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{row.mobile || "-"}</td>
-                    <td className="px-6 py-4 text-sm">
-                      {row.isGotIntern ? (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">Yes</span>
-                      ) : (
-                        <span className="px-2 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">No</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{row.company || "-"}</td>
-                    <td className="px-6 py-4 text-sm text-slate-700">{row.slotSpot || "-"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      {error ? (
+        <div style={{ background: '#fff', border: '1px solid #E4E1E0', padding: 40, textAlign: 'center' }}>
+          <p style={{ color: '#D83B01', fontWeight: 600 }}>Could not load data</p>
+          <p style={{ color: '#666B72', fontSize: 13 }}>{error}</p>
+          <Button type="primary" onClick={() => fetchData(true)} style={{ marginTop: 12 }}>Retry</Button>
+        </div>
+      ) : (
+        <div style={{ background: '#fff', border: '1px solid #E4E1E0' }}>
+          <Table
+            columns={columns}
+            dataSource={filteredRows}
+            rowKey={r => r.rollNumber || Math.random()}
+            loading={loading}
+            pagination={{ pageSize: 100, showSizeChanger: false, showTotal: t => `${t} records` }}
+            size="small"
+            onRow={r => ({ onClick: () => navigate(`/intern-stats-live/${r.rollNumber}`), style: { cursor: 'pointer' } })}
+            locale={{ emptyText: 'No records found for selected filters.' }}
+          />
+        </div>
+      )}
     </main>
-  );
-}
-
-function FilterGroup({ label, value, onChange, options }) {
-  return (
-    <div className="flex flex-col">
-      <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">{label}</label>
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all outline-none"
-      >
-        <option value="">All {label}s</option>
-        {options.map(opt => (
-          <option key={opt} value={opt}>{opt}</option>
-        ))}
-      </select>
-    </div>
   );
 }

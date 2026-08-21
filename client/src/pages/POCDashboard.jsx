@@ -1,6 +1,8 @@
 ﻿// src/pages/POCDashboard.jsx
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Input, Button, Spin, Empty } from "antd";
+import { SearchOutlined, EnvironmentOutlined, ArrowRightOutlined } from "@ant-design/icons";
 import api from "../api/axios";
 import { useSocket } from "../context/SocketContext";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
@@ -93,85 +95,69 @@ export default function POCDashboard() {
 
   return (
     <main className="px-6 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">POC Dashboard</h1>
-          <p className="text-slate-600 mt-1">Manage interviews for your assigned companies</p>
+      <div className="mb-6">
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: '#161B22', margin: 0 }}>POC Dashboard</h1>
+        <p style={{ fontSize: 13, color: '#666B72', marginTop: 4 }}>Manage interviews for your assigned companies</p>
+      </div>
+
+      <div className="mb-6" style={{ maxWidth: 480 }}>
+        <Input
+          prefix={<SearchOutlined style={{ color: '#8D9096' }} />}
+          placeholder="Search companies by name or venue…"
+          value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          allowClear
+        />
+      </div>
+
+      {loading ? (
+        <div style={{ display: 'flex', justifyContent: 'center', padding: '48px 0' }}>
+          <Spin size="large" />
         </div>
-
-        {/* Search */}
-        <div className="mb-6">
-          <div className="max-w-2xl">
-            <input
-              type="text"
-              placeholder="Search companies by name or venue..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      ) : companies.length === 0 ? (
+        <div style={{ background: '#fff', border: '1px solid #E4E1E0', padding: 48 }}>
+          <Empty description="No companies assigned yet. Contact admin for assignments." />
         </div>
-
-        {/* Companies List */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <p className="text-slate-600 mt-4">Loading your companies...</p>
-          </div>
-        ) : companies.length === 0 ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow">
-            <svg className="w-16 h-16 mx-auto text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-            </svg>
-            <p className="text-slate-600 mt-4">
-              No companies assigned to you yet. Contact admin for company assignments.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredCompanies.map(company => (
-              <div
-                key={company._id}
-                className="bg-white rounded-lg shadow hover:shadow-lg transition cursor-pointer"
-                onClick={() => navigate(`/poc/company/${company._id}`)}
-              >
-                <div className="p-6">
-                  {/* Company Header */}
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold text-slate-900 mb-2">{company.name}</h3>
-                    {company.venue && (
-                      <p className="text-sm text-slate-500 flex items-center gap-1">
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                        </svg>
-                        {company.venue}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Description */}
-                  {company.description && (
-                    <p className="text-sm text-slate-600 mb-4 line-clamp-2">{company.description}</p>
-                  )}
-
-                  {/* Details */}
-                  <div className="space-y-2 mb-4">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Max Rounds</span>
-                      <span className="font-medium text-slate-900">{company.maxRounds}</span>
-                    </div>
-                  </div>
-
-                  {/* Action Button */}
-                  <button className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
-                    Manage Interviews
-                  </button>
-                </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filteredCompanies.map(company => (
+            <div
+              key={company._id}
+              onClick={() => navigate(`/poc/company/${company._id}`)}
+              style={{
+                background: '#fff',
+                border: '1px solid #E4E1E0',
+                padding: 20,
+                cursor: 'pointer',
+                transition: 'box-shadow 0.2s',
+              }}
+              onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 12px rgba(20,33,61,0.10)')}
+              onMouseLeave={e => (e.currentTarget.style.boxShadow = 'none')}
+            >
+              <div style={{ fontWeight: 700, fontSize: 15, color: '#161B22', marginBottom: 4 }}>
+                {company.name}
               </div>
-            ))}
-          </div>
-        )}
+              {company.venue && (
+                <div style={{ fontSize: 12, color: '#8D9096', display: 'flex', alignItems: 'center', gap: 4, marginBottom: 8 }}>
+                  <EnvironmentOutlined /> {company.venue}
+                </div>
+              )}
+              {company.description && (
+                <p style={{ fontSize: 13, color: '#33383F', marginBottom: 12, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                  {company.description}
+                </p>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, fontSize: 13 }}>
+                <span style={{ color: '#8D9096' }}>Max Rounds</span>
+                <span style={{ fontWeight: 600, color: '#161B22' }}>{company.maxRounds}</span>
+              </div>
+              <Button type="primary" block icon={<ArrowRightOutlined />}>
+                Manage Interviews
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
     </main>
   );
 }

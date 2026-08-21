@@ -1,6 +1,8 @@
 import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
+import { ConfigProvider } from "antd";
+import antdTheme from "./theme/antdTheme";
 
 import Layout          from "./components/Layout";
 import Login           from "./pages/Login";
@@ -26,12 +28,12 @@ import Footer          from "./components/Footer";
 
 function App() {
   return (
-    <>
+    <ConfigProvider theme={antdTheme}>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
-          style: { background: '#1E2532', color: '#fff', fontFamily: 'Lato, sans-serif', fontSize: 14 },
+          style: { background: '#1E2532', color: '#fff', fontFamily: 'Inter, -apple-system, sans-serif', fontSize: 14 },
           success: { duration: 3000, iconTheme: { primary: '#107C10', secondary: '#fff' } },
           error:   { duration: 4000, iconTheme: { primary: '#D83B01', secondary: '#fff' } },
         }}
@@ -70,7 +72,7 @@ function App() {
 
         <Footer />
       </BrowserRouter>
-    </>
+    </ConfigProvider>
   );
 }
 

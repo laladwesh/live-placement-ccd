@@ -1,7 +1,9 @@
-﻿// src/pages/AdminDashboard.jsx
-import React, { useState, useEffect, useRef } from "react";
+// src/pages/AdminDashboard.jsx
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
+import { Table, Input, Tabs, Button, Tag, Select, Space } from "antd";
+import { SearchOutlined } from "@ant-design/icons";
 import api from "../api/axios";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
@@ -12,16 +14,14 @@ import { useSocket } from "../context/SocketContext";
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const [user, setUser] = useState(() => getCachedUser());
+  const [user, setUser]       = useState(() => getCachedUser());
   const [loading, setLoading] = useState(true);
-  const [pendingOffers, setPendingOffers] = useState([]);
+  const [pendingOffers, setPendingOffers]     = useState([]);
   const [confirmedOffers, setConfirmedOffers] = useState([]);
-  const [rejectedOffers, setRejectedOffers] = useState([]);
-  const [activeTab, setActiveTab] = useState("pending"); // "pending", "confirmed", "rejected"
-  const [processing, setProcessing] = useState(null); // offerId being processed
-  const [expandedStudent, setExpandedStudent] = useState(null); // Track expanded student rows
-  const [searchTerm, setSearchTerm] = useState(""); // Search filter
-  // Server-side filters: active filters and temporary inputs
+  const [rejectedOffers, setRejectedOffers]   = useState([]);
+  const [activeTab, setActiveTab] = useState("pending");
+  const [processing, setProcessing] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [programmeFilter, setProgrammeFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [cpiMin, setCpiMin] = useState("");
@@ -38,24 +38,16 @@ export default function AdminDashboard() {
   const [companiesAll, setCompaniesAll] = useState([]);
   const [companyFilter, setCompanyFilter] = useState("");
   const [tempCompany, setTempCompany] = useState("");
-  const [companyDropdownOpen, setCompanyDropdownOpen] = useState(false);
-  const companyRef = useRef(null);
   const [selectedStudentId, setSelectedStudentId] = useState(null);
   const [showStudentModal, setShowStudentModal] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState({
-    isOpen: false,
-    type: null, // 'approve' or 'reject'
-    offerId: null,
-    studentName: '',
-    companyName: ''
+    isOpen: false, type: null, offerId: null, studentName: '', companyName: '',
   });
-  const [rejectReasonModal, setRejectReasonModal] = useState({
-    isOpen: false,
-    offerId: null
-  });
+  const [rejectReasonModal, setRejectReasonModal] = useState({ isOpen: false, offerId: null });
 
+  // ── Auth ─────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (user) return; // Already have user from cache
+    if (user) return;
     api.get("/users/me").then(res => {
       setCachedUser(res.data.user);
       setUser(res.data.user);
@@ -69,48 +61,21 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     if (user && user.role !== "admin") navigate("/dashboard");
-  }, [user]);
+  }, [user]); // eslint-disable-line
 
-  useEffect(() => {
-    fetchOffers();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  useEffect(() => { fetchOffers(); }, []); // eslint-disable-line
 
-  // Socket listener for real-time updates
+  // ── Socket ────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
-
     socket.emit("join:admin");
-
-    // Listen for new offers created by POCs
-    socket.on("offer:created", (data) => {
-      toast.success(`New offer pending approval: ${data.companyName}`);
-      fetchOffers();
-    });
-
-    // Listen for offer status updates
-    socket.on("offer:status-update", (data) => {
-      fetchOffers();
-    });
-
-    // Listen for offer approved events
-    socket.on("offer:approved", (data) => {
-      fetchOffers();
-    });
-
-    // Listen for offer rejected events
-    socket.on("offer:rejected", (data) => {
-      fetchOffers();
-    });
-
-    // Listen for offer reverted events (POC undid offer)
-    socket.on("offer:reverted", (data) => {
-      toast(`Offer reverted by POC: ${data.companyName}`, {
-        icon: '🔄',
-      });
-      fetchOffers();
-    });
-
+    const refresh = () => fetchOffers();
+    const newOffer = (data) => { toast.success(`New offer pending: ${data.companyName}`); fetchOffers(); };
+    socket.on("offer:created",       newOffer);
+    socket.on("offer:status-update", refresh);
+    socket.on("offer:approved",      refresh);
+    socket.on("offer:rejected",      refresh);
+    socket.on("offer:reverted", (data) => { toast(`Offer reverted: ${data.companyName}`, { icon: '🔄' }); fetchOffers(); });
     return () => {
       socket.off("offer:created");
       socket.off("offer:status-update");
@@ -118,89 +83,56 @@ export default function AdminDashboard() {
       socket.off("offer:rejected");
       socket.off("offer:reverted");
     };
-  }, [socket]);
+  }, [socket]); // eslint-disable-line
 
-  // Close company dropdown on outside click
-  useEffect(() => {
-    const handleClick = (e) => {
-      if (companyRef.current && !companyRef.current.contains(e.target)) {
-        setCompanyDropdownOpen(false);
-      }
-    };
-    document.addEventListener('click', handleClick);
-    return () => document.removeEventListener('click', handleClick);
-  }, []);
-
+  // ── Data ──────────────────────────────────────────────────────────────
   const fetchOffers = async (overrideFilters = null) => {
     setLoading(true);
     try {
-      // include active server-side filters when requesting confirmed offers
-      const pendingReq = api.get("/admin/offers/pending");
       const params = {};
-      const useFilters = overrideFilters || { programme: programmeFilter, department: departmentFilter, cpiMin, cpiMax };
-      if (useFilters.programme) params.programme = useFilters.programme;
-      if (useFilters.department) params.department = useFilters.department;
-      if (useFilters.cpiMin) params.cpiMin = useFilters.cpiMin;
-      if (useFilters.cpiMax) params.cpiMax = useFilters.cpiMax;
-      const confirmedReq = api.get("/admin/offers/confirmed", { params });
-      const [pendingRes, confirmedRes] = await Promise.all([pendingReq, confirmedReq]);
-      
+      const f = overrideFilters || { programme: programmeFilter, department: departmentFilter, cpiMin, cpiMax };
+      if (f.programme) params.programme = f.programme;
+      if (f.department) params.department = f.department;
+      if (f.cpiMin) params.cpiMin = f.cpiMin;
+      if (f.cpiMax) params.cpiMax = f.cpiMax;
+      const [pendingRes, confirmedRes] = await Promise.all([
+        api.get("/admin/offers/pending"),
+        api.get("/admin/offers/confirmed", { params }),
+      ]);
       setPendingOffers(pendingRes.data.offers || []);
-      
       const allConfirmed = confirmedRes.data.offers || [];
-      
-      // Filter Confirmed (Approved + Auto-rejected)
-      const confirmedList = allConfirmed.filter(o => 
-        o.approvalStatus === "APPROVED" || 
-        (o.approvalStatus === "REJECTED" && o.remarks && o.remarks.toLowerCase().includes("auto-rejected"))
+      const confirmedList = allConfirmed.filter(o =>
+        o.approvalStatus === "APPROVED" ||
+        (o.approvalStatus === "REJECTED" && o.remarks?.toLowerCase().includes("auto-rejected"))
       );
-
-      // Filter Rejected (Manually Rejected only)
-      const rejectedList = allConfirmed.filter(o => 
-        o.approvalStatus === "REJECTED" && 
+      const rejectedList = allConfirmed.filter(o =>
+        o.approvalStatus === "REJECTED" &&
         (!o.remarks || !o.remarks.toLowerCase().includes("auto-rejected"))
       );
-
-      // Determine company to apply: prefer overrideFilters.company when provided (Apply button passes this), else use companyFilter state
-      const appliedCompany = (overrideFilters && overrideFilters.company) ? overrideFilters.company : companyFilter;
-      if (appliedCompany && appliedCompany.trim()) {
-        const lowerCompany = appliedCompany.toLowerCase();
-        const filteredConfirmed = confirmedList.filter(o => o.companyId?.name?.toLowerCase().includes(lowerCompany));
-        const filteredRejected = rejectedList.filter(o => o.companyId?.name?.toLowerCase().includes(lowerCompany));
-        setConfirmedOffers(filteredConfirmed);
-        setRejectedOffers(filteredRejected);
+      const appliedCompany = (overrideFilters?.company) ? overrideFilters.company : companyFilter;
+      if (appliedCompany?.trim()) {
+        const lc = appliedCompany.toLowerCase();
+        setConfirmedOffers(confirmedList.filter(o => o.companyId?.name?.toLowerCase().includes(lc)));
+        setRejectedOffers(rejectedList.filter(o => o.companyId?.name?.toLowerCase().includes(lc)));
       } else {
         setConfirmedOffers(confirmedList);
         setRejectedOffers(rejectedList);
       }
-
-      // derive programme/department/company lists from confirmed results for dropdowns
       try {
-        const progs = new Set();
-        const depts = new Set();
-        const comps = new Set();
-        (confirmedRes.data.offers || []).forEach(o => {
-          const s = o.studentId || {};
-          const c = o.companyId || {};
-          if (s.programme) progs.add(s.programme);
-          if (s.department) depts.add(s.department);
-          if (c.name) comps.add(c.name);
+        const progs = new Set(), depts = new Set(), comps = new Set();
+        allConfirmed.forEach(o => {
+          if (o.studentId?.programme) progs.add(o.studentId.programme);
+          if (o.studentId?.department) depts.add(o.studentId.department);
+          if (o.companyId?.name) comps.add(o.companyId.name);
         });
-        const progsArr = Array.from(progs).sort();
-        const deptsArr = Array.from(depts).sort();
-        const compsArr = Array.from(comps).sort();
-        setProgrammesList(progsArr);
-        setDepartmentsList(deptsArr);
-        setCompaniesList(compsArr);
-        // Preserve full lists on first load (when no overrideFilters provided)
+        const pa = Array.from(progs).sort(), da = Array.from(depts).sort(), ca = Array.from(comps).sort();
+        setProgrammesList(pa); setDepartmentsList(da); setCompaniesList(ca);
         if (!overrideFilters || Object.keys(overrideFilters).length === 0) {
-          if (programmesAll.length === 0) setProgrammesAll(progsArr);
-          if (departmentsAll.length === 0) setDepartmentsAll(deptsArr);
-          if (companiesAll.length === 0) setCompaniesAll(compsArr);
+          if (programmesAll.length === 0) setProgrammesAll(pa);
+          if (departmentsAll.length === 0) setDepartmentsAll(da);
+          if (companiesAll.length === 0) setCompaniesAll(ca);
         }
-      } catch (e) {
-        // ignore
-      }
+      } catch { /* ignore */ }
     } catch (err) {
       console.error("Error fetching offers:", err);
     } finally {
@@ -208,14 +140,13 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleApprove = async (offerId, studentId) => {
+  const handleApprove = async (offerId) => {
     try {
       setProcessing(offerId);
       await api.post(`/admin/offers/${offerId}/approve`);
-      await fetchOffers(); // Refresh data
-      toast.success("Offer approved! Other offers auto-rejected and marked as placed.");
+      await fetchOffers();
+      toast.success("Offer approved!");
     } catch (err) {
-      console.error("Error approving offer:", err);
       toast.error(err.response?.data?.message || "Failed to approve offer");
     } finally {
       setProcessing(null);
@@ -227,10 +158,9 @@ export default function AdminDashboard() {
     try {
       setProcessing(offerId);
       await api.post(`/admin/offers/${offerId}/reject`, { reason });
-      await fetchOffers(); // Refresh data
-      toast.success("Offer rejected successfully");
+      await fetchOffers();
+      toast.success("Offer rejected");
     } catch (err) {
-      console.error("Error rejecting offer:", err);
       toast.error(err.response?.data?.message || "Failed to reject offer");
     } finally {
       setProcessing(null);
@@ -238,648 +168,331 @@ export default function AdminDashboard() {
     }
   };
 
-  const openRejectReasonModal = (offerId) => {
-    setRejectReasonModal({ isOpen: true, offerId });
-  };
+  const openRejectReasonModal = (offerId) => setRejectReasonModal({ isOpen: true, offerId });
 
-  // Group offers by student
+  // ── Group + Filter ────────────────────────────────────────────────────
   const groupOffersByStudent = (offers) => {
     const grouped = {};
     offers.forEach(offer => {
-      const studentId = offer.studentId?._id;
-      if (!studentId) return;
-      
-      if (!grouped[studentId]) {
-        grouped[studentId] = {
-          student: offer.studentId,
-          offers: []
-        };
-      }
-      grouped[studentId].offers.push(offer);
+      const id = offer.studentId?._id;
+      if (!id) return;
+      if (!grouped[id]) grouped[id] = { student: offer.studentId, offers: [] };
+      grouped[id].offers.push(offer);
     });
     return Object.values(grouped);
   };
 
-  // Filter by search term
-  const filterBySearch = (studentGroups) => {
-    if (!searchTerm.trim()) return studentGroups;
-    
-    const lowerSearch = searchTerm.toLowerCase();
-    return studentGroups.filter(group => {
-      const student = group.student;
-      return (
-        student?.name?.toLowerCase().includes(lowerSearch) ||
-        student?.emailId?.toLowerCase().includes(lowerSearch) ||
-        student?.phoneNo?.toLowerCase().includes(lowerSearch) ||
-        student?.rollNumber?.toLowerCase().includes(lowerSearch)
-      );
+  const filterBySearch = (groups) => {
+    if (!searchTerm.trim()) return groups;
+    const lc = searchTerm.toLowerCase();
+    return groups.filter(g => {
+      const s = g.student;
+      return s?.name?.toLowerCase().includes(lc)
+        || s?.emailId?.toLowerCase().includes(lc)
+        || s?.phoneNo?.toLowerCase().includes(lc)
+        || s?.rollNumber?.toLowerCase().includes(lc);
     });
   };
 
-  const groupedPendingOffers = filterBySearch(groupOffersByStudent(pendingOffers));
+  const groupedPendingOffers   = filterBySearch(groupOffersByStudent(pendingOffers));
   const groupedConfirmedOffers = filterBySearch(groupOffersByStudent(confirmedOffers));
-  const groupedRejectedOffers = filterBySearch(groupOffersByStudent(rejectedOffers));
+  const groupedRejectedOffers  = filterBySearch(groupOffersByStudent(rejectedOffers));
 
-  const formatDate = (date) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleString("en-IN", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit"
-    });
-  };
+  const formatDate = (d) => d
+    ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    : "N/A";
 
-  // Table Row Component for Student with Multiple Offers
-  const StudentOfferRow = ({ studentData, isPending, index }) => {
-    const { student, offers } = studentData;
-    const isExpanded = expandedStudent === student._id;
-    const hasMultipleOffers = offers.length > 1;
-    
-    // Find if student is placed (in confirmed offers)
-    const placedOffer = !isPending && activeTab === "confirmed" ? offers.find(o => o.offerStatus === "ACCEPTED") : null;
-    
-    // For rejected tab, we want to show the rejection reason of the first offer (or all if expanded)
-    const rejectionReason = activeTab === "rejected" ? offers[0]?.remarks : null;
+  // ── Column helpers ────────────────────────────────────────────────────
 
+  const studentCell = (student) => (
+    <div
+      onClick={() => { setSelectedStudentId(student._id); setShowStudentModal(true); }}
+      style={{ cursor: 'pointer' }}
+    >
+      <div style={{ fontWeight: 600, color: '#161B22' }}>{student?.name}</div>
+      {student?.rollNumber && <div style={{ fontSize: 11, fontFamily: 'monospace', color: '#666B72' }}>{student.rollNumber}</div>}
+      <div style={{ fontSize: 12, color: '#666B72' }}>{student?.emailId}</div>
+      {student?.phoneNo && <div style={{ fontSize: 12, color: '#666B72' }}>{student.phoneNo}</div>}
+      <div style={{ fontSize: 11, color: '#8D9096' }}>
+        {[student?.programme, student?.department].filter(Boolean).join(' · ')}
+      </div>
+    </div>
+  );
+
+  const companyCell = (offers) => {
+    if (offers.length > 1) return <Tag color="orange">{offers.length} Companies</Tag>;
     return (
-      <>
-        {/* Main Row */}
-        <tr onClick={() => { setSelectedStudentId(student._id); setShowStudentModal(true); }} className={`${index % 2 === 0 ? 'bg-white' : 'bg-slate-50'} hover:bg-blue-50 transition`}>
-          {/* S.No */}
-          <td className="px-4 py-3 text-sm text-slate-900 font-medium border-b border-slate-200">
-            {index + 1}
-          </td>
-          
-          {/* Student Info */}
-          <td className="px-4 py-3 border-b border-slate-200">
-            <div className="font-medium text-slate-900">{student?.name}</div>
-            {student?.rollNumber && (
-              <div className="text-xs text-slate-600 font-mono">{student.rollNumber}</div>
-            )}
-            <div className="text-xs text-slate-500">{student?.emailId}</div>
-            <div className="text-xs text-slate-500">{student?.phoneNo}</div>
-            <div className="text-xs text-slate-500">{student?.programme}</div>
-            <div className="text-xs text-slate-500">{student?.department}</div>
-          </td>
-
-          {/* Companies - Show dropdown if multiple */}
-          <td className="px-4 py-3 border-b border-slate-200">
-            {hasMultipleOffers ? (
-              <div className="relative">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setExpandedStudent(isExpanded ? null : student._id); }}
-                  className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 text-orange-800 rounded-lg hover:bg-orange-200 transition text-sm font-medium"
-                >
-                  <span>{offers.length} Companies</span>
-                  <svg 
-                    className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
-                    fill="none" 
-                    stroke="currentColor" 
-                    viewBox="0 0 24 24"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-              </div>
-            ) : (
-              <div>
-                <div className="font-medium text-blue-700">{offers[0]?.companyId?.name}</div>
-                <div className="text-xs text-slate-500">{offers[0]?.companyId?.venue}</div>
-              </div>
-            )}
-          </td>
-
-          {/* Status */}
-          <td className="px-4 py-3 border-b border-slate-200">
-            {activeTab === "rejected" ? (
-               <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                Rejected
-              </span>
-            ) : placedOffer ? (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                Placed at {placedOffer.companyId?.name}
-              </span>
-            ) : hasMultipleOffers ? (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                {isPending ? 'Multiple Pending' : 'Multiple Offers'}
-              </span>
-            ) : (
-              <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                {isPending ? 'Pending' : offers[0]?.offerStatus || 'Pending'}
-              </span>
-            )}
-          </td>
-
-          {/* Created Date / Placed At / Rejection Reason */}
-          <td className="px-4 py-3 text-sm text-slate-600 border-b border-slate-200">
-            {activeTab === "rejected" ? (
-               <span className="text-xs text-red-600 italic">{rejectionReason || "No reason provided"}</span>
-            ) : (
-               formatDate(offers[0]?.createdAt)
-            )}
-          </td>
-
-          {/* Actions */}
-          <td className="px-4 py-3 border-b border-slate-200">
-            {!hasMultipleOffers && isPending ? (
-              <div className="flex gap-2">
-                <button
-                  onClick={(e) => { e.stopPropagation(); setConfirmDialog({
-                    isOpen: true,
-                    type: 'approve',
-                    offerId: offers[0]._id,
-                    studentName: student?.name,
-                    companyName: offers[0]?.companyId?.name
-                  }); }}
-                  disabled={processing === offers[0]._id}
-                  className="px-3 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
-                >
-                  {processing === offers[0]._id ? "..." : "Approve"}
-                </button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); openRejectReasonModal(offers[0]._id); }}
-                  disabled={processing === offers[0]._id}
-                  className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
-                >
-                  {processing === offers[0]._id ? "..." : "✕ Reject"}
-                </button>
-              </div>
-            ) : hasMultipleOffers ? (
-              <span className="text-xs text-slate-500">Expand to manage →</span>
-            ) : placedOffer ? (
-              <span className="text-xs text-green-600 font-medium">Completed</span>
-            ) : activeTab === "rejected" ? (
-               <span className="text-xs text-red-600 font-medium">Rejected</span>
-            ) : (
-              <span className="text-xs text-slate-500">—</span>
-            )}
-          </td>
-        </tr>
-
-        {/* Expanded Rows for Multiple Offers */}
-        {isExpanded && hasMultipleOffers && offers.map((offer, offerIndex) => (
-          <tr key={offer._id} className="bg-blue-50 border-l-4 border-blue-400">
-            <td className="px-4 py-2 text-xs text-slate-500 border-b border-slate-200"></td>
-            <td className="px-4 py-2 text-xs text-slate-500 border-b border-slate-200">
-              └─ Offer {offerIndex + 1}
-            </td>
-            <td className="px-4 py-2 border-b border-slate-200">
-              <div className="font-medium text-blue-700 text-sm">{offer.companyId?.name}</div>
-              <div className="text-xs text-slate-500">{offer.companyId?.venue}</div>
-            </td>
-            <td className="px-4 py-2 border-b border-slate-200">
-              {activeTab === "rejected" ? (
-                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-800">
-                  REJECTED
-                </span>
-              ) : !isPending && offer._id === placedOffer?._id ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-green-100 text-green-800">
-                  ACCEPTED
-                </span>
-              ) : !isPending && placedOffer ? (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-slate-200 text-slate-600">
-                  Auto-rejected
-                </span>
-              ) : (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-yellow-100 text-yellow-800">
-                  Pending
-                </span>
-              )}
-            </td>
-            <td className="px-4 py-2 text-xs text-slate-600 border-b border-slate-200">
-               {activeTab === "rejected" ? (
-                 <span className="text-xs text-red-600 italic">{offer.remarks || "No reason"}</span>
-               ) : (
-                 formatDate(offer.createdAt)
-               )}
-            </td>
-            <td className="px-4 py-2 border-b border-slate-200">
-              {isPending ? (
-                <div className="flex gap-2">
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setConfirmDialog({
-                      isOpen: true,
-                      type: 'approve',
-                      offerId: offer._id,
-                      studentName: student?.name,
-                      companyName: offer.companyId?.name
-                    }); }}
-                    disabled={processing === offer._id}
-                    className="px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700 transition disabled:opacity-50"
-                  >
-                    {processing === offer._id ? "..." : "Approve"}
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); openRejectReasonModal(offer._id); }}
-                    disabled={processing === offer._id}
-                    className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700 transition disabled:opacity-50"
-                  >
-                    {processing === offer._id ? "..." : "Reject"}
-                  </button>
-                </div>
-              ) : activeTab === "rejected" ? (
-                 <span className="text-xs text-red-600">Rejected</span>
-              ) : offer._id !== placedOffer?._id && placedOffer ? (
-                <span className="text-xs text-slate-500">Placed at {placedOffer.companyId?.name}</span>
-              ) : (
-                <span className="text-xs text-green-600">—</span>
-              )}
-            </td>
-          </tr>
-        ))}
-      </>
+      <div>
+        <div style={{ fontWeight: 600, color: '#14213D' }}>{offers[0]?.companyId?.name}</div>
+        {offers[0]?.companyId?.venue && (
+          <div style={{ fontSize: 12, color: '#8D9096' }}>{offers[0].companyId.venue}</div>
+        )}
+      </div>
     );
   };
 
+  const pendingActions = (offer, student) => (
+    <Space size={4} onClick={e => e.stopPropagation()}>
+      <Button
+        type="primary" size="small"
+        loading={processing === offer._id}
+        onClick={() => setConfirmDialog({
+          isOpen: true, type: 'approve', offerId: offer._id,
+          studentName: student?.name, companyName: offer.companyId?.name,
+        })}
+      >
+        Approve
+      </Button>
+      <Button
+        danger size="small"
+        loading={processing === offer._id}
+        onClick={() => openRejectReasonModal(offer._id)}
+      >
+        Reject
+      </Button>
+    </Space>
+  );
+
+  // ── Columns ───────────────────────────────────────────────────────────
+
+  const pendingCols = [
+    { title: '#', width: 50, render: (_, __, i) => <span style={{ color: '#8D9096', fontSize: 12 }}>{i + 1}</span> },
+    { title: 'Student Details', render: (_, r) => studentCell(r.student) },
+    { title: 'Company', render: (_, r) => companyCell(r.offers) },
+    {
+      title: 'Status', render: (_, r) =>
+        r.offers.length > 1 ? <Tag color="warning">Multiple Pending</Tag> : <Tag color="processing">Pending</Tag>,
+    },
+    { title: 'Created', render: (_, r) => <span style={{ fontSize: 12, color: '#666B72' }}>{formatDate(r.offers[0]?.createdAt)}</span> },
+    {
+      title: 'Actions', render: (_, r) =>
+        r.offers.length > 1
+          ? <span style={{ fontSize: 12, color: '#8D9096' }}>Expand to manage</span>
+          : pendingActions(r.offers[0], r.student),
+    },
+  ];
+
+  const confirmedCols = [
+    { title: '#', width: 50, render: (_, __, i) => <span style={{ color: '#8D9096', fontSize: 12 }}>{i + 1}</span> },
+    { title: 'Student Details', render: (_, r) => studentCell(r.student) },
+    { title: 'Company', render: (_, r) => companyCell(r.offers) },
+    {
+      title: 'Status', render: (_, r) => {
+        const placed = r.offers.find(o => o.offerStatus === "ACCEPTED");
+        if (placed) return <Tag color="success">Placed — {placed.companyId?.name}</Tag>;
+        if (r.offers.length > 1) return <Tag color="warning">Multiple Offers</Tag>;
+        return <Tag color="blue">{r.offers[0]?.offerStatus || 'Pending'}</Tag>;
+      },
+    },
+    { title: 'Placed At', render: (_, r) => <span style={{ fontSize: 12, color: '#666B72' }}>{formatDate(r.offers[0]?.createdAt)}</span> },
+  ];
+
+  const rejectedCols = [
+    { title: '#', width: 50, render: (_, __, i) => <span style={{ color: '#8D9096', fontSize: 12 }}>{i + 1}</span> },
+    { title: 'Student Details', render: (_, r) => studentCell(r.student) },
+    { title: 'Company', render: (_, r) => companyCell(r.offers) },
+    { title: 'Status', render: () => <Tag color="error">Rejected</Tag> },
+    {
+      title: 'Rejection Reason',
+      render: (_, r) => <span style={{ fontSize: 12, color: '#C03200', fontStyle: 'italic' }}>{r.offers[0]?.remarks || "No reason provided"}</span>,
+    },
+  ];
+
+  // ── Expandable sub-table ──────────────────────────────────────────────
+
+  const makeExpandable = (isPending) => ({
+    rowExpandable: r => r.offers.length > 1,
+    expandedRowRender: r => {
+      const subCols = [
+        { title: 'Offer', width: 70, render: (_, __, i) => <span style={{ fontSize: 12 }}>Offer {i + 1}</span> },
+        {
+          title: 'Company', render: (_, o) => (
+            <div>
+              <div style={{ fontWeight: 600, color: '#14213D' }}>{o.companyId?.name}</div>
+              <div style={{ fontSize: 11, color: '#8D9096' }}>{o.companyId?.venue}</div>
+            </div>
+          ),
+        },
+        {
+          title: 'Status', render: (_, o) => {
+            if (isPending) return <Tag color="warning">Pending</Tag>;
+            const placed = r.offers.find(x => x.offerStatus === "ACCEPTED");
+            if (o._id === placed?._id) return <Tag color="success">ACCEPTED</Tag>;
+            if (placed) return <Tag>Auto-rejected</Tag>;
+            return <Tag color="error">REJECTED</Tag>;
+          },
+        },
+        { title: 'Date', render: (_, o) => <span style={{ fontSize: 12, color: '#666B72' }}>{formatDate(o.createdAt)}</span> },
+        ...(isPending ? [{
+          title: 'Actions',
+          render: (_, o) => pendingActions(o, r.student),
+        }] : []),
+      ];
+      return (
+        <Table
+          columns={subCols}
+          dataSource={r.offers}
+          rowKey="_id"
+          pagination={false}
+          size="small"
+        />
+      );
+    },
+  });
+
+  // ── Confirmed Filters ─────────────────────────────────────────────────
+
+  const progOptions  = (programmesAll.length ? programmesAll : programmesList).map(p => ({ label: p, value: p }));
+  const deptOptions  = (departmentsAll.length ? departmentsAll : departmentsList).map(d => ({ label: d, value: d }));
+  const compOptions  = (companiesAll.length ? companiesAll : companiesList).map(c => ({ label: c, value: c }));
+
+  const applyFilters = async () => {
+    setProgrammeFilter(tempProgramme); setDepartmentFilter(tempDepartment);
+    setCpiMin(tempCpiMin); setCpiMax(tempCpiMax); setCompanyFilter(tempCompany);
+    await fetchOffers({ programme: tempProgramme, department: tempDepartment, cpiMin: tempCpiMin, cpiMax: tempCpiMax, company: tempCompany });
+  };
+
+  const clearFilters = async () => {
+    setProgrammeFilter(''); setDepartmentFilter(''); setCpiMin(''); setCpiMax(''); setCompanyFilter('');
+    setTempProgramme(''); setTempDepartment(''); setTempCpiMin(''); setTempCpiMax(''); setTempCompany('');
+    await fetchOffers({});
+  };
+
+  const confirmedFiltersRow = (
+    <div className="mb-3 flex flex-wrap gap-2 items-end p-3" style={{ background: '#F4F2F1', border: '1px solid #E4E1E0' }}>
+      <Select
+        value={tempProgramme || undefined}
+        onChange={v => setTempProgramme(v || '')}
+        placeholder="Programme" allowClear style={{ width: 150 }} options={progOptions}
+      />
+      <Select
+        value={tempDepartment || undefined}
+        onChange={v => setTempDepartment(v || '')}
+        placeholder="Department" allowClear style={{ width: 160 }} options={deptOptions}
+      />
+      <Select
+        value={tempCompany || undefined}
+        onChange={v => setTempCompany(v || '')}
+        placeholder="Company" allowClear showSearch style={{ width: 200 }} options={compOptions}
+      />
+      <Input
+        value={tempCpiMin} onChange={e => setTempCpiMin(e.target.value)}
+        placeholder="CPI Min" style={{ width: 90 }} type="number"
+      />
+      <Input
+        value={tempCpiMax} onChange={e => setTempCpiMax(e.target.value)}
+        placeholder="CPI Max" style={{ width: 90 }} type="number"
+      />
+      <Space>
+        <Button type="primary" onClick={applyFilters}>Apply</Button>
+        <Button onClick={clearFilters}>Clear</Button>
+      </Space>
+    </div>
+  );
+
+  // ── Tab items ─────────────────────────────────────────────────────────
+
+  const tabItems = [
+    {
+      key: 'pending',
+      label: (
+        <span>
+          Pending Approval&nbsp;
+          <Tag color="warning">{groupedPendingOffers.length}</Tag>
+        </span>
+      ),
+      children: (
+        <Table
+          columns={pendingCols}
+          dataSource={groupedPendingOffers}
+          rowKey={r => r.student._id}
+          loading={loading}
+          pagination={false}
+          size="small"
+          expandable={makeExpandable(true)}
+          locale={{ emptyText: searchTerm ? 'No students match your search' : 'No pending offers' }}
+        />
+      ),
+    },
+    {
+      key: 'confirmed',
+      label: (
+        <span>
+          Confirmed Offers&nbsp;
+          <Tag color="success">{groupedConfirmedOffers.length}</Tag>
+        </span>
+      ),
+      children: (
+        <>
+          {confirmedFiltersRow}
+          <Table
+            columns={confirmedCols}
+            dataSource={groupedConfirmedOffers}
+            rowKey={r => r.student._id}
+            loading={loading}
+            pagination={false}
+            size="small"
+            expandable={makeExpandable(false)}
+            locale={{ emptyText: searchTerm ? 'No students match your search' : 'No confirmed offers yet' }}
+          />
+        </>
+      ),
+    },
+    {
+      key: 'rejected',
+      label: (
+        <span>
+          Rejected Offers&nbsp;
+          <Tag color="error">{groupedRejectedOffers.length}</Tag>
+        </span>
+      ),
+      children: (
+        <Table
+          columns={rejectedCols}
+          dataSource={groupedRejectedOffers}
+          rowKey={r => r.student._id}
+          loading={loading}
+          pagination={false}
+          size="small"
+          expandable={makeExpandable(false)}
+          locale={{ emptyText: searchTerm ? 'No students match your search' : 'No rejected offers' }}
+        />
+      ),
+    },
+  ];
+
+  // ── Render ────────────────────────────────────────────────────────────
+
   return (
     <>
-      {/* Navigation Cards Section */}
-      {/* <div className="w-full bg-slate-50 py-6 flex justify-center shadow-sm">
-        <div className="w-full px-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <button
-              onClick={() => navigate("/admin/students")}
-              className="p-6 bg-white border-2 rounded-lg hover:border-blue-300 hover:shadow-md transition text-left"
-            >
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Student Management</h3>
-              <p className="text-sm text-slate-600">Upload students via CSV</p>
-            </button>
-
-            <button
-              onClick={() => navigate("/admin/company")}
-              className="p-6 bg-white border-2 rounded-lg hover:border-blue-300 hover:shadow-md transition text-left"
-            >
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">Company Management</h3>
-              <p className="text-sm text-slate-600">Manage companies & upload shortlists</p>
-            </button>
-          </div>
-        </div>
-      </div> */}
-
-      {/* Offers Management Section */}
       <main className="px-6 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-slate-900">Offer Management</h1>
-          <p className="text-slate-600 mt-2">Review and approve offers created by POCs</p>
-        </div>
-
-        {/* Tabs */}
-        <div className="bg-white rounded-lg shadow-sm mb-6">
-          <div className="flex border-b">
-            <button
-              onClick={() => setActiveTab("pending")}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition ${
-                activeTab === "pending"
-                  ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span>Pending Approval</span>
-                <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 rounded-full text-xs font-semibold">
-                  {groupedPendingOffers.length} {groupedPendingOffers.length === 1 ? 'Student' : 'Students'}
-                </span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab("confirmed")}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition ${
-                activeTab === "confirmed"
-                  ? "text-blue-600 border-b-2 border-blue-600 bg-blue-50"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span>Confirmed Offers</span>
-                <span className="px-2 py-0.5 bg-green-100 text-green-800 rounded-full text-xs font-semibold">
-                  {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'Student' : 'Students'}
-                </span>
-              </div>
-            </button>
-            <button
-              onClick={() => setActiveTab("rejected")}
-              className={`flex-1 px-6 py-4 text-sm font-medium transition ${
-                activeTab === "rejected"
-                  ? "text-red-600 border-b-2 border-red-600 bg-red-50"
-                  : "text-slate-600 hover:text-slate-900 hover:bg-slate-50"
-              }`}
-            >
-              <div className="flex items-center justify-center gap-2">
-                <span>Rejected Offers</span>
-                <span className="px-2 py-0.5 bg-red-100 text-red-800 rounded-full text-xs font-semibold">
-                  {groupedRejectedOffers.length} {groupedRejectedOffers.length === 1 ? 'Student' : 'Students'}
-                </span>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* Search Bar */}
         <div className="mb-6">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search by name, email, phone, or roll number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-3 pl-11 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-            <svg
-              className="w-5 h-5 absolute left-3 top-3.5 text-slate-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </div>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: '#161B22', margin: 0 }}>Offer Management</h1>
+          <p style={{ fontSize: 13, color: '#666B72', marginTop: 4 }}>Review and approve offers created by POCs</p>
         </div>
 
-        {/* Content - Table Layout */}
-        {loading ? (
-          <div className="text-center py-12 bg-white rounded-lg shadow-sm">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="text-slate-600 mt-4">Loading offers...</p>
-          </div>
-        ) : activeTab === "pending" ? (
-          groupedPendingOffers.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <svg className="mx-auto h-16 w-16 text-slate-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                {searchTerm ? "No students found" : "No Pending Offers"}
-              </h3>
-              <p className="text-slate-600">
-                {searchTerm ? "Try adjusting your search" : "All offers have been reviewed!"}
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        S.No
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Student Details
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Created
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupedPendingOffers.map((studentData, index) => (
-                      <StudentOfferRow 
-                        key={studentData.student._id} 
-                        studentData={studentData} 
-                        isPending={true}
-                        index={index}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
-                Showing {groupedPendingOffers.length} {groupedPendingOffers.length === 1 ? 'student' : 'students'}
-                {searchTerm && ` matching "${searchTerm}"`}
-              </div>
-            </div>
-          )
-        ) : activeTab === "confirmed" ? (
-          <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-            {/* Filters (server-side) placed inside confirmed tab */}
-            <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-              <div className="flex flex-wrap gap-3 items-end">
-                <div className="flex flex-col">
-                  <label className="text-xs text-slate-600 mb-1">Programme</label>
-                  <select value={tempProgramme} onChange={(e) => setTempProgramme(e.target.value)} className="px-3 py-2 border rounded-md">
-                    <option value="">All</option>
-                    {(programmesAll.length ? programmesAll : programmesList).map(p => (<option key={p} value={p}>{p}</option>))}
-                  </select>
-                </div>
+        <div className="mb-4">
+          <Input
+            prefix={<SearchOutlined style={{ color: '#8D9096' }} />}
+            placeholder="Search by name, email, phone, or roll number…"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            allowClear
+            style={{ maxWidth: 480 }}
+          />
+        </div>
 
-                <div className="flex flex-col">
-                  <label className="text-xs text-slate-600 mb-1">Department</label>
-                  <select value={tempDepartment} onChange={(e) => setTempDepartment(e.target.value)} className="px-3 py-2 border rounded-md">
-                    <option value="">All</option>
-                    {(departmentsAll.length ? departmentsAll : departmentsList).map(d => (<option key={d} value={d}>{d}</option>))}
-                  </select>
-                </div>
-
-                <div className="flex flex-col relative" ref={companyRef}>
-                  <label className="text-xs text-slate-600 mb-1">Company</label>
-                  <input
-                    value={tempCompany}
-                    onChange={(e) => { setTempCompany(e.target.value); setCompanyDropdownOpen(true); }}
-                    onFocus={() => setCompanyDropdownOpen(true)}
-                    placeholder="Search or select a company"
-                    className="px-3 py-2 border rounded-md w-60 relative z-20"
-                  />
-                  {companyDropdownOpen && (
-                    <ul className="absolute left-0 top-full mt-1 max-h-48 w-60 overflow-auto bg-white border rounded shadow-sm">
-                      {( (companiesAll.length ? companiesAll : companiesList).filter(c => c.toLowerCase().includes((tempCompany||'').toLowerCase())) ).map(c => (
-                        <li
-                          key={c}
-                          onClick={() => { setTempCompany(c); setCompanyDropdownOpen(false); }}
-                          className="px-3 py-2 text-sm hover:bg-slate-100 cursor-pointer"
-                        >
-                          {c}
-                        </li>
-                      ))}
-                      {((companiesAll.length ? companiesAll : companiesList).filter(c => c.toLowerCase().includes((tempCompany||'').toLowerCase())).length === 0) && (
-                        <li className="px-3 py-2 text-sm text-slate-400">No matches</li>
-                      )}
-                    </ul>
-                  )}
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-xs text-slate-600 mb-1">CPI Min</label>
-                  <input type="number" step="0.01" min="0" max="10" value={tempCpiMin} onChange={(e) => setTempCpiMin(e.target.value)} className="px-3 py-2 border rounded-md w-28" />
-                </div>
-
-                <div className="flex flex-col">
-                  <label className="text-xs text-slate-600 mb-1">CPI Max</label>
-                  <input type="number" step="0.01" min="0" max="10" value={tempCpiMax} onChange={(e) => setTempCpiMax(e.target.value)} className="px-3 py-2 border rounded-md w-28" />
-                </div>
-
-                <div className="ml-auto flex gap-2">
-                  <button
-                    onClick={async () => {
-                      setProgrammeFilter(tempProgramme);
-                      setDepartmentFilter(tempDepartment);
-                      setCpiMin(tempCpiMin);
-                      setCpiMax(tempCpiMax);
-                      setCompanyFilter(tempCompany);
-                      await fetchOffers({ programme: tempProgramme, department: tempDepartment, cpiMin: tempCpiMin, cpiMax: tempCpiMax, company: tempCompany });
-                    }}
-                    className="px-3 py-2 bg-blue-600 text-white rounded-md text-sm"
-                  >
-                    Apply
-                  </button>
-                  <button
-                    onClick={async () => {
-                      setProgrammeFilter('');
-                      setDepartmentFilter('');
-                      setCpiMin('');
-                      setCpiMax('');
-                      setCompanyFilter('');
-                      setTempProgramme('');
-                      setTempDepartment('');
-                      setTempCpiMin('');
-                      setTempCpiMax('');
-                      setTempCompany('');
-                      await fetchOffers({});
-                    }}
-                    className="px-3 py-2 bg-slate-100 rounded-md text-sm"
-                  >
-                    Clear
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {groupedConfirmedOffers.length === 0 ? (
-              <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-                <div className="text-6xl mb-4">Pray to God Son.</div>
-                <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                  {searchTerm ? "No students found" : "No Confirmed Offers"}
-                </h3>
-                <p className="text-slate-600">
-                  {searchTerm ? "Try adjusting your search" : "No offers have been approved yet"}
-                </p>
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200">
-                    <thead className="bg-slate-100">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          S.No
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          Student Details
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          Company
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          Status
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          Placed At
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                          Details
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {groupedConfirmedOffers.map((studentData, index) => (
-                        <StudentOfferRow 
-                          key={studentData.student._id} 
-                          studentData={studentData} 
-                          isPending={false}
-                          index={index}
-                        />
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
-                  Showing {groupedConfirmedOffers.length} {groupedConfirmedOffers.length === 1 ? 'student' : 'students'}
-                  {searchTerm && ` matching "${searchTerm}"`}
-                </div>
-              </>
-            )}
-          </div>
-        ) : (
-          // Rejected Offers Tab
-          groupedRejectedOffers.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-              <div className="text-6xl mb-4">🗑️</div>
-              <h3 className="text-xl font-semibold text-slate-900 mb-2">
-                {searchTerm ? "No students found" : "No Rejected Offers"}
-              </h3>
-              <p className="text-slate-600">
-                {searchTerm ? "Try adjusting your search" : "No offers have been rejected manually"}
-              </p>
-            </div>
-          ) : (
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-slate-200">
-                  <thead className="bg-slate-100">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        S.No
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Student Details
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Company
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Rejection Reason
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                        Details
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {groupedRejectedOffers.map((studentData, index) => (
-                      <StudentOfferRow 
-                        key={studentData.student._id} 
-                        studentData={studentData} 
-                        isPending={false}
-                        index={index}
-                      />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <div className="px-4 py-3 bg-slate-50 border-t border-slate-200 text-sm text-slate-600">
-                Showing {groupedRejectedOffers.length} {groupedRejectedOffers.length === 1 ? 'student' : 'students'}
-                {searchTerm && ` matching "${searchTerm}"`}
-              </div>
-            </div>
-          )
-        )}
+        <div style={{ background: '#FFFFFF', border: '1px solid #E4E1E0' }}>
+          <Tabs
+            activeKey={activeTab}
+            onChange={setActiveTab}
+            destroyInactiveTabPane
+            items={tabItems}
+            style={{ padding: '0 16px' }}
+          />
+        </div>
       </main>
 
-      {/* Confirm Approve Dialog */}
       <StudentDetailsModal
         isOpen={showStudentModal}
         onClose={() => { setShowStudentModal(false); setSelectedStudentId(null); }}
@@ -898,7 +511,6 @@ export default function AdminDashboard() {
         icon="success"
       />
 
-      {/* Reject Reason Input Modal */}
       <InputModal
         isOpen={rejectReasonModal.isOpen}
         onClose={() => setRejectReasonModal({ isOpen: false, offerId: null })}
@@ -910,4 +522,3 @@ export default function AdminDashboard() {
     </>
   );
 }
-

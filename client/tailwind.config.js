@@ -7,12 +7,14 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        primary: "#2164E8",
-        accent: "#00CC52",
+        primary:       "#14213D",   // oxford ink-blue (matches placement portal)
+        primaryHover:  "#1C2C4F",
+        primaryActive: "#0B1526",
+        accent:        "#7C2D3E",   // muted burgundy accent (matches placement portal)
 
         // Override slate scale → placement portal gray palette
         slate: {
-          50:  "#EEF1F4",   // page background
+          50:  "#F4F2F1",   // page background (warm off-white, matches portal)
           100: "#EDEEF0",   // table header / section bg
           200: "#E9E9EB",   // borders / dividers
           300: "#DBDDE0",   // hover borders
@@ -25,19 +27,34 @@ module.exports = {
           950: "#0F1420",
         },
 
-        // Override blue → portal primary blue
+        // indigo → same oxford blue (so any indigo-* classes match the theme)
+        indigo: {
+          50:  "#F1EDEA",
+          100: "#E9E2DF",
+          200: "#C9C0BC",
+          300: "#9E918A",
+          400: "#6B5D56",
+          500: "#3A3028",
+          600: "#14213D",
+          700: "#1C2C4F",
+          800: "#0B1526",
+          900: "#06090F",
+          950: "#020305",
+        },
+
+        // Override blue → oxford blue scale (matches placement portal)
         blue: {
-          50:  "#EFF6FC",   // light info background
-          100: "#DBEAFE",
-          200: "#BFDBFE",
-          300: "#93C5FD",
-          400: "#60A5FA",
-          500: "#3B82F6",
-          600: "#2164E8",   // portal primary button
-          700: "#1A52C4",   // button hover
-          800: "#1E40AF",
-          900: "#1E3A8A",
-          950: "#172554",
+          50:  "#F1EDEA",   // tint hover (warm off-white tint)
+          100: "#E9E2DF",   // tint active
+          200: "#C9C0BC",
+          300: "#9E918A",
+          400: "#6B5D56",
+          500: "#3A3028",
+          600: "#14213D",   // oxford primary
+          700: "#1C2C4F",   // hover
+          800: "#0B1526",   // active
+          900: "#06090F",
+          950: "#020305",
         },
 
         // Override green → portal success green
@@ -72,7 +89,7 @@ module.exports = {
       },
 
       fontFamily: {
-        sans: ["Lato", "ui-sans-serif", "system-ui", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Helvetica Neue", "Arial", "sans-serif"],
       },
 
       // Portal card/table shadows

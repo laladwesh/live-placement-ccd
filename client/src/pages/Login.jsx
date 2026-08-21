@@ -231,7 +231,7 @@ export default function Login() {
                 outline: "none",
                 boxSizing: "border-box",
               }}
-              onFocus={e => (e.target.style.borderColor = "#2164E8")}
+              onFocus={e => (e.target.style.borderColor = "#14213D")}
               onBlur={e => (e.target.style.borderColor = "#767A81")}
             />
           </div>
@@ -255,7 +255,7 @@ export default function Login() {
                 outline: "none",
                 boxSizing: "border-box",
               }}
-              onFocus={e => (e.target.style.borderColor = "#2164E8")}
+              onFocus={e => (e.target.style.borderColor = "#14213D")}
               onBlur={e => (e.target.style.borderColor = "#767A81")}
             />
           </div>
@@ -276,7 +276,7 @@ export default function Login() {
 
         <p className="mt-5 text-xs text-center" style={{ color: "#8D9096" }}>
           Having trouble?{" "}
-          <a href="mailto:ccd.techsupport@iitg.ac.in" style={{ color: "#2164E8" }}>
+          <a href="mailto:ccd.techsupport@iitg.ac.in" style={{ color: "#14213D" }}>
             ccd.techsupport@iitg.ac.in
           </a>
         </p>

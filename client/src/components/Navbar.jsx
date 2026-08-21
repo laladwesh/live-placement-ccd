@@ -51,7 +51,7 @@ export default function Navbar({ user }) {
             <div className="leading-tight">
               <div
                 className="font-bold text-base"
-                style={{ color: "#1E2532", fontFamily: "Lato, sans-serif" }}
+                style={{ color: "#1E2532", fontFamily: "Inter, -apple-system, sans-serif" }}
               >
                 Live Placement Portal
               </div>
@@ -81,7 +81,7 @@ export default function Navbar({ user }) {
             <div className="hidden sm:flex items-center gap-3 ml-auto flex-shrink-0 pl-4"
               style={{ borderLeft: "1px solid #E9E9EB" }}>
               <div className="text-right leading-tight">
-                <div className="text-sm font-semibold" style={{ color: "#2164E8" }}>
+                <div className="text-sm font-semibold" style={{ color: "#14213D" }}>
                   {user.name}
                 </div>
                 <div className="text-xs uppercase tracking-wide" style={{ color: "#8D9096" }}>
@@ -130,7 +130,7 @@ export default function Navbar({ user }) {
                 className={({ isActive }) =>
                   `block px-3 py-2 text-sm font-semibold rounded transition ${
                     isActive
-                      ? "text-[#2164E8] bg-[#EFF6FC]"
+                      ? "text-[#14213D] bg-[#EFF6FC]"
                       : "text-[#353B47] hover:bg-[#EEF1F4]"
                   }`
                 }
@@ -142,7 +142,7 @@ export default function Navbar({ user }) {
             {user ? (
               <div className="pt-3 mt-2" style={{ borderTop: "1px solid #E9E9EB" }}>
                 <div className="px-3 mb-2">
-                  <div className="text-sm font-semibold" style={{ color: "#2164E8" }}>{user.name}</div>
+                  <div className="text-sm font-semibold" style={{ color: "#14213D" }}>{user.name}</div>
                   <div className="text-xs uppercase" style={{ color: "#8D9096" }}>{user.role}</div>
                 </div>
                 <button
@@ -157,7 +157,7 @@ export default function Navbar({ user }) {
               <Link
                 to="/login"
                 className="block px-3 py-2 text-sm font-semibold"
-                style={{ color: "#2164E8" }}
+                style={{ color: "#14213D" }}
               >
                 Sign In
               </Link>

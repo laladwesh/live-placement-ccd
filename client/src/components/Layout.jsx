@@ -128,18 +128,19 @@ function Sidebar({ user, open, onClose, onLogout }) {
                 onClick={onClose}
                 style={({ isActive }) => ({
                   textDecoration: 'none',
-                  fontSize: 18,
-                  fontWeight: 600,
-                  color: 'black',
+                  fontSize: 15,
+                  fontWeight: isActive ? 600 : 500,
+                  color: isActive ? '#14213D' : '#33383F',
                   width: '100%',
                   height: '100%',
                   display: 'flex',
                   alignItems: 'center',
-                  padding: '0 14px',
-                  marginLeft: 10,
-                  marginRight: 10,
+                  padding: '0 14px 0 18px',
+                  marginLeft: 8,
+                  marginRight: 8,
                   borderRadius: 0,
-                  backgroundColor: isActive ? 'rgb(238, 238, 238)' : 'transparent',
+                  borderLeft: isActive ? '3px solid #14213D' : '3px solid transparent',
+                  backgroundColor: isActive ? '#E9E2DF' : 'transparent',
                   userSelect: 'none',
                   WebkitTapHighlightColor: 'transparent',
                 })}
@@ -163,7 +164,7 @@ function Sidebar({ user, open, onClose, onLogout }) {
           fontSize: 16,
           fontWeight: 600,
           color: 'black',
-          fontFamily: 'Lato, sans-serif',
+          fontFamily: 'Inter, -apple-system, sans-serif',
           textDecoration: 'none',
           cursor: 'pointer',
         }}
@@ -207,15 +208,15 @@ export default function Layout() {
 
   if (!user) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: '#EEF1F4' }}>
-        <div style={{ width: 36, height: 36, borderRadius: '50%', borderBottom: '2px solid #2164E8', animation: 'spin 1s linear infinite' }} />
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', background: '#F4F2F1' }}>
+        <div style={{ width: 36, height: 36, borderRadius: '50%', borderBottom: '2px solid #14213D', animation: 'spin 1s linear infinite' }} />
       </div>
     );
   }
 
   return (
     <div
-      style={{ display: 'flex', overflow: 'hidden', fontFamily: 'Lato, ui-sans-serif, sans-serif' }}
+      style={{ display: 'flex', overflow: 'hidden', fontFamily: 'Inter, -apple-system, sans-serif' }}
       ref={el => { if (el) el.style.height = '100dvh'; }}
       className="h-screen"
     >
@@ -276,12 +277,12 @@ export default function Layout() {
                 display: 'flex',
                 alignItems: 'center',
                 gap: 6,
-                color: '#2164E8',
+                color: '#14213D',
                 fontSize: 14,
                 fontWeight: 600,
               }}
             >
-              <svg width="16" height="16" fill="#2164E8" viewBox="0 0 24 24">
+              <svg width="16" height="16" fill="#14213D" viewBox="0 0 24 24">
                 <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
               </svg>
               <span className="hidden sm:inline">{user.name}</span>
@@ -293,7 +294,7 @@ export default function Layout() {
             {/* Sign Out button */}
             <button
               onClick={logout}
-              onMouseOver={e => { e.currentTarget.style.backgroundColor = '#EEF1F4'; }}
+              onMouseOver={e => { e.currentTarget.style.backgroundColor = '#F4F2F1'; }}
               onMouseOut={e => { e.currentTarget.style.backgroundColor = 'white'; }}
               onTouchStart={() => {}}
               style={{
@@ -309,7 +310,7 @@ export default function Layout() {
                 alignItems: 'center',
                 gap: 5,
                 borderRadius: 2,
-                fontFamily: 'Lato, sans-serif',
+                fontFamily: 'Inter, -apple-system, sans-serif',
                 flexShrink: 0,
               }}
             >
@@ -324,7 +325,7 @@ export default function Layout() {
             flex: 1,
             overflowY: 'auto',
             overflowX: 'hidden',
-            background: '#EEF1F4',
+            background: '#F4F2F1',
             WebkitOverflowScrolling: 'touch',
             paddingBottom: 'env(safe-area-inset-bottom)',
           }}
