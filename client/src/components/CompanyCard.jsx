@@ -285,40 +285,40 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
         )}
 
         {/* Actions */}
-        <div className="mt-4 pt-4 border-t flex gap-2">
+        <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
           <button
             onClick={() => navigate(`/admin/companies/${company._id}`)}
-            className="flex-1 px-3 py-2 text-sm bg-blue-50 text-blue-700 rounded hover:bg-blue-100 transition font-medium flex items-center justify-center gap-1"
             title="Manage shortlist and upload CSV"
+            className="pp-btn2 flex-1"
+            style={{ minWidth: 0, fontSize: 13 }}
           >
-            <SettingOutlined />
-            Manage Company
+            <SettingOutlined /> Manage
           </button>
           <button
             onClick={() => navigate(`/poc/companies/${company._id}/students`)}
-            className="flex-1 px-3 py-2 text-sm bg-purple-50 text-purple-700 rounded hover:bg-purple-100 transition font-medium flex items-center justify-center gap-1"
             title="View and manage students as POC"
+            className="pp-btn2 flex-1"
+            style={{ minWidth: 0, fontSize: 13 }}
           >
-            <EyeOutlined />
-            Act as POC
+            <EyeOutlined /> POC View
           </button>
           <button
             onClick={() => setShowEditModal(true)}
-            className="flex-1 px-3 py-2 text-sm bg-amber-50 text-amber-700 rounded hover:bg-amber-100 transition font-medium flex items-center justify-center gap-1"
             title="Assign existing or new POCs to this company"
+            className="pp-btn2 flex-1"
+            style={{ minWidth: 0, fontSize: 13 }}
           >
-            <UserAddOutlined />
-            {company.POCs?.length ? "Assign POCs" : "Assign POC"}
+            <UserAddOutlined /> {company.POCs?.length ? "POCs" : "Assign POC"}
           </button>
           {company.placementPortalJobId && (user?.role === "admin" || user?.role === "superadmin") && (
             <button
               onClick={handleSyncShortlist}
               disabled={syncingShortlist}
-              className="flex-1 px-3 py-2 text-sm bg-emerald-50 text-emerald-700 rounded hover:bg-emerald-100 transition font-medium flex items-center justify-center gap-1 disabled:opacity-50"
               title="Sync interview shortlist from placement portal"
+              className="pp-btn2 flex-1 disabled:opacity-50"
+              style={{ minWidth: 0, fontSize: 13 }}
             >
-              <SyncOutlined spin={syncingShortlist} />
-              {syncingShortlist ? "Syncing…" : "Sync Shortlist"}
+              <SyncOutlined spin={syncingShortlist} /> Sync
             </button>
           )}
         </div>
