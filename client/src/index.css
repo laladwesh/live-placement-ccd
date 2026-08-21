@@ -138,6 +138,15 @@ html {
   animation: slideIn 0.3s ease-out;
 }
 
+/* ── Responsive page padding ───────────────────────────────────── */
+/* Pages use px-6 py-6 — shrink on mobile */
+@media (max-width: 640px) {
+  main.px-6 { padding-left: 1rem; padding-right: 1rem; }
+  main.py-6 { padding-top: 1rem; padding-bottom: 1rem; }
+  /* antd Select/Input inside Space: allow 100% width on mobile */
+  .ant-space-item { min-width: 0; max-width: 100%; }
+}
+
 /* ── Sidebar nav link hover ────────────────────────────────────── */
 .sidebar-navlink:hover {
   background-color: #F1EDEA !important;

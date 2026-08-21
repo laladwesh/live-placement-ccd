@@ -335,6 +335,7 @@ export default function AdminDashboard() {
           rowKey="_id"
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
         />
       );
     },
@@ -409,6 +410,7 @@ export default function AdminDashboard() {
           loading={loading}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
           expandable={makeExpandable(true)}
           locale={{ emptyText: searchTerm ? 'No students match your search' : 'No pending offers' }}
         />
@@ -432,6 +434,7 @@ export default function AdminDashboard() {
             loading={loading}
             pagination={false}
             size="small"
+            scroll={{ x: 'max-content' }}
             expandable={makeExpandable(false)}
             locale={{ emptyText: searchTerm ? 'No students match your search' : 'No confirmed offers yet' }}
           />
@@ -454,6 +457,7 @@ export default function AdminDashboard() {
           loading={loading}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
           expandable={makeExpandable(false)}
           locale={{ emptyText: searchTerm ? 'No students match your search' : 'No rejected offers' }}
         />

@@ -287,25 +287,25 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
         )}
 
         {/* Action buttons */}
-        <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #E4E1E0', paddingTop: 12 }}>
+        <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #E4E1E0', paddingTop: 12, flexWrap: 'wrap' }}>
           <button onClick={() => navigate(`/admin/companies/${company._id}`)}
-            className="pp-btn" style={{ flex: 1, fontSize: 13, height: 30 }}
+            className="pp-btn" style={{ flex: '1 1 auto', fontSize: 12, height: 30, whiteSpace: 'nowrap' }}
             title="Manage shortlist and upload CSV">
             <SettingOutlined /> Manage
           </button>
           <button onClick={() => navigate(`/poc/companies/${company._id}/students`)}
-            className="pp-btn2" style={{ flex: 1, fontSize: 13, height: 30 }}
+            className="pp-btn2" style={{ flex: '1 1 auto', fontSize: 12, height: 30, whiteSpace: 'nowrap' }}
             title="View students as POC">
             <EyeOutlined /> POC View
           </button>
           <button onClick={() => setShowEditModal(true)}
-            className="pp-btn2" style={{ flex: 1, fontSize: 13, height: 30 }}
+            className="pp-btn2" style={{ flex: '1 1 auto', fontSize: 12, height: 30, whiteSpace: 'nowrap' }}
             title="Assign POCs">
             <UserAddOutlined /> POCs
           </button>
           {company.placementPortalJobId && (user?.role === "admin" || user?.role === "superadmin") && (
             <button onClick={handleSyncShortlist} disabled={syncingShortlist}
-              className="pp-btn2" style={{ flex: 1, fontSize: 13, height: 30, opacity: syncingShortlist ? 0.6 : 1 }}
+              className="pp-btn2" style={{ flex: '1 1 auto', fontSize: 12, height: 30, whiteSpace: 'nowrap', opacity: syncingShortlist ? 0.6 : 1 }}
               title="Sync shortlist from placement portal">
               <SyncOutlined spin={syncingShortlist} /> Sync
             </button>

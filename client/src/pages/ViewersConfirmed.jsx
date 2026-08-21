@@ -136,12 +136,12 @@ export default function ViewersConfirmed() {
             {filtered.length} placement{filtered.length !== 1 ? 's' : ''} shown
           </p>
         </div>
-        <Space wrap>
+        <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
           <Select
             value={selectedYear}
             onChange={v => { setSelectedYear(v); setProgramme(''); setDepartment(''); setCompany(''); }}
             options={seasonOptions}
-            style={{ width: 180 }}
+            style={{ width: 'min(180px, 100%)' }}
           />
           <Input
             prefix={<SearchOutlined style={{ color: '#8D9096' }} />}
@@ -149,7 +149,7 @@ export default function ViewersConfirmed() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             allowClear
-            style={{ width: 240 }}
+            style={{ width: 'min(240px, 100%)' }}
           />
         </Space>
       </div>
@@ -197,6 +197,7 @@ export default function ViewersConfirmed() {
           loading={loading}
           pagination={{ pageSize: 50, showSizeChanger: false, showTotal: (t) => `${t} records` }}
           size="small"
+          scroll={{ x: 'max-content' }}
           locale={{ emptyText: 'No placement records match your filters.' }}
         />
       </div>

@@ -654,8 +654,8 @@ export default function POCCompanyStudents() {
           )}
 
           {/* Filters */}
-          <div className="flex gap-4 mb-4">
-            <div className="flex-1 relative">
+          <div className="flex flex-wrap gap-4 mb-4">
+            <div className="flex-1 min-w-0 relative" style={{ minWidth: 180 }}>
               <input
                 type="text"
                 placeholder="Search by name or email..."
@@ -717,7 +717,7 @@ export default function POCCompanyStudents() {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 w-max md:w-full">
+              <div className="divide-y divide-slate-200 w-full">
                 {filteredShortlists.map((shortlist) => (
                   <StudentInterviewRow
                     key={shortlist._id}

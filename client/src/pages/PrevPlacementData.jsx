@@ -375,7 +375,7 @@ export default function PrevPlacementData() {
           )}
         </div>
 
-        <div className="flex items-end gap-3">
+        <div className="flex flex-wrap items-end gap-3">
           {/* ── Year selector ── */}
           <div className="flex flex-col">
             <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1">Season</label>

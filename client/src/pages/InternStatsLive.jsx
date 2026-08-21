@@ -176,7 +176,7 @@ export default function InternStatsLive() {
             value={search}
             onChange={e => setSearch(e.target.value)}
             allowClear
-            style={{ width: 260 }}
+            style={{ width: '100%', maxWidth: 260 }}
           />
         </Space>
       </div>
@@ -289,6 +289,7 @@ export default function InternStatsLive() {
             loading={loading}
             pagination={{ pageSize: 100, showSizeChanger: false, showTotal: t => `${t} records` }}
             size="small"
+            scroll={{ x: 'max-content' }}
             onRow={r => ({ onClick: () => navigate(`/intern-stats-live/${r.rollNumber}`), style: { cursor: 'pointer' } })}
             locale={{ emptyText: 'No records found for selected filters.' }}
           />
