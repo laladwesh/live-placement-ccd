@@ -192,132 +192,121 @@ export default function CompanyCard({ company, onUpdate, onDelete, user: userPro
     }
   };
 
+  const iconBtn = {
+    background: 'none', border: 'none', cursor: 'pointer',
+    color: '#8D9096', fontSize: 16, padding: '2px 4px',
+    display: 'inline-flex', alignItems: 'center', transition: 'color .15s',
+  };
+
   return (
     <>
-      <div className="bg-white rounded-lg shadow hover:shadow-lg transition p-6">
-        {/* Company Header */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex-1">
-            <h3 className="text-lg font-semibold text-slate-900 mb-1">{company.name}</h3>
+      <div style={{
+        background: '#fff',
+        border: '1px solid #E4E1E0',
+        borderRadius: 2,
+        padding: '16px 18px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 12,
+      }}>
+        {/* Header row */}
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: '#161B22', lineHeight: 1.3 }}>
+              {company.name}
+            </div>
             {company.venue && (
-              <p className="text-sm text-slate-500 flex items-center gap-1">
-                <EnvironmentOutlined />
+              <div style={{ fontSize: 12, color: '#8D9096', marginTop: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <EnvironmentOutlined style={{ fontSize: 11 }} />
                 {company.venue}
-              </p>
+              </div>
             )}
           </div>
-          <div className="flex gap-2">
-            <button
-              onClick={handleDownloadPDF}
-              disabled={downloading}
-              className="text-slate-400 hover:text-slate-600 transition disabled:opacity-50"
-              title="Download Student List (PDF)"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 2 }}
-            >
-              <DownloadOutlined />
-            </button>
-            <button
-              onClick={() => setShowEditModal(true)}
-              className="text-slate-400 hover:text-slate-600 transition"
-              title="Edit"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 2 }}
-            >
-              <EditOutlined />
-            </button>
-            <button
-              onClick={() => setShowDeleteConfirm(true)}
-              disabled={deleting}
-              className="text-slate-400 hover:text-slate-600 transition disabled:opacity-50"
-              title="Delete"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 18, padding: 2 }}
-            >
-              <DeleteOutlined />
-            </button>
+          {/* Icon-only toolbar */}
+          <div style={{ display: 'flex', gap: 2, flexShrink: 0 }}>
+            <button onClick={handleDownloadPDF} disabled={downloading} title="Download student list (PDF)"
+              style={{ ...iconBtn, opacity: downloading ? 0.4 : 1 }}
+              onMouseOver={e => e.currentTarget.style.color = '#14213D'}
+              onMouseOut={e => e.currentTarget.style.color = '#8D9096'}
+            ><DownloadOutlined /></button>
+            <button onClick={() => setShowEditModal(true)} title="Edit / assign POCs"
+              style={iconBtn}
+              onMouseOver={e => e.currentTarget.style.color = '#14213D'}
+              onMouseOut={e => e.currentTarget.style.color = '#8D9096'}
+            ><EditOutlined /></button>
+            <button onClick={() => setShowDeleteConfirm(true)} disabled={deleting} title="Delete company"
+              style={{ ...iconBtn, opacity: deleting ? 0.4 : 1 }}
+              onMouseOver={e => e.currentTarget.style.color = '#D83B01'}
+              onMouseOut={e => e.currentTarget.style.color = '#8D9096'}
+            ><DeleteOutlined /></button>
           </div>
         </div>
 
-        {/* Description */}
-        {company.description && (
-          <p className="text-sm text-slate-600 mb-4 line-clamp-2">{company.description}</p>
-        )}
-
-        {/* Details */}
-        <div className="space-y-2 mb-4">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500">Max Rounds</span>
-            <span className="font-medium text-slate-900">{company.maxRounds}</span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-500">POCs Assigned</span>
-            <span className="font-medium text-slate-900">
-              {company.POCs?.length || 0}
+        {/* Meta row */}
+        <div style={{ display: 'flex', gap: 20, fontSize: 12, color: '#666B72' }}>
+          <span>Rounds: <strong style={{ color: '#33383F' }}>{company.maxRounds}</strong></span>
+          <span>POCs: <strong style={{ color: '#33383F' }}>{company.POCs?.length || 0}</strong></span>
+          {company.description && (
+            <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {company.description}
             </span>
-          </div>
+          )}
         </div>
 
-        {/* POCs List */}
+        {/* POC avatars */}
         {company.POCs && company.POCs.length > 0 && (
-          <div className="border-t pt-4">
-            <div className="text-xs text-slate-500 mb-2">Assigned POCs:</div>
-            <div className="space-y-1">
-              {company.POCs.map(poc => (
-                <div key={poc._id} className="flex items-center gap-2 text-sm">
-                  <div style={{ width: 24, height: 24, background: '#E9E2DF', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#14213D', fontSize: 13, fontWeight: 600 }}>
-                    {poc.name?.charAt(0).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-slate-700 truncate">{poc.name}</div>
-                    <div className="text-xs text-slate-500 truncate">{poc.emailId}</div>
-                  </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {company.POCs.map(poc => (
+              <div key={poc._id} title={`${poc.name} · ${poc.emailId}`}
+                style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, color: '#494D57',
+                  background: '#F4F2F1', padding: '2px 8px', borderRadius: 2 }}>
+                <div style={{ width: 18, height: 18, background: '#E9E2DF', borderRadius: '50%',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 10, fontWeight: 700, color: '#14213D', flexShrink: 0 }}>
+                  {poc.name?.charAt(0).toUpperCase()}
                 </div>
-              ))}
-            </div>
+                <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {poc.name}
+                </span>
+              </div>
+            ))}
           </div>
         )}
 
-        {/* Shortlist sync result */}
+        {/* Sync result */}
         {shortlistSyncResult && (
-          <div className={`mt-3 px-3 py-1.5 rounded text-xs ${shortlistSyncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
+          <div style={{ fontSize: 12, padding: '4px 8px',
+            background: shortlistSyncResult.error ? '#FFF4F2' : '#F0F9F0',
+            color: shortlistSyncResult.error ? '#D83B01' : '#107C10',
+            border: `1px solid ${shortlistSyncResult.error ? '#FBCDC2' : '#C6EFCE'}`,
+          }}>
             {shortlistSyncResult.error
               ? shortlistSyncResult.error
-              : `${shortlistSyncResult.added} added, ${shortlistSyncResult.skipped} skipped`}
+              : `Synced — ${shortlistSyncResult.added} added, ${shortlistSyncResult.skipped} skipped`}
           </div>
         )}
 
-        {/* Actions */}
-        <div className="mt-4 pt-4 border-t flex flex-wrap gap-2">
-          <button
-            onClick={() => navigate(`/admin/companies/${company._id}`)}
-            title="Manage shortlist and upload CSV"
-            className="pp-btn2 flex-1"
-            style={{ minWidth: 0, fontSize: 13 }}
-          >
+        {/* Action buttons */}
+        <div style={{ display: 'flex', gap: 6, borderTop: '1px solid #E4E1E0', paddingTop: 12 }}>
+          <button onClick={() => navigate(`/admin/companies/${company._id}`)}
+            className="pp-btn" style={{ flex: 1, fontSize: 13, height: 30 }}
+            title="Manage shortlist and upload CSV">
             <SettingOutlined /> Manage
           </button>
-          <button
-            onClick={() => navigate(`/poc/companies/${company._id}/students`)}
-            title="View and manage students as POC"
-            className="pp-btn2 flex-1"
-            style={{ minWidth: 0, fontSize: 13 }}
-          >
+          <button onClick={() => navigate(`/poc/companies/${company._id}/students`)}
+            className="pp-btn2" style={{ flex: 1, fontSize: 13, height: 30 }}
+            title="View students as POC">
             <EyeOutlined /> POC View
           </button>
-          <button
-            onClick={() => setShowEditModal(true)}
-            title="Assign existing or new POCs to this company"
-            className="pp-btn2 flex-1"
-            style={{ minWidth: 0, fontSize: 13 }}
-          >
-            <UserAddOutlined /> {company.POCs?.length ? "POCs" : "Assign POC"}
+          <button onClick={() => setShowEditModal(true)}
+            className="pp-btn2" style={{ flex: 1, fontSize: 13, height: 30 }}
+            title="Assign POCs">
+            <UserAddOutlined /> POCs
           </button>
           {company.placementPortalJobId && (user?.role === "admin" || user?.role === "superadmin") && (
-            <button
-              onClick={handleSyncShortlist}
-              disabled={syncingShortlist}
-              title="Sync interview shortlist from placement portal"
-              className="pp-btn2 flex-1 disabled:opacity-50"
-              style={{ minWidth: 0, fontSize: 13 }}
-            >
+            <button onClick={handleSyncShortlist} disabled={syncingShortlist}
+              className="pp-btn2" style={{ flex: 1, fontSize: 13, height: 30, opacity: syncingShortlist ? 0.6 : 1 }}
+              title="Sync shortlist from placement portal">
               <SyncOutlined spin={syncingShortlist} /> Sync
             </button>
           )}
