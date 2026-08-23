@@ -105,6 +105,7 @@ export default function AdminCompanyDetails() {
   };
 
   const filteredCompanies = companies.filter(company => {
+    
     const q = (searchTerm || "").trim().toLowerCase();
 
     if (q === "") return true;
