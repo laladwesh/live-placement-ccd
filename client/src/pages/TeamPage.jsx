@@ -168,17 +168,17 @@ export default function TeamPage() {
           </p>
           <div className="flex flex-wrap gap-4">
             {tenure.gratitude.map((person, i) => (
-              <div key={i} className="flex items-center gap-3 border-2 border-black bg-white px-4 py-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
-                <div className="w-10 h-10 border-2 border-black overflow-hidden grayscale flex-shrink-0">
+              <div key={i} className="flex items-center gap-5 border-4 border-black bg-white px-6 py-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:bg-yellow-300 transition-all cursor-crosshair group">
+                <div className="w-20 h-20 border-4 border-black overflow-hidden grayscale group-hover:grayscale-0 transition-all flex-shrink-0 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
                   <img src={person.photo} className="w-full h-full object-cover" alt={person.name} />
                 </div>
                 <div>
-                  <div className="text-sm font-black uppercase tracking-tight">{person.name}</div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{person.department}</div>
-                </div>
-                <div className="flex gap-2 ml-2">
-                  <a href={`mailto:${person.email}`} className="border border-black px-2 py-1 text-[9px] font-black uppercase hover:bg-black hover:text-white transition-all">EMAIL</a>
-                  <a href={person.linkedin} target="_blank" rel="noreferrer" className="border border-black px-2 py-1 text-[9px] font-black uppercase hover:bg-black hover:text-white transition-all">LI</a>
+                  <div className="text-lg font-black uppercase tracking-tight leading-tight">{person.name}</div>
+                  <div className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">DEP: {person.department}</div>
+                  <div className="flex gap-2">
+                    <a href={`mailto:${person.email}`} className="border-2 border-black bg-white px-3 py-1.5 text-[10px] font-black uppercase hover:bg-black hover:text-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">SEND_EMAIL</a>
+                    <a href={person.linkedin} target="_blank" rel="noreferrer" className="border-2 border-black bg-black text-white px-3 py-1.5 text-[10px] font-black uppercase hover:bg-blue-600 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)]">LINKEDIN</a>
+                  </div>
                 </div>
               </div>
             ))}
