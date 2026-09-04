@@ -8,10 +8,13 @@ const TENURES = {
       { name: "Gaurav Anand",   department: "BTech, CE",  email: "g.anand@iitg.ac.in",   linkedin: "https://www.linkedin.com/in/gaurav-anand-26b380296/", photo: "/dday/gaurav.jpg" },
     ],
     coordinators: [
-      { name: "Bibek Nath",           department: "CL",  email: "n.bibek@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/bibek-nath-944254170/",   photo: "/dday/Bibek.jpeg" },
-      { name: "Hari Chakravarthy",     department: "ECE", email: "c.nomula@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/nhc1866/",                photo: "/dday/Hari.jpeg" },
-      { name: "Kabya Ranjan Chaubey", department: "EEE", email: "c.kabya@iitg.ac.in",          linkedin: "https://www.linkedin.com/in/kbchaubey25/",            photo: "/dday/Kabya.jpeg" },
-      { name: "Raman Agrawal",        department: "EEE", email: "raman.agrawal@iitg.ac.in",    linkedin: "https://www.linkedin.com/in/raman-agrawal-7a24bb326", photo: "/dday/Raman.jpeg" },
+      { name: "Bibek Nath",           department: "CL",   email: "n.bibek@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/bibek-nath-944254170/",   photo: "/dday/Bibek.jpeg" },
+      { name: "Hari Chakravarthy",    department: "ECE",  email: "c.nomula@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/nhc1866/",                photo: "/dday/Hari.jpeg" },
+      { name: "Kabya Ranjan Chaubey", department: "EEE",  email: "c.kabya@iitg.ac.in",          linkedin: "https://www.linkedin.com/in/kbchaubey25/",            photo: "/dday/Kabya.jpeg" },
+      { name: "Raman Agrawal",        department: "EEE",  email: "raman.agrawal@iitg.ac.in",    linkedin: "https://www.linkedin.com/in/raman-agrawal-7a24bb326", photo: "/dday/Raman.jpeg" },
+    ],
+    gratitude: [
+      { name: "Shivam", department: "BDES, DOD", email: "shivam.bdes@iitg.ac.in", linkedin: "https://www.linkedin.com/in/shivam-umaru/", photo: "https://iitg.ac.in/ccd/assets/img/LSC26-27/Shivam.png" },
     ],
   },
   "25—26": {
@@ -156,6 +159,32 @@ export default function TeamPage() {
           </section>
         </div>
       </main>
+
+      {/* ── Gratitude strip — subtle, not lead-level ── */}
+      {tenure.gratitude && tenure.gratitude.length > 0 && (
+        <div className="mt-10 border-t-2 border-dashed border-black pt-8">
+          <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400 mb-5">
+            — With gratitude
+          </p>
+          <div className="flex flex-wrap gap-4">
+            {tenure.gratitude.map((person, i) => (
+              <div key={i} className="flex items-center gap-3 border-2 border-black bg-white px-4 py-3 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)]">
+                <div className="w-10 h-10 border-2 border-black overflow-hidden grayscale flex-shrink-0">
+                  <img src={person.photo} className="w-full h-full object-cover" alt={person.name} />
+                </div>
+                <div>
+                  <div className="text-sm font-black uppercase tracking-tight">{person.name}</div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{person.department}</div>
+                </div>
+                <div className="flex gap-2 ml-2">
+                  <a href={`mailto:${person.email}`} className="border border-black px-2 py-1 text-[9px] font-black uppercase hover:bg-black hover:text-white transition-all">EMAIL</a>
+                  <a href={person.linkedin} target="_blank" rel="noreferrer" className="border border-black px-2 py-1 text-[9px] font-black uppercase hover:bg-black hover:text-white transition-all">LI</a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <footer className="mt-24 pb-12 flex justify-between items-center text-[10px] font-black uppercase tracking-[0.2em]">
         <div className="border-b-2 border-black">CCD TECH TEAM // 2027</div>
