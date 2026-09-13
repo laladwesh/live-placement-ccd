@@ -345,6 +345,25 @@ function SpreadsheetConverterTool() {
   );
 }
 
+function MailSenderCard() {
+  return (
+    <ToolCard title="Mail Sender" description="Compose bulk emails with a rich editor, dynamic variables from CSV/Excel, live preview and real-time send status.">
+      <a
+        href="/dday/mail"
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6, height: 34, padding: "0 20px",
+          fontSize: 13, fontWeight: 600, color: "#fff", background: "#14213D", borderRadius: 2,
+          textDecoration: "none", transition: "background .15s",
+        }}
+        onMouseEnter={e => e.currentTarget.style.background = "#1C2C4F"}
+        onMouseLeave={e => e.currentTarget.style.background = "#14213D"}
+      >
+        Open Mail Sender →
+      </a>
+    </ToolCard>
+  );
+}
+
 // ── File card (public + admin view) ──────────────────────────────────────────
 
 function FileCard({ file, isAdmin, onDelete }) {
@@ -553,6 +572,7 @@ export default function SharePage() {
               <CvDownloaderTool />
               <ExcelExportTool />
               <SpreadsheetConverterTool />
+              <MailSenderCard />
             </div>
           </>
         )}
