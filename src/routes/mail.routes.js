@@ -1,7 +1,24 @@
 import express from "express";
 import nodemailer from "nodemailer";
 import crypto from "crypto";
-import { authMiddleware, permit } from "../middleware/auth.middleware.js";
+import jwt from "jsonwebtoken";
+
+const JWT_SECRET = process.env.JWT_SECRET || "ccd-dev-secret";
+
+function shareMiddleware(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer "))
+    return res.status(401).json({ message: "Authentication required" });
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (decoded.role !== "share" && decoded.role !== "admin")
+      return res.status(403).json({ message: "Forbidden" });
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+}
 
 const router = express.Router();
 
@@ -23,7 +40,7 @@ function broadcast(job, data) {
 }
 
 // POST /mail/send — validate config, create job, start sending
-router.post("/send", authMiddleware, permit("admin"), async (req, res) => {
+router.post("/send", shareMiddleware, async (req, res) => {
   const { smtpEmail, smtpPassword, fromName, defaultCc, subject, htmlBody, recipients, delayMs = 600 } = req.body;
 
   if (!smtpEmail || !smtpPassword)
@@ -124,7 +141,7 @@ router.get("/progress/:jobId", (req, res, next) => {
     req.headers.authorization = `Bearer ${req.query.token}`;
   }
   next();
-}, authMiddleware, (req, res) => {
+}, shareMiddleware, (req, res) => {
   const job = mailJobs.get(req.params.jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
 
@@ -148,7 +165,7 @@ router.get("/progress/:jobId", (req, res, next) => {
 });
 
 // POST /mail/stop/:jobId — graceful stop
-router.post("/stop/:jobId", authMiddleware, (req, res) => {
+router.post("/stop/:jobId", shareMiddleware, (req, res) => {
   const job = mailJobs.get(req.params.jobId);
   if (!job) return res.status(404).json({ message: "Job not found" });
   job.status = "stopped";
@@ -156,7 +173,7 @@ router.post("/stop/:jobId", authMiddleware, (req, res) => {
 });
 
 // POST /mail/test — send a single test email
-router.post("/test", authMiddleware, permit("admin"), async (req, res) => {
+router.post("/test", shareMiddleware, async (req, res) => {
   const { smtpEmail, smtpPassword, fromName, toEmail, subject, htmlBody } = req.body;
   if (!smtpEmail || !smtpPassword || !toEmail)
     return res.status(400).json({ message: "smtpEmail, smtpPassword and toEmail are required" });

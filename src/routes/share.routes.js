@@ -4,6 +4,7 @@ import fs from "fs";
 import crypto from "crypto";
 import multer from "multer";
 import { fileURLToPath } from "url";
+import jwt from "jsonwebtoken";
 import { PDFDocument } from "pdf-lib";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
@@ -14,7 +15,25 @@ import SharedFile from "../models/shared-file.model.js";
 import Student from "../models/student.model.js";
 import User from "../models/user.model.js";
 import Company from "../models/company.model.js";
-import { authMiddleware, permit } from "../middleware/auth.middleware.js";
+
+const SHARE_PASSWORD = process.env.SHARE_PASSWORD || "awie";
+const JWT_SECRET = process.env.JWT_SECRET || "ccd-dev-secret";
+
+// Accepts share token (role:"share") OR admin JWT (role:"admin")
+function shareMiddleware(req, res, next) {
+  const auth = req.headers.authorization;
+  if (!auth?.startsWith("Bearer "))
+    return res.status(401).json({ message: "Authentication required" });
+  try {
+    const decoded = jwt.verify(auth.slice(7), JWT_SECRET);
+    if (decoded.role !== "share" && decoded.role !== "admin")
+      return res.status(403).json({ message: "Forbidden" });
+    req.user = decoded;
+    next();
+  } catch {
+    res.status(401).json({ message: "Invalid or expired token" });
+  }
+}
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -62,6 +81,15 @@ const cleanupDir = (dir) => {
   try { if (dir && fs.existsSync(dir)) fs.rmSync(dir, { recursive: true }); } catch {}
 };
 
+// ── Share login (no auth required) ───────────────────────────────────────────
+
+router.post("/login", (req, res) => {
+  if (!req.body?.password || req.body.password !== SHARE_PASSWORD)
+    return res.status(401).json({ message: "Incorrect password" });
+  const token = jwt.sign({ role: "share", sub: "share-access" }, JWT_SECRET, { expiresIn: "12h" });
+  res.json({ token });
+});
+
 // ── Public routes (no auth) ───────────────────────────────────────────────────
 
 router.get("/public", async (req, res) => {
@@ -89,7 +117,7 @@ router.get("/file/:shareUrl", async (req, res) => {
 
 // ── Admin: file management ────────────────────────────────────────────────────
 
-router.get("/files", authMiddleware, permit("admin"), async (req, res) => {
+router.get("/files", shareMiddleware, async (req, res) => {
   try {
     const { search, permanent } = req.query;
     const query = {};
@@ -101,7 +129,7 @@ router.get("/files", authMiddleware, permit("admin"), async (req, res) => {
   } catch { res.status(500).json({ message: "Failed to fetch files" }); }
 });
 
-router.post("/upload", authMiddleware, permit("admin"), upload.single("file"), async (req, res) => {
+router.post("/upload", shareMiddleware, upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
   try {
     const permanent = req.body.isPermanent === "true" || req.body.isPermanent === true;
@@ -120,7 +148,7 @@ router.post("/upload", authMiddleware, permit("admin"), upload.single("file"), a
   }
 });
 
-router.delete("/files/:id", authMiddleware, permit("admin"), async (req, res) => {
+router.delete("/files/:id", shareMiddleware, async (req, res) => {
   try {
     const file = await SharedFile.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
@@ -131,7 +159,7 @@ router.delete("/files/:id", authMiddleware, permit("admin"), async (req, res) =>
 });
 
 // Make a temp file permanent
-router.patch("/files/:id/permanent", authMiddleware, permit("admin"), async (req, res) => {
+router.patch("/files/:id/permanent", shareMiddleware, async (req, res) => {
   try {
     const file = await SharedFile.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
@@ -145,7 +173,7 @@ router.patch("/files/:id/permanent", authMiddleware, permit("admin"), async (req
 // ── Tools ─────────────────────────────────────────────────────────────────────
 
 // 1. Compress Image
-router.post("/tools/compress-image", authMiddleware, permit("admin"), upload.single("image"), async (req, res) => {
+router.post("/tools/compress-image", shareMiddleware, upload.single("image"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No image uploaded" });
   const inputPath = req.file.path;
   try {
@@ -175,7 +203,7 @@ router.post("/tools/compress-image", authMiddleware, permit("admin"), upload.sin
 });
 
 // 2. Merge PDFs
-router.post("/tools/merge-pdfs", authMiddleware, permit("admin"), upload.array("pdfs", 20), async (req, res) => {
+router.post("/tools/merge-pdfs", shareMiddleware, upload.array("pdfs", 20), async (req, res) => {
   if (!req.files || req.files.length < 2)
     return res.status(400).json({ message: "Upload at least 2 PDF files" });
   const paths = req.files.map(f => f.path);
@@ -201,7 +229,7 @@ router.post("/tools/merge-pdfs", authMiddleware, permit("admin"), upload.array("
 });
 
 // 3. Compress Files to ZIP
-router.post("/tools/compress-files", authMiddleware, permit("admin"), upload.array("files", 30), async (req, res) => {
+router.post("/tools/compress-files", shareMiddleware, upload.array("files", 30), async (req, res) => {
   if (!req.files || req.files.length === 0)
     return res.status(400).json({ message: "No files uploaded" });
   const outName = `archive-${Date.now()}.zip`;
@@ -227,7 +255,7 @@ router.post("/tools/compress-files", authMiddleware, permit("admin"), upload.arr
 });
 
 // 4. CV Downloader — reads Excel/CSV with a Resume/CV column, downloads each CV, returns ZIP
-router.post("/tools/cv-downloader", authMiddleware, permit("admin"), upload.single("excel"), async (req, res) => {
+router.post("/tools/cv-downloader", shareMiddleware, upload.single("excel"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No Excel file uploaded" });
   const excelPath = req.file.path;
   const tempDir = path.join(UPLOAD_DIR, `cvs-${Date.now()}`);
@@ -282,7 +310,7 @@ router.post("/tools/cv-downloader", authMiddleware, permit("admin"), upload.sing
 });
 
 // 5. Export Placements as Excel — generates from DB
-router.get("/tools/export-placements", authMiddleware, permit("admin"), async (req, res) => {
+router.get("/tools/export-placements", shareMiddleware, async (req, res) => {
   try {
     const students = await Student.find({ isPlaced: true, placementYear: null })
       .populate("userId", "name emailId department programme cpi")
@@ -317,7 +345,7 @@ router.get("/tools/export-placements", authMiddleware, permit("admin"), async (r
 });
 
 // 6. CSV ↔ Excel converter
-router.post("/tools/convert-spreadsheet", authMiddleware, permit("admin"), upload.single("file"), async (req, res) => {
+router.post("/tools/convert-spreadsheet", shareMiddleware, upload.single("file"), async (req, res) => {
   if (!req.file) return res.status(400).json({ message: "No file uploaded" });
   const inputPath = req.file.path;
   const isCSV = req.file.originalname.toLowerCase().endsWith(".csv") || req.file.mimetype === "text/csv";
@@ -348,7 +376,7 @@ router.post("/tools/convert-spreadsheet", authMiddleware, permit("admin"), uploa
 });
 
 // 7. Make any tool output permanent (save to shared files list)
-router.patch("/tools/save/:id", authMiddleware, permit("admin"), async (req, res) => {
+router.patch("/tools/save/:id", shareMiddleware, async (req, res) => {
   try {
     const file = await SharedFile.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
