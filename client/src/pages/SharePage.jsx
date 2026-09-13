@@ -1,6 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
 import { Toaster, toast } from "react-hot-toast";
+import { EditorState, convertToRaw } from "draft-js";
+import { Editor } from "react-draft-wysiwyg";
+import draftToHtml from "draftjs-to-html";
+import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
 /* ─── Theme (oxford blue) ─────────────────────────────────────────────────── */
 const T = {
@@ -426,8 +430,13 @@ function MailTab() {
   const [recipients, setRecipients] = useState([]);
   const [columns, setColumns] = useState([]);
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  const [editorState, setEditorState] = useState(() => EditorState.createEmpty());
   const [previewIdx, setPreviewIdx] = useState(0);
+
+  const getBody = () => {
+    const raw = convertToRaw(editorState.getCurrentContent());
+    return raw.blocks.some((b) => b.text.trim()) ? draftToHtml(raw) : "";
+  };
   const [rightTab, setRightTab] = useState("preview");
 
   const [sending, setSending] = useState(false);
@@ -458,6 +467,7 @@ function MailTab() {
   };
 
   const startSend = async () => {
+    const body = getBody();
     if (!fromEmail || !fromPwd) { toast.error("Enter sender email and password"); return; }
     if (!subject || !body) { toast.error("Subject and body are required"); return; }
     const pending = recipients.filter((r) => r._status === "pending" || r._status === "failed");
@@ -509,6 +519,7 @@ function MailTab() {
   const total = recipients.length;
   const progress = total ? Math.round(((sentCount + failCount) / total) * 100) : 0;
   const previewRow = recipients[previewIdx] || {};
+  const body = getBody();
 
   const inpStyle = {
     width: "100%", height: 36, padding: "0 10px", fontSize: 14, fontFamily: "inherit",
@@ -611,14 +622,36 @@ function MailTab() {
                 style={inpStyle} />
             </div>
             <div>
-              <label style={lbl}>Body <span style={{ fontSize: 10, textTransform: "none", letterSpacing: 0, color: T.info }}>(HTML supported)</span></label>
-              <textarea value={body} onChange={(e) => setBody(e.target.value)}
-                placeholder={`<p>Dear {{contact_name}},</p>\n<p>Greetings from CCD, IIT Guwahati!</p>\n\n<p>We would like to invite <strong>{{company_name}}</strong>...</p>`}
-                rows={14}
-                style={{ ...inpStyle, height: "auto", padding: "10px", resize: "vertical", fontFamily: "monospace", fontSize: 12, lineHeight: 1.6 }} />
-              <div style={{ marginTop: 6, fontSize: 11, color: T.textSub }}>
-                HTML email body. Click column chips to insert variables.{" "}
-                <a href="/dday/mail" target="_blank" rel="noreferrer" style={{ color: T.info }}>Open WYSIWYG editor →</a>
+              <label style={lbl}>Body</label>
+              <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 4, overflow: "hidden", background: T.white }}>
+                <Editor
+                  editorState={editorState}
+                  onEditorStateChange={setEditorState}
+                  wrapperStyle={{ margin: 0 }}
+                  toolbarStyle={{
+                    margin: 0, padding: "6px 8px", borderBottom: `1px solid ${T.tint}`,
+                    background: T.bg, fontSize: 13,
+                  }}
+                  editorStyle={{
+                    minHeight: 220, maxHeight: 340, overflowY: "auto",
+                    padding: "8px 14px", fontSize: 14, fontFamily: "inherit", lineHeight: 1.6,
+                  }}
+                  placeholder="Dear {{contact_name}}, Greetings from CCD, IIT Guwahati!…"
+                  toolbar={{
+                    options: ["inline", "blockType", "fontSize", "list", "textAlign", "colorPicker", "link", "history"],
+                    inline: { options: ["bold", "italic", "underline", "strikethrough"] },
+                    blockType: { options: ["Normal", "H1", "H2", "H3", "Blockquote"] },
+                    fontSize: { options: [10, 11, 12, 13, 14, 16, 18, 24, 36] },
+                    list: { options: ["ordered", "unordered"] },
+                    textAlign: { options: ["left", "center", "right", "justify"] },
+                    colorPicker: {},
+                    link: { defaultTargetOption: "_blank" },
+                    history: { options: ["undo", "redo"] },
+                  }}
+                />
+              </div>
+              <div style={{ marginTop: 5, fontSize: 11, color: T.textSub }}>
+                Click column chips on the left to insert {"{{variables}}"} into subject or paste into body.
               </div>
             </div>
           </div>
@@ -702,7 +735,7 @@ function MailTab() {
       {/* Send bar */}
       <div style={{ ...card, marginTop: 14, padding: "14px 20px", display: "flex", alignItems: "center", gap: 14, flexWrap: "wrap" }}>
         {!sending && jobStatus !== "done" && (
-          <SBtn disabled={!total || !subject || !body || !fromEmail || !fromPwd} onClick={startSend} style={{ padding: "10px 24px", fontSize: 14 }}>
+          <SBtn disabled={!total || !subject || !body || !fromEmail || !fromPwd} onClick={startSend} style={{ padding: "10px 24px", fontSize: 14 }} title={!body ? "Write a body first" : ""}>
             ✉ Send to {pendCount || total} recipient{total !== 1 ? "s" : ""}
           </SBtn>
         )}
