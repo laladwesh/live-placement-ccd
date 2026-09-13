@@ -4,7 +4,6 @@ import fs from "fs";
 import crypto from "crypto";
 import multer from "multer";
 import { fileURLToPath } from "url";
-import sharp from "sharp";
 import { PDFDocument } from "pdf-lib";
 import { createRequire } from "module";
 const require = createRequire(import.meta.url);
@@ -150,6 +149,7 @@ router.post("/tools/compress-image", authMiddleware, permit("admin"), upload.sin
   if (!req.file) return res.status(400).json({ message: "No image uploaded" });
   const inputPath = req.file.path;
   try {
+    const { default: sharp } = await import("sharp");
     const quality = Math.min(100, Math.max(1, parseInt(req.body.quality) || 75));
     const format = req.body.format || "jpeg"; // jpeg | webp | png
     const ext = format === "png" ? ".png" : format === "webp" ? ".webp" : ".jpg";

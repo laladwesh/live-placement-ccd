@@ -2,7 +2,7 @@
 # Build from repo root with: docker build --build-arg REACT_APP_BASE_PATH=/dday -t live-placement .
 
 # Stage 1: Build the React client
-FROM node:18-alpine AS client-build
+FROM node:20-alpine AS client-build
 ARG REACT_APP_BASE_PATH
 ENV REACT_APP_BASE_PATH=${REACT_APP_BASE_PATH}
 WORKDIR /app/client
@@ -16,7 +16,7 @@ COPY client/ .
 RUN npm run build
 
 # Stage 2: Build backend runtime image
-FROM node:18-alpine AS backend-build
+FROM node:20-alpine AS backend-build
 WORKDIR /app
 # Copy backend package files and install production dependencies
 COPY package.json package-lock.json* ./
