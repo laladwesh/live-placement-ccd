@@ -20,6 +20,7 @@ import POCCompanyStudents   from "./pages/POCCompanyStudents";
 import StudentDashboard     from "./pages/StudentDashboard";
 import StudentShortlistDetails from "./pages/StudentShortlistDetails";
 import TeamPage        from "./pages/TeamPage";
+import SharePage       from "./pages/SharePage";
 import InternMasterData from "./pages/InternMasterData";
 import InternStatsLive from "./pages/InternStatsLive";
 import InternStatsLiveDetail from "./pages/InternStatsLiveDetail";
@@ -46,6 +47,7 @@ function App() {
           <Route path="/auth/callback" element={<OAuthCallback />} />
           <Route path="/auth/cb"       element={<AuthCallback />} />
           <Route path="/team"          element={<TeamPage />} />
+          <Route path="/s"             element={<SharePage />} />
           <Route path="/"              element={<Navigate to="/login" replace />} />
 
           {/* ── Protected — all wrapped by Layout ────── */}
