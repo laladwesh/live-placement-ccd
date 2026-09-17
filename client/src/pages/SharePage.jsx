@@ -724,7 +724,7 @@ const STANDARD_DRAFTS = [
     name: "Placement Invitation 2026–27",
     subject: "IIT Guwahati <> {{company_name}} – Invitation for Placements 2026–27",
     body: `<p>Dear {{contact_name}},</p>
-<p><em><strong>Greetings from the Centre for Career Development, IIT Guwahati.</strong></em></p>
+<p><em><strong><span style="color:#C00000;">Greetings from the Centre for Career Development, IIT Guwahati.</span></strong></em></p>
 <p>We are pleased to invite <strong>{{company_name}}</strong> to participate in the <strong>On-Campus Placement Season 2026–27</strong> at IIT Guwahati for the graduating Batch of 2027. Recognized as one of India's premier institutions for engineering, research, and innovation, IIT Guwahati is ranked <strong>8th in Engineering in the NIRF 2025 Rankings</strong> and <strong>No. 115 in the QS Asia University Rankings 2026</strong>. The Institute also has a strong global research footprint, ranking <strong>42nd globally in Citations per Faculty (QS World University Rankings 2025)</strong>.</p>
 <p>These rankings reflect the strong academic, research, and technical capabilities of our students. Our graduating cohort across <strong>EEE, ECE, and CSE</strong> offers <strong>{{company_name}}</strong> access to a highly skilled talent pool with expertise in <strong>power electronics, power systems, control and automation, electric mobility, embedded systems, electronics, AI/ML, and software development</strong>. This enables recruitment across <strong>R&amp;D, product development, power and energy solutions, industrial automation, EV technologies, embedded systems, and other engineering roles</strong> from a single campus.</p>
 <p><em><strong>Placement Timeline</strong></em></p>
