@@ -717,6 +717,55 @@ function FilesTab() {
   );
 }
 
+/* ─── Standard placement email templates (always available, never deleted) ── */
+const STANDARD_DRAFTS = [
+  {
+    id: "std-placement-invite-2027",
+    name: "Placement Invitation 2026–27",
+    subject: "IIT Guwahati <> {{company_name}} – Invitation for Placements 2026–27",
+    body: `<p>Dear {{contact_name}},</p>
+<p><em><strong>Greetings from the Centre for Career Development, IIT Guwahati.</strong></em></p>
+<p>We are pleased to invite <strong>{{company_name}}</strong> to participate in the <strong>On-Campus Placement Season 2026–27</strong> at IIT Guwahati for the graduating Batch of 2027. Recognized as one of India's premier institutions for engineering, research, and innovation, IIT Guwahati is ranked <strong>8th in Engineering in the NIRF 2025 Rankings</strong> and <strong>#115 in the QS Asia University Rankings 2026</strong>. The Institute also has a strong global research footprint, ranking <strong>42nd globally in Citations per Faculty (QS World University Rankings 2025)</strong>.</p>
+<p>These rankings reflect the strong academic, research, and technical capabilities of our students. Our graduating cohort across <strong>EEE, ECE, and CSE</strong> offers {{company_name}} access to a highly skilled talent pool with expertise in <strong>power electronics, power systems, control and automation, electric mobility, embedded systems, electronics, AI/ML, and software development</strong>. This enables recruitment across <strong>R&amp;D, product development, power and energy solutions, industrial automation, EV technologies, embedded systems, and other engineering roles</strong> from a single campus.</p>
+<p><em><strong>Placement Timeline</strong></em></p>
+<p><strong>Phase 1</strong></p>
+<ul>
+<li>Online Assessments &amp; Pre-Placement Talks: September 25 – October 30, 2026</li>
+<li>Interviews: December onwards</li>
+</ul>
+<p><strong>Phase 2</strong></p>
+<ul>
+<li>Online Assessments &amp; Pre-Placement Talks: January 15, 2027 onwards</li>
+<li>Interviews: January 15 – April 2027</li>
+</ul>
+<p><em>Joining:</em> From June 2027 onwards</p>
+<p>To register and participate, please submit the <strong>Job Application Form (JAF)</strong> via our <a href="https://iitg.ac.in/placements/auth/login/recruiter" target="_blank">Placement Portal</a>.</p>
+<p><em><strong>About IIT Guwahati</strong></em></p>
+<p>Every year, leading organizations across diverse industries engage with IIT Guwahati to recruit some of the finest young minds in the country. The Institute's students consistently demonstrate their capabilities through national and international competitions, technical challenges, research initiatives, and industry-oriented projects.</p>
+<p><em><strong>Recent achievements of our students include:</strong></em></p>
+<ul>
+<li>Rank 16 at the ICPC Asia West Finals</li>
+<li>Global Ranks 1, 6, 8, and 10 at the Creative Shock international case competition</li>
+<li>3rd position overall at Inter IIT Tech Meet 13.0</li>
+<li>11th Rank at IICPC Quantfest Finals</li>
+<li>Special Innovation Prize at Smart India Hackathon 2025</li>
+<li>1st Runner-Up finishes at the LAM Research Challenge and V-Guard Big Idea Tech Design Competition</li>
+<li>2nd Runner-Up finishes at Convolve and SARCathon, IIT Bombay</li>
+</ul>
+<p>We are confident our students will bring exceptional value to your organization.</p>
+<p><strong>Faculty Coordinators:</strong></p>
+<ul>
+<li><strong>Dr. Rishikesh D. Kulkarni</strong> (+91 7636892279)</li>
+<li><strong>Dr. Rajkumar P. Thummer</strong> (+91 70868 67025)</li>
+</ul>
+<p>We look forward to welcoming <strong>{{company_name}}</strong> to our campus and building a successful partnership.</p>
+<p>Warm regards,</p>
+<p><em><strong>Chandrashekhar Rao</strong></em><br><em>Lead Student Placement Coordinator – Industry Liaison</em><br><em>Centre for Career Development</em><br><em>Indian Institute of Technology Guwahati</em><br><em>Contact: +91 7222940112</em></p>`,
+    savedAt: "2026-09-17T00:00:00.000Z",
+    isStandard: true,
+  },
+];
+
 /* ─── Mail Tab ───────────────────────────────────────────────────────────── */
 function MailTab() {
   /* SMTP State */
@@ -724,7 +773,7 @@ function MailTab() {
   const [fromPwd, setFromPwd] = useState("");
   const [showPwd, setShowPwd] = useState(false);
   const [fromName, setFromName] = useState("Centre for Career Development");
-  const [defaultCc, setDefaultCc] = useState("fc2ccd@iitg.ac.in, cdo.ccd@iitg.ac.in");
+  const [defaultCc, setDefaultCc] = useState("");
   const [delayMs, setDelayMs] = useState(600);
   const [advOpen, setAdvOpen] = useState(false);
 
@@ -1069,20 +1118,28 @@ function MailTab() {
           </div>
 
           <Btn onClick={() => setAdvOpen((o) => !o)}>
-            {advOpen ? "Close Advanced Options" : "Server Advanced Settings"}
+            {advOpen ? "Close Advanced" : "Advanced Settings"}
           </Btn>
         </div>
 
+        {/* CC — always visible below the credential row */}
+        <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}` }}>
+          <FieldLabel>CC (comma-separated — leave blank if none)</FieldLabel>
+          <input
+            type="text"
+            placeholder="e.g. fc1ccd@iitg.ac.in, cdo.ccd@iitg.ac.in"
+            value={defaultCc}
+            onChange={(e) => setDefaultCc(e.target.value)}
+            style={inpStyle}
+          />
+        </div>
+
         {advOpen && (
-          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1.5px solid ${T.border}` }}>
+          <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1.5px solid ${T.border}` }}>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
               <div>
                 <FieldLabel>Display From Name</FieldLabel>
                 <input type="text" value={fromName} onChange={(e) => setFromName(e.target.value)} style={inpStyle} />
-              </div>
-              <div>
-                <FieldLabel>Default Carbon Copy (CC)</FieldLabel>
-                <input type="text" value={defaultCc} onChange={(e) => setDefaultCc(e.target.value)} style={inpStyle} />
               </div>
               <div>
                 <FieldLabel>Throttle Delay Per Message (ms)</FieldLabel>
@@ -1522,17 +1579,48 @@ function MailTab() {
         </div>
       </div>
 
-      {/* Reusable Drafts Collection */}
+      {/* Standard Templates — always available, read-only */}
       <div style={{ marginTop: 8 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
+        <div style={{ marginBottom: 10 }}>
+          <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: "-0.01em" }}>Standard Templates</h3>
+          <p style={{ margin: "3px 0 0", fontSize: 12, color: T.textSec, fontWeight: 500 }}>Built-in CCD templates — always available, load to edit and send</p>
+        </div>
+        <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+          {STANDARD_DRAFTS.map((draft, idx) => (
+            <div key={draft.id}
+              style={{ padding: "13px 18px", borderBottom: idx < STANDARD_DRAFTS.length - 1 ? `1px solid ${T.border}` : "none", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+              <div style={{ flex: "1 1 240px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: T.text }}>{draft.name}</div>
+                  <span style={{ fontSize: 9, fontWeight: 800, color: T.accent, border: `1px solid ${T.accent}55`, borderRadius: 3, padding: "1px 5px", letterSpacing: "0.05em" }}>BUILT-IN</span>
+                </div>
+                <div style={{ fontSize: 12, color: T.textSec, marginTop: 3, fontWeight: 500 }}>
+                  Subject: {draft.subject}
+                </div>
+                <div style={{ fontSize: 11, color: T.muted, marginTop: 3 }}>
+                  Variables: <code style={{ fontFamily: MONO, fontSize: 10, color: T.accent }}>{"{{contact_name}}"}</code>{" "}
+                  <code style={{ fontFamily: MONO, fontSize: 10, color: T.accent }}>{"{{company_name}}"}</code>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                <Btn size="sm" variant="primary" onClick={() => loadDraft(draft)}>Load into Editor</Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* User-saved Drafts */}
+      <div style={{ marginTop: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 12, flexWrap: "wrap" }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.text, letterSpacing: "-0.01em" }}>Saved Announcement Templates</h3>
-            <p style={{ margin: "3px 0 0", fontSize: 12, color: T.textSec, fontWeight: 500 }}>Stored locally for future recruitment seasons</p>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: "-0.01em" }}>Your Saved Drafts</h3>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: T.textSec, fontWeight: 500 }}>Stored locally — survive page refresh and re-login</p>
           </div>
           {drafts.length > 0 && (
             <input
               type="text"
-              placeholder="Search saved templates…"
+              placeholder="Search drafts…"
               value={draftSearch}
               onChange={(e) => setDraftSearch(e.target.value)}
               style={{ ...inpStyle, width: 220 }}
@@ -1541,13 +1629,13 @@ function MailTab() {
         </div>
 
         {drafts.length === 0 ? (
-          <div style={{ background: T.surface, border: `2px dashed ${T.border}`, borderRadius: 6, padding: "36px 20px", textAlign: "center" }}>
-            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.textSec }}>Zero Saved Templates</p>
-            <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted }}>Draft an announcement above and click "Save as Reusable Draft" to pin it here.</p>
+          <div style={{ background: T.surface, border: `2px dashed ${T.border}`, borderRadius: 6, padding: "28px 20px", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.textSec }}>No saved drafts yet</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted }}>Click "Save as Reusable Draft" in the compose panel to store your custom templates here.</p>
           </div>
         ) : filteredDrafts.length === 0 ? (
           <div style={{ color: T.muted, fontSize: 13, padding: "20px 0", textAlign: "center" }}>
-            No drafts matching search criteria "{draftSearch}"
+            No drafts match "{draftSearch}"
           </div>
         ) : (
           <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
@@ -1587,7 +1675,7 @@ function MailTab() {
                         Subject: {draft.subject || "—"}
                       </div>
                       <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 4 }}>
-                        Modified: {fmtDate(draft.savedAt)}
+                        Saved: {fmtDate(draft.savedAt)}
                       </div>
                     </div>
                   )}
@@ -1595,7 +1683,7 @@ function MailTab() {
 
                 <div style={{ display: "flex", gap: 6 }}>
                   <Btn size="sm" onClick={() => loadDraft(draft)}>Load</Btn>
-                  <Btn size="sm" onClick={() => updateDraft(draft.id)} title="Overwrite this template with currently drafted subject and body">Overwrite</Btn>
+                  <Btn size="sm" onClick={() => updateDraft(draft.id)} title="Overwrite with current subject + body">Update</Btn>
                   <Btn size="sm" variant="ghost" onClick={() => { setEditingId(draft.id); setRenameName(draft.name); }}>Rename</Btn>
                   <Btn size="sm" variant="ghost" onClick={() => duplicateDraft(draft)}>Clone</Btn>
                   <Btn size="sm" variant="danger" onClick={() => { if (window.confirm(`Delete "${draft.name}"?`)) deleteDraft(draft.id); }}>Delete</Btn>
