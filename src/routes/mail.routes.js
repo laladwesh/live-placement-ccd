@@ -147,7 +147,7 @@ router.post("/send", shareMiddleware, async (req, res) => {
 
       try {
         const resolvedSubject = substituteVars(subject, row);
-        const resolvedBody    = substituteVars(htmlBody, row) + footer;
+        const resolvedBody    = `<div style="padding-left:24px;padding-right:24px;">${substituteVars(htmlBody, row)}</div>${footer}`;
 
         const rowCc = (row.cc || row.CC || "").split(",").map(e => e.trim()).filter(Boolean);
         const allCc = [...new Set([...ccBase, ...rowCc])];
@@ -237,7 +237,7 @@ router.post("/test", shareMiddleware, async (req, res) => {
       from: `"${fromName || "CCD IITG"}" <${smtpEmail}>`,
       to: toEmail,
       subject: subject || "(Test) " + new Date().toLocaleTimeString(),
-      html: (htmlBody || "<p>This is a test email from the CCD Mail Sender.</p>") + footer,
+      html: `<div style="padding-left:24px;padding-right:24px;">${htmlBody || "<p>This is a test email from the CCD Mail Sender.</p>"}</div>${footer}`,
       attachments: logoAttachment(),
     });
     res.json({ message: "Test email sent" });
