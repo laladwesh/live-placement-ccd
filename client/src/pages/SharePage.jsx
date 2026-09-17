@@ -204,7 +204,7 @@ function PasswordGate({ onAuth }) {
         <div style={{ display: "inline-block", background: T.elevated, border: `1px solid ${T.borderHi}`, padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, color: T.textSec, marginBottom: 16, letterSpacing: "0.05em" }}>
           IIT GUWAHATI • CCD
         </div>
-        <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: "0 0 6px", letterSpacing: "-0.02em" }}>Share for Care</h1>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: "0 0 6px", letterSpacing: "-0.02em" }}>Tech Team ki Gareemat</h1>
         <p style={{ fontSize: 13, fontWeight: 500, color: T.textSec, margin: "0 0 24px" }}>Internal career development and document operations</p>
         
         <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -816,7 +816,26 @@ function MailTab() {
 
   const handlePastedText = (text, html) => {
     if (html) {
-      const { contentBlocks, entityMap } = htmlToDraft(html);
+      // Pre-process: convert CSS-based italic/bold spans (Outlook, Gmail) to semantic tags
+      let processed = html;
+      try {
+        const doc = new DOMParser().parseFromString(html, "text/html");
+        doc.querySelectorAll("[style]").forEach((el) => {
+          const s = el.getAttribute("style") || "";
+          if (/font-style\s*:\s*italic/i.test(s)) {
+            const em = doc.createElement("em");
+            em.innerHTML = el.innerHTML;
+            el.replaceWith(em);
+          } else if (/font-weight\s*:\s*(bold|[6-9]\d{2})/i.test(s)) {
+            const strong = doc.createElement("strong");
+            strong.innerHTML = el.innerHTML;
+            el.replaceWith(strong);
+          }
+        });
+        processed = doc.body.innerHTML;
+      } catch {}
+
+      const { contentBlocks, entityMap } = htmlToDraft(processed);
       if (contentBlocks && contentBlocks.length) {
         const pasted = ContentState.createFromBlockArray(contentBlocks, entityMap);
         const newContent = Modifier.replaceWithFragment(
@@ -890,11 +909,21 @@ function MailTab() {
     if (draft.rawContent) {
       try {
         setEditorState(EditorState.createWithContent(convertFromRaw(draft.rawContent)));
-      } catch {
-        setEditorState(EditorState.createEmpty());
-      }
+        toast.success(`Loaded: "${draft.name}"`);
+        return;
+      } catch {}
     }
-    toast.success(`Restored template: "${draft.name}"`);
+    if (draft.body) {
+      try {
+        const { contentBlocks, entityMap } = htmlToDraft(draft.body);
+        const cs = ContentState.createFromBlockArray(contentBlocks, entityMap);
+        setEditorState(EditorState.createWithContent(cs));
+        toast.success(`Loaded: "${draft.name}"`);
+        return;
+      } catch {}
+    }
+    setEditorState(EditorState.createEmpty());
+    toast.success(`Loaded: "${draft.name}"`);
   };
 
   const deleteDraft = (id) => {
@@ -1167,7 +1196,7 @@ function MailTab() {
       </div>
 
       {/* Main Mail Layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr 320px", gap: 14, alignItems: "start" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 440px", gap: 14, alignItems: "start" }}>
 
         {/* Recipients Sidebar */}
         <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
@@ -1300,79 +1329,93 @@ function MailTab() {
               <FieldLabel required>HTML Announcement Body</FieldLabel>
               <style>{`
                 .wd-industrial .rdw-editor-wrapper {
-                  background: ${T.sunken};
+                  background: #ffffff;
                   border-radius: 5px;
-                  border: 1.5px solid ${T.border};
+                  border: 1.5px solid #d1d5db;
                 }
                 .wd-industrial .rdw-editor-toolbar {
-                  background: ${T.surface};
+                  background: #f3f4f6;
                   border: none;
-                  border-bottom: 1.5px solid ${T.border};
+                  border-bottom: 1.5px solid #d1d5db;
                   padding: 8px;
+                  border-radius: 5px 5px 0 0;
                 }
                 .wd-industrial .rdw-option-wrapper {
-                  background: ${T.elevated};
-                  border: 1px solid ${T.border};
+                  background: #ffffff;
+                  border: 1px solid #d1d5db;
                   border-radius: 3px;
                   min-width: 26px;
                   height: 26px;
                 }
                 .wd-industrial .rdw-option-wrapper:hover {
-                  background: ${T.bg};
-                  border-color: ${T.borderHi};
+                  background: #e5e7eb;
+                  border-color: #9ca3af;
                 }
                 .wd-industrial .rdw-option-active {
-                  background: #ffffff !important;
-                  border-color: #ffffff !important;
+                  background: #1f2937 !important;
+                  border-color: #1f2937 !important;
                 }
                 .wd-industrial .rdw-option-active img {
                   filter: invert(1) !important;
                 }
                 .wd-industrial .rdw-option-wrapper img {
-                  filter: invert(0.8);
+                  filter: none;
                 }
                 .wd-industrial .rdw-dropdown-wrapper {
-                  background: ${T.elevated};
-                  border: 1px solid ${T.border};
+                  background: #ffffff;
+                  border: 1px solid #d1d5db;
                   border-radius: 3px;
                   height: 26px;
                 }
                 .wd-industrial .rdw-dropdown-selectedtext {
-                  color: ${T.text};
+                  color: #111827;
                   font-family: ${FONT};
                   font-size: 12px;
                   font-weight: 700;
                 }
                 .wd-industrial .rdw-dropdownoption-default {
-                  background: ${T.surface};
-                  color: ${T.text};
+                  background: #ffffff;
+                  color: #111827;
                   font-family: ${FONT};
                   font-size: 12px;
                   font-weight: 600;
                 }
                 .wd-industrial .rdw-dropdownoption-default:hover {
-                  background: ${T.elevated};
+                  background: #f3f4f6;
+                }
+                .wd-industrial .rdw-dropdown-optionwrapper {
+                  background: #ffffff;
+                  border: 1px solid #d1d5db;
                 }
                 .wd-industrial .rdw-editor-main {
-                  color: ${T.text};
-                  font-family: ${FONT};
+                  color: #111827;
+                  background: #ffffff;
+                  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
                   font-size: 14px;
-                  min-height: 260px;
-                  max-height: 380px;
+                  min-height: 300px;
+                  max-height: 460px;
                   overflow-y: auto;
-                  padding: 14px 16px;
-                  line-height: 1.6;
+                  padding: 16px 18px;
+                  line-height: 1.7;
                 }
                 .wd-industrial .DraftEditor-root {
-                  color: ${T.text};
+                  color: #111827;
                 }
                 .wd-industrial .public-DraftEditorPlaceholder-root {
-                  color: ${T.muted};
+                  color: #9ca3af;
                 }
                 .wd-industrial .rdw-dropdown-carettoopen,
                 .wd-industrial .rdw-dropdown-carettoclose {
-                  border-top-color: ${T.textSec};
-                  border-bottom-color: ${T.textSec};
+                  border-top-color: #374151;
+                  border-bottom-color: #374151;
+                }
+                .wd-industrial .rdw-colorpicker-modal,
+                .wd-industrial .rdw-link-modal,
+                .wd-industrial .rdw-image-modal,
+                .wd-industrial .rdw-embedded-modal {
+                  background: #ffffff;
+                  border: 1px solid #d1d5db;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
                 }
               `}</style>
 
@@ -1451,10 +1494,10 @@ function MailTab() {
                 Subject: <span style={{ color: T.text }}>{sub(subject, previewRow) || "—"}</span>
               </div>
 
-              <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 4, overflow: "hidden", height: 320, background: "#ffffff" }}>
+              <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 4, overflow: "hidden", height: 520, background: "#ffffff" }}>
                 {currentBody ? (
                   <iframe
-                    srcDoc={`<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px;margin:0;font-size:14px;line-height:1.5;color:#111827">${sub(currentBody, previewRow)}</body></html>`}
+                    srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;padding:20px 24px;margin:0;font-size:14px;line-height:1.7;color:#111827;background:#ffffff">${sub(currentBody, previewRow)}</body></html>`}
                     style={{ width: "100%", height: "100%", border: "none" }}
                     title="rendered-preview"
                   />
@@ -1750,7 +1793,7 @@ export default function SharePage() {
       {/* Top Navigation Bar */}
       <header style={{ padding: "14px 28px", borderBottom: `2px solid ${T.border}`, background: T.surface, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: "-0.02em" }}>Share for Care</span>
+          <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: "-0.02em" }}>Tech Team ki Gareemat</span>
           <span style={{ height: 16, width: 1.5, background: T.borderHi }} />
           <span style={{ fontSize: 12, fontWeight: 700, color: T.textSec, letterSpacing: "0.04em" }}>CENTRE FOR CAREER DEVELOPMENT • IIT GUWAHATI</span>
         </div>

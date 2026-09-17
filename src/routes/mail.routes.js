@@ -11,8 +11,8 @@ const __dirname_  = dirname(fileURLToPath(import.meta.url));
 // Logo path — works in both dev (client/src/assets) and production (src/assets copied by Dockerfile)
 const LOGO_PATH = (() => {
   const candidates = [
-    join(__dirname_, "../assets/iitg_logo.png"),                       // production
-    join(__dirname_, "../../client/src/assets/iitg_logo.png"),         // dev
+    join(__dirname_, "../assets/iitg_mail_image.png"),
+    join(__dirname_, "../../client/src/assets/iitg_mail_image.png"),
   ];
   return candidates.find(p => existsSync(p)) || null;
 })();
@@ -64,19 +64,18 @@ function getPortalUrl(fromEmail) {
 function buildFooterHtml(fromEmail) {
   const portalUrl = getPortalUrl(fromEmail);
   const logoTag = LOGO_PATH
-    ? `<img src="cid:iitg_logo" width="56" height="56" alt="IIT Guwahati" style="display:block;">`
+    ? `<img src="cid:iitg_mail_image" width="72" height="72" alt="IIT Guwahati" style="display:block;">`
     : "";
   return `
-<br>
-<hr style="border:none;border-top:1px solid #cccccc;margin:24px 0 14px 0;">
-<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#333333;line-height:1.7;">
+<hr style="border:none;border-top:1px solid #cccccc;margin:10px 0 12px 0;">
+<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:13.5px;color:#222222;line-height:1.8;">
   <tr>
-    ${LOGO_PATH ? `<td style="padding-right:14px;vertical-align:middle;">${logoTag}</td>` : ""}
+    ${LOGO_PATH ? `<td style="padding-right:16px;vertical-align:middle;">${logoTag}</td>` : ""}
     <td style="vertical-align:middle;">
-      Visit us at <a href="https://www.iitg.ac.in/ccd" style="color:#6b21a8;text-decoration:none;">www.iitg.ac.in/ccd</a><br>
-      <a href="https://www.linkedin.com/school/iit-guwahati/" style="color:#6b21a8;text-decoration:none;">LinkedIn</a>
+      Visit us at <a href="https://www.iitg.ac.in/ccd" style="color:#1a56db;text-decoration:none;">www.iitg.ac.in/ccd</a><br>
+      <a href="https://www.linkedin.com/school/iit-guwahati/" style="color:#1a56db;text-decoration:none;">LinkedIn</a>
       &nbsp;|&nbsp;
-      <a href="${portalUrl}" style="color:#6b21a8;text-decoration:none;">Portal</a><br>
+      <a href="${portalUrl}" style="color:#1a56db;text-decoration:none;">Portal</a><br>
       <strong>Centre for Career Development</strong><br>
       IIT Guwahati
     </td>
@@ -87,7 +86,7 @@ function buildFooterHtml(fromEmail) {
 // Nodemailer attachment for the logo (if available)
 function logoAttachment() {
   if (!LOGO_PATH) return [];
-  return [{ filename: "iitg_logo.png", path: LOGO_PATH, cid: "iitg_logo" }];
+  return [{ filename: "iitg_mail_image.png", path: LOGO_PATH, cid: "iitg_mail_image" }];
 }
 
 // POST /mail/send
