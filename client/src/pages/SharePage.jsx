@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import * as XLSX from "xlsx";
 import { Toaster, toast } from "react-hot-toast";
-import { EditorState, convertToRaw, convertFromRaw } from "draft-js";
+import { EditorState, convertToRaw, convertFromRaw, ContentState, AtomicBlockUtils, Modifier } from "draft-js";
 import { Editor } from "react-draft-wysiwyg";
 import draftToHtml from "draftjs-to-html";
+import htmlToDraft from "html-to-draftjs";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
 /* ─── Theme ──────────────────────────────────────────────────────────────── */
@@ -397,10 +398,68 @@ function MailTab() {
   const [renameName, setRenameName] = useState("");
 
   /* helpers */
+
+  // Custom entity → HTML: renders HR entity as <hr> in outgoing email
+  const customEntityTransform = (entity) => {
+    if (entity.type === "HR") return '<hr style="border:none;border-top:1px solid #cccccc;margin:12px 0;">';
+  };
+
   const getBody = () => {
     const raw = convertToRaw(editorState.getCurrentContent());
-    return raw.blocks.some((b) => b.text.trim()) ? draftToHtml(raw) : "";
+    const hasContent = raw.blocks.some((b) => b.text.trim()) ||
+      raw.blocks.some((b) => b.type === "atomic");
+    return hasContent ? draftToHtml(raw, {}, false, customEntityTransform) : "";
   };
+
+  // Preserve bold / italic / underline / HR when pasting HTML from external sources
+  const handlePastedText = (text, html) => {
+    if (html) {
+      const { contentBlocks, entityMap } = htmlToDraft(html);
+      if (contentBlocks && contentBlocks.length) {
+        const pasted = ContentState.createFromBlockArray(contentBlocks, entityMap);
+        const newContent = Modifier.replaceWithFragment(
+          editorState.getCurrentContent(),
+          editorState.getSelection(),
+          pasted.getBlockMap()
+        );
+        setEditorState(EditorState.push(editorState, newContent, "insert-fragment"));
+        return true;
+      }
+    }
+    return false;
+  };
+
+  // Insert a horizontal rule (HR) as an atomic entity
+  const insertHr = () => {
+    const cs = editorState.getCurrentContent().createEntity("HR", "IMMUTABLE", {});
+    const key = cs.getLastCreatedEntityKey();
+    const withEntity = EditorState.set(editorState, { currentContent: cs });
+    setEditorState(AtomicBlockUtils.insertAtomicBlock(withEntity, key, " "));
+  };
+
+  // Block renderer: show HR entities as an actual <hr> line inside the editor
+  const blockRendererFn = (block) => {
+    if (block.getType() === "atomic") {
+      const cs = editorState.getCurrentContent();
+      const key = block.getEntityAt(0);
+      if (key && cs.getEntity(key).getType() === "HR") {
+        return {
+          component: () => <hr style={{ border: "none", borderTop: `1px solid ${T.border}`, margin: "6px 0", display: "block" }} />,
+          editable: false,
+        };
+      }
+    }
+    return null;
+  };
+
+  // Custom toolbar button to insert HR
+  const HrButton = ({ onChange: _onChange, editorState: _es }) => (
+    <div onClick={insertHr} title="Insert horizontal line"
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 22, cursor: "pointer", fontSize: 13, color: T.muted, border: `1px solid ${T.border}`, borderRadius: 2, background: T.elevated, marginLeft: 2, letterSpacing: 0 }}>
+      —
+    </div>
+  );
+
   const sub = (tmpl, row) => tmpl.replace(/\{\{([\w.]+)\}\}/g, (_, k) => String(row[k] ?? row[k.toLowerCase()] ?? row[k.toUpperCase()] ?? ""));
 
   /* draft CRUD */
@@ -671,6 +730,9 @@ function MailTab() {
                   editorState={editorState} onEditorStateChange={setEditorState}
                   wrapperStyle={{ margin: 0 }} toolbarStyle={{ margin: 0 }} editorStyle={{ lineHeight: 1.6 }}
                   placeholder="Dear {{name}}, Greetings from CCD, IIT Guwahati…"
+                  handlePastedText={handlePastedText}
+                  blockRendererFn={blockRendererFn}
+                  toolbarCustomButtons={[<HrButton key="hr" />]}
                   toolbar={{
                     options: ["inline", "blockType", "fontSize", "list", "textAlign", "colorPicker", "link", "history"],
                     inline: { options: ["bold", "italic", "underline", "strikethrough"] },
