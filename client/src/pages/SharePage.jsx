@@ -7,22 +7,30 @@ import draftToHtml from "draftjs-to-html";
 import htmlToDraft from "html-to-draftjs";
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 
-/* ─── Theme ──────────────────────────────────────────────────────────────── */
+/* ─── Robust High-Contrast Theme ────────────────────────────────────────── */
 const T = {
-  bg:       "#0a0a0a",
-  surface:  "#111111",
-  elevated: "#1a1a1a",
-  border:   "#222222",
-  borderHi: "#333333",
-  text:     "#e8e8e8",
-  muted:    "#555555",
-  accent:   "#4f7cf7",
-  success:  "#22c55e",
+  bg:       "#090a0d",
+  surface:  "#111318",
+  elevated: "#181b22",
+  sunken:   "#0d0e12",
+  border:   "#272b35",
+  borderHi: "#3d4452",
+  text:     "#f4f5f7",
+  textSec:  "#9da4b2",
+  muted:    "#656e7d",
+  primary:  "#ffffff",
+  onPrimary:"#000000",
+  accent:   "#3b82f6",
+  success:  "#10b981",
+  successBg:"#064e3b33",
   danger:   "#ef4444",
+  dangerBg: "#450a0a44",
   warn:     "#f59e0b",
+  warnBg:   "#451a0344",
 };
 
-const FONT = "'Roboto', system-ui, sans-serif";
+const FONT = "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif";
+const MONO = "'JetBrains Mono', 'Fira Code', monospace";
 
 const API =
   process.env.NODE_ENV === "development"
@@ -57,84 +65,164 @@ function fmtSize(b) {
 }
 function fmtExpiry(expiresAt) {
   const diff = new Date(expiresAt) - Date.now();
-  if (diff <= 0) return "Expired";
+  if (diff <= 0) return "EXPIRED";
   const m = Math.floor(diff / 60000);
-  return m > 0 ? `${m}m` : "<1m";
+  return m > 0 ? `${m}m left` : "<1m left";
 }
 function fmtDate(iso) {
-  return new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+  return new Date(iso).toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
 }
 
-/* ─── Base styles ────────────────────────────────────────────────────────── */
-const inp = {
-  display: "block", width: "100%", padding: "7px 10px",
-  background: T.elevated, color: T.text, border: `1px solid ${T.border}`,
-  borderRadius: 4, fontSize: 13, fontFamily: FONT, outline: "none",
-  boxSizing: "border-box",
-};
-
-function Btn({ children, onClick, disabled, danger, ghost, small, style = {} }) {
-  const base = {
-    padding: small ? "4px 10px" : "7px 14px",
-    fontSize: small ? 11 : 12,
-    fontWeight: 600, fontFamily: FONT,
-    border: `1px solid ${T.border}`,
-    borderRadius: 4, cursor: disabled ? "not-allowed" : "pointer",
-    whiteSpace: "nowrap", transition: "background .1s, border-color .1s",
-    background: danger ? "#2a0a0a" : ghost ? "transparent" : T.elevated,
-    color: disabled ? T.muted : danger ? T.danger : ghost ? T.muted : T.text,
-    opacity: disabled ? 0.5 : 1,
-    ...style,
-  };
-  return <button onClick={disabled ? undefined : onClick} style={base}>{children}</button>;
-}
-
-function Label({ children }) {
-  return <div style={{ fontSize: 10, fontWeight: 600, color: T.muted, marginBottom: 4, letterSpacing: "0.06em", textTransform: "uppercase" }}>{children}</div>;
-}
-
-/* ─── Font loader ────────────────────────────────────────────────────────── */
-function useMontserrat() {
+/* ─── Typography & Font Loader ───────────────────────────────────────────── */
+function useDesignFont() {
   useEffect(() => {
-    if (document.getElementById("mf")) return;
+    if (document.getElementById("pjs-font")) return;
     const l = document.createElement("link");
-    l.id = "mf"; l.rel = "stylesheet";
-    l.href = "https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap";
+    l.id = "pjs-font";
+    l.rel = "stylesheet";
+    l.href = "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap";
     document.head.appendChild(l);
   }, []);
 }
 
+/* ─── Base Input & Button Components ─────────────────────────────────────── */
+const inpStyle = {
+  display: "block",
+  width: "100%",
+  padding: "9px 12px",
+  background: T.sunken,
+  color: T.text,
+  border: `1.5px solid ${T.border}`,
+  borderRadius: 5,
+  fontSize: 13,
+  fontWeight: 600,
+  fontFamily: FONT,
+  outline: "none",
+  boxSizing: "border-box",
+  transition: "border-color 0.15s ease",
+};
+
+function Btn({ children, onClick, disabled, variant = "default", size = "md", style = {}, title }) {
+  let bg = T.elevated;
+  let color = T.text;
+  let border = `1.5px solid ${T.border}`;
+
+  if (variant === "primary") {
+    bg = T.primary;
+    color = T.onPrimary;
+    border = `1.5px solid ${T.primary}`;
+  } else if (variant === "danger") {
+    bg = T.dangerBg;
+    color = "#fca5a5";
+    border = `1.5px solid ${T.danger}66`;
+  } else if (variant === "ghost") {
+    bg = "transparent";
+    color = T.textSec;
+    border = `1.5px solid ${T.border}`;
+  }
+
+  const base = {
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    padding: size === "sm" ? "5px 12px" : size === "lg" ? "11px 22px" : "8px 16px",
+    fontSize: size === "sm" ? 12 : size === "lg" ? 14 : 13,
+    fontWeight: 700,
+    fontFamily: FONT,
+    border,
+    borderRadius: 5,
+    cursor: disabled ? "not-allowed" : "pointer",
+    whiteSpace: "nowrap",
+    background: bg,
+    color: disabled ? T.muted : color,
+    opacity: disabled ? 0.45 : 1,
+    letterSpacing: "-0.01em",
+    userSelect: "none",
+    ...style,
+  };
+  return <button title={title} onClick={disabled ? undefined : onClick} style={base}>{children}</button>;
+}
+
+function SectionHeader({ title, subtitle, action }) {
+  return (
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 16, borderBottom: `2px solid ${T.border}`, paddingBottom: 12 }}>
+      <div>
+        <h2 style={{ margin: 0, fontSize: 17, fontWeight: 800, color: T.text, letterSpacing: "-0.02em" }}>{title}</h2>
+        {subtitle && <p style={{ margin: "4px 0 0", fontSize: 13, fontWeight: 500, color: T.textSec }}>{subtitle}</p>}
+      </div>
+      {action && <div>{action}</div>}
+    </div>
+  );
+}
+
+function FieldLabel({ children, required }) {
+  return (
+    <label style={{ display: "block", fontSize: 12, fontWeight: 700, color: T.textSec, marginBottom: 6, letterSpacing: "0.02em" }}>
+      {children} {required && <span style={{ color: T.danger }}>*</span>}
+    </label>
+  );
+}
+
 /* ─── Password Gate ──────────────────────────────────────────────────────── */
 function PasswordGate({ onAuth }) {
-  useMontserrat();
+  useDesignFont();
   const [pwd, setPwd] = useState("");
   const [loading, setLoading] = useState(false);
 
   const submit = async (e) => {
-    e.preventDefault(); setLoading(true);
+    e.preventDefault();
+    setLoading(true);
     try {
       const r = await fetch(`${API}/share/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password: pwd }),
       });
-      if (r.ok) { const { token } = await r.json(); sessionStorage.setItem(TOKEN_KEY, token); onAuth(token); }
-      else toast.error("Incorrect password");
-    } catch { toast.error("Connection failed"); }
+      if (r.ok) {
+        const { token } = await r.json();
+        sessionStorage.setItem(TOKEN_KEY, token);
+        onAuth(token);
+      } else {
+        toast.error("Invalid credentials");
+      }
+    } catch {
+      toast.error("Server communication failed");
+    }
     setLoading(false);
   };
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: T.bg, fontFamily: FONT }}>
-      <div style={{ width: 320, padding: "36px 28px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6 }}>
-        <div style={{ fontSize: 18, fontWeight: 700, color: T.text, marginBottom: 4 }}>Share for Care</div>
-        <div style={{ fontSize: 12, color: T.muted, marginBottom: 28 }}>CCD — IIT Guwahati</div>
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <input type="password" placeholder="Password" value={pwd} onChange={(e) => setPwd(e.target.value)} required autoFocus style={{ ...inp }} />
-          <button type="submit" disabled={loading}
-            style={{ padding: "9px 0", background: T.accent, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: loading ? "not-allowed" : "pointer", fontFamily: FONT, opacity: loading ? 0.7 : 1 }}>
-            {loading ? "…" : "Enter"}
-          </button>
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: T.bg, fontFamily: FONT, padding: 20 }}>
+      <div style={{ width: "100%", maxWidth: 380, padding: 36, background: T.surface, border: `2px solid ${T.border}`, borderRadius: 8, boxShadow: "0 10px 30px rgba(0,0,0,0.5)" }}>
+        <div style={{ display: "inline-block", background: T.elevated, border: `1px solid ${T.borderHi}`, padding: "4px 8px", borderRadius: 4, fontSize: 11, fontWeight: 700, color: T.textSec, marginBottom: 16, letterSpacing: "0.05em" }}>
+          IIT GUWAHATI • CCD
+        </div>
+        <h1 style={{ fontSize: 22, fontWeight: 800, color: T.text, margin: "0 0 6px", letterSpacing: "-0.02em" }}>Share for Care</h1>
+        <p style={{ fontSize: 13, fontWeight: 500, color: T.textSec, margin: "0 0 24px" }}>Internal career development and document operations</p>
+        
+        <form onSubmit={submit} style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+          <div>
+            <FieldLabel required>Portal Password</FieldLabel>
+            <input
+              type="password"
+              placeholder="Enter authorization key"
+              value={pwd}
+              onChange={(e) => setPwd(e.target.value)}
+              required
+              autoFocus
+              style={{ ...inpStyle, fontSize: 14, padding: "11px 14px" }}
+            />
+          </div>
+          <Btn variant="primary" size="lg" disabled={loading} style={{ width: "100%", marginTop: 4 }}>
+            {loading ? "Authenticating…" : "Unlock System"}
+          </Btn>
         </form>
       </div>
     </div>
@@ -149,71 +237,206 @@ function UploadToolsTab() {
 
   const upload = async (file, permanent) => {
     if (!file) return;
-    const fd = new FormData(); fd.append("file", file); fd.append("isPermanent", String(permanent));
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("isPermanent", String(permanent));
     const r = await sFetch(`${API}/share/upload`, { method: "POST", body: fd });
-    if (r.ok) toast.success(`Uploaded${permanent ? " permanently" : " (15 min)"}`);
+    if (r.ok) toast.success(`Uploaded successfully ${permanent ? "[Permanent]" : "[Temporary 15m]"}`);
     else toast.error("Upload failed");
   };
 
   const tool = async (endpoint, fd, msg) => {
     const r = await sFetch(`${API}/share/${endpoint}`, { method: "POST", body: fd });
-    if (r.ok) { const d = await r.json(); toast.success(msg(d)); }
-    else { const e = await r.json().catch(() => ({})); toast.error(e.message || "Failed"); }
+    if (r.ok) {
+      const d = await r.json();
+      toast.success(msg(d));
+    } else {
+      const e = await r.json().catch(() => ({}));
+      toast.error(e.message || "Operation failed");
+    }
   };
 
-  const fileInp = (accept, multiple, onChange) => (
-    <input type="file" accept={accept} multiple={multiple} disabled={busy} onChange={onChange}
-      style={{ ...inp, cursor: "pointer", padding: "6px 8px", fontSize: 11, color: T.muted }} />
-  );
-
-  const row = (label, desc, children) => (
-    <div key={label} style={{ padding: "16px 18px", borderBottom: `1px solid ${T.border}` }}>
-      <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-        <span style={{ fontWeight: 600, fontSize: 13, color: T.text }}>{label}</span>
-        <span style={{ fontSize: 11, color: T.muted }}>{desc}</span>
-      </div>
-      {children}
-    </div>
-  );
+  const tools = [
+    {
+      title: "Temporary Upload",
+      badge: "AUTO-DELETE 15 MIN",
+      desc: "Fast drop for one-off student sharing. Automatically purged from storage.",
+      accept: "*",
+      multiple: false,
+      onSelect: (e) => { const f = e.target.files[0]; if (f) run(() => upload(f, false)); e.target.value = ""; }
+    },
+    {
+      title: "Permanent Upload",
+      badge: "PERSISTENT",
+      desc: "Archived files, forms, templates, or notices that remain until explicitly deleted.",
+      accept: "*",
+      multiple: false,
+      onSelect: (e) => { const f = e.target.files[0]; if (f) run(() => upload(f, true)); e.target.value = ""; }
+    },
+    {
+      title: "Compress Image",
+      badge: "JPG / PNG / WEBP",
+      desc: "Minimizes student photo or banner payloads without perceptible quality loss.",
+      accept: "image/*",
+      multiple: false,
+      onSelect: (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const fd = new FormData();
+        fd.append("image", f);
+        fd.append("quality", "80");
+        run(() => tool("tools/compress-image", fd, (d) => `Saved ${d.reduction} storage size`));
+        e.target.value = "";
+      }
+    },
+    {
+      title: "Merge PDF Documents",
+      badge: "MULTI-FILE",
+      desc: "Combine 2 or more PDF scorecards, grade sheets, or registration documents into 1 file.",
+      accept: "application/pdf",
+      multiple: true,
+      onSelect: (e) => {
+        const fs = Array.from(e.target.files);
+        if (fs.length < 2) { toast.error("Please pick at least 2 PDF files"); return; }
+        const fd = new FormData();
+        fs.forEach((f) => fd.append("pdfs", f));
+        run(() => tool("tools/merge-pdfs", fd, (d) => `Merged ${d.pageCount} pages total`));
+        e.target.value = "";
+      }
+    },
+    {
+      title: "Bundle to ZIP Archive",
+      badge: "ARCHIVER",
+      desc: "Compress multiple arbitrary student attachments into a clean downloadable ZIP package.",
+      accept: "*",
+      multiple: true,
+      onSelect: (e) => {
+        const fs = Array.from(e.target.files);
+        if (!fs.length) return;
+        const fd = new FormData();
+        fs.forEach((f) => fd.append("files", f));
+        run(() => tool("tools/compress-files", fd, (d) => `Archive built with ${d.fileCount} items`));
+        e.target.value = "";
+      }
+    },
+    {
+      title: "CV Bulk Downloader",
+      badge: "EXCEL PIPELINE",
+      desc: "Parse resume drive links from an official placement sheet and pack CVs into a single ZIP.",
+      accept: ".xlsx,.xls,.csv",
+      multiple: false,
+      onSelect: (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const fd = new FormData();
+        fd.append("excel", f);
+        run(() => tool("tools/cv-downloader", fd, (d) => `${d.success} CVs extracted successfully`));
+        e.target.value = "";
+      }
+    },
+    {
+      title: "Spreadsheet Format Converter",
+      badge: "CSV ⇄ XLSX",
+      desc: "Instantly transcode candidate spreadsheets between raw CSV format and structured Excel books.",
+      accept: ".csv,.xlsx,.xls",
+      multiple: false,
+      onSelect: (e) => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const fd = new FormData();
+        fd.append("file", f);
+        run(() => tool("tools/convert-spreadsheet", fd, () => "Spreadsheet transformed successfully"));
+        e.target.value = "";
+      }
+    }
+  ];
 
   return (
     <div>
-      <div style={{ fontSize: 11, color: T.muted, marginBottom: 16 }}>Upload files or run tools on them</div>
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
-        {row("Temporary upload", "auto-deleted after 15 min",
-          fileInp("*", false, (e) => { run(() => upload(e.target.files[0], false)); e.target.value = ""; })
-        )}
-        {row("Permanent upload", "stays until deleted",
-          fileInp("*", false, (e) => { run(() => upload(e.target.files[0], true)); e.target.value = ""; })
-        )}
-        {row("Compress image", "JPEG / PNG / WebP",
-          fileInp("image/*", false, (e) => { const f = e.target.files[0]; if (!f) return; const fd = new FormData(); fd.append("image", f); fd.append("quality", "80"); run(() => tool("tools/compress-image", fd, (d) => `Compressed — saved ${d.reduction}`)); e.target.value = ""; })
-        )}
-        {row("Merge PDFs", "select 2+ PDFs",
-          fileInp("application/pdf", true, (e) => { const fs = Array.from(e.target.files); if (fs.length < 2) { toast.error("Need 2+ PDFs"); return; } const fd = new FormData(); fs.forEach((f) => fd.append("pdfs", f)); run(() => tool("tools/merge-pdfs", fd, (d) => `Merged — ${d.pageCount} pages`)); e.target.value = ""; })
-        )}
-        {row("Compress to ZIP", "bundle files",
-          fileInp("*", true, (e) => { const fs = Array.from(e.target.files); if (!fs.length) return; const fd = new FormData(); fs.forEach((f) => fd.append("files", f)); run(() => tool("tools/compress-files", fd, (d) => `ZIP with ${d.fileCount} files`)); e.target.value = ""; })
-        )}
-        {row("CV bulk downloader", "Excel with CV URLs → ZIP",
-          fileInp(".xlsx,.xls,.csv", false, (e) => { const f = e.target.files[0]; if (!f) return; const fd = new FormData(); fd.append("excel", f); run(() => tool("tools/cv-downloader", fd, (d) => `${d.success} CVs downloaded`)); e.target.value = ""; })
-        )}
-        {row("Convert spreadsheet", "CSV ↔ Excel, auto-detected",
-          fileInp(".csv,.xlsx,.xls", false, (e) => { const f = e.target.files[0]; if (!f) return; const fd = new FormData(); fd.append("file", f); run(() => tool("tools/convert-spreadsheet", fd, () => "Converted")); e.target.value = ""; })
-        )}
-        <div style={{ padding: "16px 18px" }}>
-          <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginBottom: 8 }}>
-            <span style={{ fontWeight: 600, fontSize: 13, color: T.text }}>Export placements</span>
-            <span style={{ fontSize: 11, color: T.muted }}>generates Excel from database</span>
+      <SectionHeader
+        title="Operations & File Tools"
+        subtitle="Batch transformation pipelines and manual file distribution for CCD operations"
+      />
+
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", gap: 14 }}>
+        {tools.map((t) => (
+          <div key={t.title} style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 6, padding: "18px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+            <div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                <span style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: "-0.01em" }}>{t.title}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, fontFamily: MONO, background: T.elevated, border: `1px solid ${T.borderHi}`, color: T.textSec, padding: "2px 6px", borderRadius: 3 }}>{t.badge}</span>
+              </div>
+              <p style={{ fontSize: 13, color: T.textSec, margin: "0 0 16px", lineHeight: 1.45, fontWeight: 500 }}>{t.desc}</p>
+            </div>
+            <div>
+              <label style={{ display: "block" }}>
+                <input
+                  type="file"
+                  accept={t.accept}
+                  multiple={t.multiple}
+                  disabled={busy}
+                  onChange={t.onSelect}
+                  style={{ display: "none" }}
+                />
+                <div style={{
+                  padding: "9px 14px",
+                  background: T.sunken,
+                  border: `1.5px dashed ${T.borderHi}`,
+                  borderRadius: 5,
+                  textAlign: "center",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: T.text,
+                  cursor: busy ? "not-allowed" : "pointer",
+                  transition: "background 0.1s ease",
+                }}>
+                  Select File{t.multiple ? "s" : ""}
+                </div>
+              </label>
+            </div>
           </div>
-          <Btn disabled={busy} onClick={async () => { setBusy(true); try { const r = await sFetch(`${API}/share/tools/export-placements`); if (r.ok) { const d = await r.json(); toast.success(`${d.count} placements exported`); } else toast.error("Export failed"); } finally { setBusy(false); } }}>
-            {busy ? "Generating…" : "Generate"}
+        ))}
+
+        {/* Dedicated DB Export Card */}
+        <div style={{ background: T.surface, border: `1.5px solid ${T.border}`, borderRadius: 6, padding: "18px 20px", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+          <div>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <span style={{ fontSize: 15, fontWeight: 800, color: T.text, letterSpacing: "-0.01em" }}>Export Placements DB</span>
+              <span style={{ fontSize: 10, fontWeight: 700, fontFamily: MONO, background: T.elevated, border: `1px solid ${T.borderHi}`, color: T.textSec, padding: "2px 6px", borderRadius: 3 }}>RECORDS</span>
+            </div>
+            <p style={{ fontSize: 13, color: T.textSec, margin: "0 0 16px", lineHeight: 1.45, fontWeight: 500 }}>
+              Query the current recruitment database and dump complete placement tallies directly to an Excel sheet.
+            </p>
+          </div>
+          <Btn
+            variant="default"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await sFetch(`${API}/share/tools/export-placements`);
+                if (r.ok) {
+                  const d = await r.json();
+                  toast.success(`Export ready: ${d.count} candidates parsed`);
+                } else {
+                  toast.error("Database query failed");
+                }
+              } finally {
+                setBusy(false);
+              }
+            }}
+            style={{ width: "100%", padding: "10px 0" }}
+          >
+            {busy ? "Generating…" : "Execute DB Export"}
           </Btn>
         </div>
       </div>
+
       {busy && (
-        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, padding: "20px 36px", borderRadius: 6, fontSize: 14, fontWeight: 600, color: T.text, fontFamily: FONT }}>Processing…</div>
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999 }}>
+          <div style={{ background: T.surface, border: `2px solid ${T.borderHi}`, padding: "24px 36px", borderRadius: 8, fontSize: 15, fontWeight: 800, color: T.text, fontFamily: FONT, letterSpacing: "-0.01em" }}>
+            PROCESSING PIPELINE…
+          </div>
         </div>
       )}
     </div>
@@ -225,24 +448,34 @@ function ExcelCreatorTab() {
   const [data, setData] = useState([["", "", "", ""], ["", "", "", ""], ["", "", "", ""]]);
   const [busy, setBusy] = useState(false);
 
-  const setCell = (r, c, v) => { const d = data.map((row) => [...row]); d[r][c] = v; setData(d); };
+  const setCell = (r, c, v) => {
+    const d = data.map((row) => [...row]);
+    d[r][c] = v;
+    setData(d);
+  };
 
   const paste = async () => {
     try {
       const text = await navigator.clipboard.readText();
       const rows = text.trim().split("\n").map((r) => r.split("\t"));
       const maxC = Math.max(...rows.map((r) => r.length));
-      setData(rows.map((r) => { const row = [...r]; while (row.length < maxC) row.push(""); return row; }));
-      toast.success("Pasted");
-    } catch { toast.error("Clipboard denied"); }
+      setData(rows.map((r) => {
+        const row = [...r];
+        while (row.length < maxC) row.push("");
+        return row;
+      }));
+      toast.success("Grid updated from clipboard");
+    } catch {
+      toast.error("Clipboard access refused");
+    }
   };
 
   const download = () => {
     const ws = XLSX.utils.aoa_to_sheet(data);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
-    XLSX.writeFile(wb, "created.xlsx");
-    toast.success("Downloaded");
+    XLSX.writeFile(wb, "table_export.xlsx");
+    toast.success("Spreadsheet written to disk");
   };
 
   const uploadToFiles = async () => {
@@ -253,41 +486,82 @@ function ExcelCreatorTab() {
       XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
       const buf = XLSX.write(wb, { bookType: "xlsx", type: "array" });
       const blob = new Blob([buf], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
-      const fd = new FormData(); fd.append("file", blob, "created.xlsx"); fd.append("isPermanent", "false");
+      const fd = new FormData();
+      fd.append("file", blob, "created_table.xlsx");
+      fd.append("isPermanent", "false");
       const r = await sFetch(`${API}/share/upload`, { method: "POST", body: fd });
-      if (r.ok) toast.success("Uploaded"); else toast.error("Upload failed");
-    } catch { toast.error("Failed"); }
+      if (r.ok) toast.success("Pushed to server (15m temp)");
+      else toast.error("Upload failure");
+    } catch {
+      toast.error("Process aborted");
+    }
     setBusy(false);
   };
 
   return (
     <div>
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 14 }}>
-        <Btn onClick={() => setData([...data, Array(data[0]?.length || 4).fill("")])} small>+ Row</Btn>
-        <Btn onClick={() => setData(data.map((r) => [...r, ""]))} small>+ Column</Btn>
-        <Btn onClick={paste} small>Paste</Btn>
-        <Btn onClick={uploadToFiles} disabled={busy} small>Upload</Btn>
-        <Btn onClick={download} small>Download</Btn>
-        <Btn onClick={() => setData([["","","",""],["","","",""],["","","",""]])} danger small>Clear</Btn>
-      </div>
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflowX: "auto" }}>
-        <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 400 }}>
-          <tbody>
-            {data.map((row, ri) => (
-              <tr key={ri}>
-                <td style={{ padding: "0 8px", borderRight: `1px solid ${T.border}`, fontSize: 10, color: T.muted, textAlign: "center", background: T.surface, minWidth: 28, userSelect: "none" }}>{ri + 1}</td>
-                {row.map((cell, ci) => (
-                  <td key={ci} style={{ padding: 0, border: `1px solid ${T.border}` }}>
-                    <input value={cell} onChange={(e) => setCell(ri, ci, e.target.value)}
-                      style={{ width: "100%", minWidth: 90, padding: "6px 8px", border: "none", fontSize: 12, fontFamily: FONT, outline: "none", background: "transparent", color: T.text, boxSizing: "border-box" }}
-                      onFocus={(e) => (e.target.style.background = T.elevated)}
-                      onBlur={(e) => (e.target.style.background = "transparent")} />
-                  </td>
+      <SectionHeader
+        title="Spreadsheet Scratchpad"
+        subtitle="Construct or paste quick tabular data arrays and transcode immediately to XLSX format"
+        action={
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn size="sm" onClick={() => setData([...data, Array(data[0]?.length || 4).fill("")])}>+ Row</Btn>
+            <Btn size="sm" onClick={() => setData(data.map((r) => [...r, ""]))}>+ Column</Btn>
+            <Btn size="sm" onClick={paste}>Paste Clipboard</Btn>
+            <Btn size="sm" onClick={uploadToFiles} disabled={busy}>Upload to Files</Btn>
+            <Btn size="sm" variant="primary" onClick={download}>Download XLSX</Btn>
+            <Btn size="sm" variant="danger" onClick={() => setData([["","","",""],["","","",""],["","","",""]])}>Reset</Btn>
+          </div>
+        }
+      />
+
+      <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ borderCollapse: "collapse", width: "100%", minWidth: 600 }}>
+            <thead>
+              <tr style={{ background: T.sunken, borderBottom: `2px solid ${T.border}` }}>
+                <th style={{ width: 44, padding: "8px 0", textAlign: "center", fontSize: 11, fontWeight: 700, color: T.muted, fontFamily: MONO, borderRight: `1.5px solid ${T.border}` }}>#</th>
+                {data[0]?.map((_, ci) => (
+                  <th key={ci} style={{ padding: "8px 12px", textAlign: "left", fontSize: 11, fontWeight: 700, color: T.textSec, fontFamily: MONO, borderRight: `1px solid ${T.border}` }}>
+                    COL {String.fromCharCode(65 + ci)}
+                  </th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: `1px solid ${T.border}` }}>
+                  <td style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: T.muted, background: T.sunken, borderRight: `1.5px solid ${T.border}`, fontFamily: MONO, userSelect: "none" }}>
+                    {ri + 1}
+                  </td>
+                  {row.map((cell, ci) => (
+                    <td key={ci} style={{ padding: 0, borderRight: `1px solid ${T.border}` }}>
+                      <input
+                        value={cell}
+                        onChange={(e) => setCell(ri, ci, e.target.value)}
+                        style={{
+                          width: "100%",
+                          minWidth: 120,
+                          padding: "8px 10px",
+                          border: "none",
+                          fontSize: 13,
+                          fontWeight: 500,
+                          fontFamily: FONT,
+                          outline: "none",
+                          background: "transparent",
+                          color: T.text,
+                          boxSizing: "border-box",
+                        }}
+                        onFocus={(e) => (e.target.style.background = T.elevated)}
+                        onBlur={(e) => (e.target.style.background = "transparent")}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -304,7 +578,10 @@ function FilesTab() {
     const p = new URLSearchParams();
     if (search) p.append("search", search);
     if (filter !== "all") p.append("permanent", filter === "permanent");
-    try { const r = await sFetch(`${API}/share/files?${p}`); if (r.ok) setFiles(await r.json()); } catch {}
+    try {
+      const r = await sFetch(`${API}/share/files?${p}`);
+      if (r.ok) setFiles(await r.json());
+    } catch {}
   }, [search, filter]);
 
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -314,46 +591,127 @@ function FilesTab() {
     setBusy(true);
     try {
       const r = await sFetch(`${API}/share/file/${shareUrl}`);
-      if (r.ok) { const blob = await r.blob(); const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name; a.click(); fetch_(); }
-    } catch { toast.error("Download failed"); }
+      if (r.ok) {
+        const blob = await r.blob();
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        a.click();
+        fetch_();
+      }
+    } catch {
+      toast.error("Download error");
+    }
     setBusy(false);
   };
 
   const del = async (id) => {
-    if (!window.confirm("Delete?")) return;
+    if (!window.confirm("Permanently wipe this file from storage?")) return;
     const r = await sFetch(`${API}/share/files/${id}`, { method: "DELETE" });
-    if (r.ok) { toast.success("Deleted"); fetch_(); } else toast.error("Failed");
+    if (r.ok) {
+      toast.success("File deleted");
+      fetch_();
+    } else {
+      toast.error("Failed to delete");
+    }
   };
 
   return (
     <div>
-      <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-        <input type="text" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inp, flex: 1, minWidth: 180 }} />
-        <select value={filter} onChange={(e) => setFilter(e.target.value)} style={{ ...inp, width: "auto", cursor: "pointer" }}>
-          <option value="all">All</option>
-          <option value="permanent">Permanent</option>
-          <option value="temporary">Temporary</option>
-        </select>
-        <Btn onClick={fetch_} small>Refresh</Btn>
-      </div>
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
-        {!files.length
-          ? <div style={{ padding: "48px 20px", textAlign: "center", color: T.muted, fontSize: 13 }}>No files</div>
-          : files.map((f, idx) => (
-            <div key={f._id} style={{ padding: "12px 16px", borderBottom: idx < files.length - 1 ? `1px solid ${T.border}` : "none", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 600, fontSize: 13, color: T.text, marginBottom: 3, wordBreak: "break-word" }}>{f.originalName}</div>
-                <div style={{ fontSize: 11, color: T.muted }}>
-                  {fmtSize(f.fileSize)} · {f.downloadCount} downloads · {f.isPermanent ? <span style={{ color: T.success }}>permanent</span> : <span>expires {fmtExpiry(f.expiresAt)}</span>}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-                <Btn small onClick={() => navigator.clipboard.writeText(`${window.location.origin}/dday/api/share/file/${f.shareUrl}`).then(() => toast.success("Copied"), () => toast.error("Failed"))}>Copy link</Btn>
-                <Btn small onClick={() => download(f.shareUrl, f.originalName)} disabled={busy}>Download</Btn>
-                <Btn small danger onClick={() => del(f._id)}>Delete</Btn>
-              </div>
-            </div>
-          ))}
+      <SectionHeader
+        title="File Registry"
+        subtitle="Manage public distribution links, expiration monitors, and storage allocation"
+        action={
+          <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+            <input
+              type="text"
+              placeholder="Search filename…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ ...inpStyle, width: 220 }}
+            />
+            <select
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              style={{ ...inpStyle, width: 140, cursor: "pointer" }}
+            >
+              <option value="all">All Storage</option>
+              <option value="permanent">Permanent Only</option>
+              <option value="temporary">Temporary (15m)</option>
+            </select>
+            <Btn onClick={fetch_} size="md">Sync</Btn>
+          </div>
+        }
+      />
+
+      <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+        {!files.length ? (
+          <div style={{ padding: "64px 20px", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 16, fontWeight: 700, color: T.textSec }}>No storage artifacts found</p>
+            <p style={{ margin: "6px 0 0", fontSize: 13, color: T.muted }}>Upload a file or run a conversion tool to generate download handles</p>
+          </div>
+        ) : (
+          <table style={{ borderCollapse: "collapse", width: "100%" }}>
+            <thead>
+              <tr style={{ background: T.sunken, borderBottom: `2px solid ${T.border}`, textAlign: "left" }}>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec }}>DOCUMENT / PAYLOAD</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 110 }}>SIZE</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 130 }}>LIFECYCLE</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 90 }}>D/L</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, textAlign: "right" }}>ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {files.map((f, idx) => (
+                <tr key={f._id} style={{ borderBottom: idx < files.length - 1 ? `1px solid ${T.border}` : "none" }}>
+                  <td style={{ padding: "12px 16px" }}>
+                    <div style={{ fontWeight: 700, fontSize: 14, color: T.text, wordBreak: "break-all" }}>{f.originalName}</div>
+                    <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 3 }}>ID: {f._id}</div>
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: 12, fontFamily: MONO, fontWeight: 600, color: T.textSec }}>
+                    {fmtSize(f.fileSize)}
+                  </td>
+                  <td style={{ padding: "12px 16px" }}>
+                    {f.isPermanent ? (
+                      <span style={{ fontSize: 11, fontWeight: 800, color: T.success, background: T.successBg, border: `1px solid ${T.success}44`, padding: "3px 8px", borderRadius: 4 }}>
+                        PERMANENT
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: 11, fontWeight: 800, color: T.warn, background: T.warnBg, border: `1px solid ${T.warn}44`, padding: "3px 8px", borderRadius: 4 }}>
+                        {fmtExpiry(f.expiresAt)}
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ padding: "12px 16px", fontSize: 13, fontFamily: MONO, fontWeight: 700, color: T.text }}>
+                    {f.downloadCount}
+                  </td>
+                  <td style={{ padding: "12px 16px", textAlign: "right" }}>
+                    <div style={{ display: "inline-flex", gap: 6 }}>
+                      <Btn
+                        size="sm"
+                        onClick={() => {
+                          const url = `${window.location.origin}/dday/api/share/file/${f.shareUrl}`;
+                          navigator.clipboard.writeText(url).then(
+                            () => toast.success("URL copied"),
+                            () => toast.error("Copy failed")
+                          );
+                        }}
+                      >
+                        Copy URL
+                      </Btn>
+                      <Btn size="sm" onClick={() => download(f.shareUrl, f.originalName)} disabled={busy}>
+                        Download
+                      </Btn>
+                      <Btn size="sm" variant="danger" onClick={() => del(f._id)}>
+                        Wipe
+                      </Btn>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
@@ -361,7 +719,7 @@ function FilesTab() {
 
 /* ─── Mail Tab ───────────────────────────────────────────────────────────── */
 function MailTab() {
-  /* SMTP */
+  /* SMTP State */
   const [fromEmail, setFromEmail] = useState("");
   const [fromPwd, setFromPwd] = useState("");
   const [showPwd, setShowPwd] = useState(false);
@@ -370,11 +728,11 @@ function MailTab() {
   const [delayMs, setDelayMs] = useState(600);
   const [advOpen, setAdvOpen] = useState(false);
 
-  /* Test email */
+  /* Test Email */
   const [testTo, setTestTo] = useState("");
   const [testBusy, setTestBusy] = useState(false);
 
-  /* Compose */
+  /* Compose Data */
   const [recipients, setRecipients] = useState([]);
   const [columns, setColumns] = useState([]);
   const [subject, setSubject] = useState("");
@@ -382,14 +740,14 @@ function MailTab() {
   const [previewIdx, setPreviewIdx] = useState(0);
   const [rightTab, setRightTab] = useState("preview");
 
-  /* Send */
+  /* Dispatch Execution */
   const [sending, setSending] = useState(false);
   const [jobId, setJobId] = useState(null);
   const [jobStatus, setJobStatus] = useState(null);
   const [summary, setSummary] = useState(null);
   const esSrc = useRef(null);
 
-  /* Drafts */
+  /* Saved Drafts */
   const [drafts, setDrafts] = useState(() => loadMailDrafts());
   const [draftSearch, setDraftSearch] = useState("");
   const [showSavePanel, setShowSavePanel] = useState(false);
@@ -397,21 +755,16 @@ function MailTab() {
   const [editingId, setEditingId] = useState(null);
   const [renameName, setRenameName] = useState("");
 
-  /* helpers */
-
-  // Custom entity → HTML: renders HR entity as <hr> in outgoing email
   const customEntityTransform = (entity) => {
-    if (entity.type === "HR") return '<hr style="border:none;border-top:1px solid #cccccc;margin:12px 0;">';
+    if (entity.type === "HR") return '<hr style="border:none;border-top:1.5px solid #cccccc;margin:16px 0;">';
   };
 
   const getBody = () => {
     const raw = convertToRaw(editorState.getCurrentContent());
-    const hasContent = raw.blocks.some((b) => b.text.trim()) ||
-      raw.blocks.some((b) => b.type === "atomic");
+    const hasContent = raw.blocks.some((b) => b.text.trim()) || raw.blocks.some((b) => b.type === "atomic");
     return hasContent ? draftToHtml(raw, {}, false, customEntityTransform) : "";
   };
 
-  // Preserve bold / italic / underline / HR when pasting HTML from external sources
   const handlePastedText = (text, html) => {
     if (html) {
       const { contentBlocks, entityMap } = htmlToDraft(html);
@@ -429,7 +782,6 @@ function MailTab() {
     return false;
   };
 
-  // Insert a horizontal rule (HR) as an atomic entity
   const insertHr = () => {
     const cs = editorState.getCurrentContent().createEntity("HR", "IMMUTABLE", {});
     const key = cs.getLastCreatedEntityKey();
@@ -437,14 +789,13 @@ function MailTab() {
     setEditorState(AtomicBlockUtils.insertAtomicBlock(withEntity, key, " "));
   };
 
-  // Block renderer: show HR entities as an actual <hr> line inside the editor
   const blockRendererFn = (block) => {
     if (block.getType() === "atomic") {
       const cs = editorState.getCurrentContent();
       const key = block.getEntityAt(0);
       if (key && cs.getEntity(key).getType() === "HR") {
         return {
-          component: () => <hr style={{ border: "none", borderTop: `1px solid ${T.border}`, margin: "6px 0", display: "block" }} />,
+          component: () => <hr style={{ border: "none", borderTop: `2px solid ${T.borderHi}`, margin: "10px 0" }} />,
           editable: false,
         };
       }
@@ -452,79 +803,111 @@ function MailTab() {
     return null;
   };
 
-  // Custom toolbar button to insert HR
-  const HrButton = ({ onChange: _onChange, editorState: _es }) => (
-    <div onClick={insertHr} title="Insert horizontal line"
-      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 30, height: 22, cursor: "pointer", fontSize: 13, color: T.muted, border: `1px solid ${T.border}`, borderRadius: 2, background: T.elevated, marginLeft: 2, letterSpacing: 0 }}>
+  const HrButton = () => (
+    <div
+      onClick={insertHr}
+      title="Insert horizontal line"
+      style={{ display: "flex", alignItems: "center", justifyContent: "center", width: 28, height: 26, cursor: "pointer", fontSize: 14, fontWeight: 800, color: T.text, border: `1.5px solid ${T.border}`, borderRadius: 4, background: T.sunken }}
+    >
       —
     </div>
   );
 
   const sub = (tmpl, row) => tmpl.replace(/\{\{([\w.]+)\}\}/g, (_, k) => String(row[k] ?? row[k.toLowerCase()] ?? row[k.toUpperCase()] ?? ""));
 
-  /* draft CRUD */
+  /* Draft CRUD */
   const saveDraft = () => {
-    if (!draftName.trim()) { toast.error("Enter a name"); return; }
-    const body = getBody();
-    if (!subject && !body) { toast.error("Nothing to save"); return; }
-    const entry = { id: Date.now().toString(), name: draftName.trim(), subject, body, rawContent: convertToRaw(editorState.getCurrentContent()), savedAt: new Date().toISOString() };
+    if (!draftName.trim()) { toast.error("Provide a template identifier"); return; }
+    const bodyContent = getBody();
+    if (!subject && !bodyContent) { toast.error("Cannot save empty message draft"); return; }
+    const entry = {
+      id: Date.now().toString(),
+      name: draftName.trim(),
+      subject,
+      body: bodyContent,
+      rawContent: convertToRaw(editorState.getCurrentContent()),
+      savedAt: new Date().toISOString()
+    };
     const next = [entry, ...drafts];
-    setDrafts(next); persistDrafts(next);
-    setDraftName(""); setShowSavePanel(false);
-    toast.success(`Saved "${entry.name}"`);
+    setDrafts(next);
+    persistDrafts(next);
+    setDraftName("");
+    setShowSavePanel(false);
+    toast.success(`Draft preserved: "${entry.name}"`);
   };
 
   const loadDraft = (draft) => {
     setSubject(draft.subject || "");
     if (draft.rawContent) {
-      try { setEditorState(EditorState.createWithContent(convertFromRaw(draft.rawContent))); }
-      catch { setEditorState(EditorState.createEmpty()); }
+      try {
+        setEditorState(EditorState.createWithContent(convertFromRaw(draft.rawContent)));
+      } catch {
+        setEditorState(EditorState.createEmpty());
+      }
     }
-    toast.success(`Loaded "${draft.name}"`);
+    toast.success(`Restored template: "${draft.name}"`);
   };
 
   const deleteDraft = (id) => {
     const next = drafts.filter((d) => d.id !== id);
-    setDrafts(next); persistDrafts(next); toast.success("Deleted");
+    setDrafts(next);
+    persistDrafts(next);
+    toast.success("Draft eliminated");
   };
 
   const duplicateDraft = (draft) => {
-    const entry = { ...draft, id: Date.now().toString(), name: `Copy of ${draft.name}`, savedAt: new Date().toISOString() };
+    const entry = { ...draft, id: Date.now().toString(), name: `${draft.name} (Copy)`, savedAt: new Date().toISOString() };
     const next = [entry, ...drafts];
-    setDrafts(next); persistDrafts(next); toast.success("Duplicated");
+    setDrafts(next);
+    persistDrafts(next);
+    toast.success("Template cloned");
   };
 
   const renameDraft = (id) => {
     if (!renameName.trim()) return;
     const next = drafts.map((d) => d.id === id ? { ...d, name: renameName.trim() } : d);
-    setDrafts(next); persistDrafts(next); setEditingId(null); toast.success("Renamed");
+    setDrafts(next);
+    persistDrafts(next);
+    setEditingId(null);
+    toast.success("Template renamed");
   };
 
   const updateDraft = (id) => {
     const raw = convertToRaw(editorState.getCurrentContent());
-    const body = getBody();
-    const next = drafts.map((d) => d.id === id ? { ...d, subject, body, rawContent: raw, savedAt: new Date().toISOString() } : d);
-    setDrafts(next); persistDrafts(next); toast.success("Draft updated");
+    const next = drafts.map((d) => d.id === id ? { ...d, subject, body: getBody(), rawContent: raw, savedAt: new Date().toISOString() } : d);
+    setDrafts(next);
+    persistDrafts(next);
+    toast.success("Draft updated from current editor");
   };
 
-  /* test email */
   const sendTest = async () => {
-    if (!fromEmail || !fromPwd) { toast.error("Enter SMTP credentials first"); return; }
-    if (!testTo.trim()) { toast.error("Enter recipient email"); return; }
+    if (!fromEmail || !fromPwd) { toast.error("Set authenticated credentials above"); return; }
+    if (!testTo.trim()) { toast.error("Recipient address missing"); return; }
     setTestBusy(true);
     try {
-      const body = getBody();
       const r = await sFetch(`${API}/mail/test`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ smtpEmail: fromEmail, smtpPassword: fromPwd, fromName, toEmail: testTo.trim(), subject: subject || "(Test)", htmlBody: body || "<p>Test from CCD Mail Sender.</p>" }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpEmail: fromEmail,
+          smtpPassword: fromPwd,
+          fromName,
+          toEmail: testTo.trim(),
+          subject: subject || "[TEST] CCD Announcement Sample",
+          htmlBody: getBody() || "<p>Test pipeline verification message from IIT Guwahati CCD.</p>"
+        }),
       });
-      if (r.ok) toast.success(`Test sent to ${testTo}`);
-      else { const d = await r.json(); toast.error(d.message || "Test failed"); }
-    } catch { toast.error("Network error"); }
+      if (r.ok) toast.success(`Test email routed to ${testTo}`);
+      else {
+        const d = await r.json();
+        toast.error(d.message || "Dispatch failed");
+      }
+    } catch {
+      toast.error("Network interface error");
+    }
     setTestBusy(false);
   };
 
-  /* parse recipients file */
   const parseFile = (file) => {
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -534,210 +917,423 @@ function MailTab() {
         if (rows.length) {
           setColumns(Object.keys(rows[0]));
           setRecipients(rows.map((r) => ({ ...r, _status: "pending", _error: null })));
-          toast.success(`${rows.length} recipients loaded`);
-        } else toast.error("Empty file");
-      } catch { toast.error("Failed to parse file"); }
+          toast.success(`${rows.length} records parsed into batch`);
+        } else {
+          toast.error("Spreadsheet holds 0 rows");
+        }
+      } catch {
+        toast.error("Failed to parse spreadsheet");
+      }
     };
     reader.readAsArrayBuffer(file);
   };
 
-  /* send */
   const startSend = async () => {
-    const body = getBody();
-    if (!fromEmail || !fromPwd) { toast.error("SMTP credentials required"); return; }
-    if (!subject || !body) { toast.error("Subject and body required"); return; }
+    const currentBody = getBody();
+    if (!fromEmail || !fromPwd) { toast.error("SMTP sender authentication is required"); return; }
+    if (!subject || !currentBody) { toast.error("Both subject and body are mandatory"); return; }
     const pending = recipients.filter((r) => r._status === "pending" || r._status === "failed");
-    if (!pending.length) { toast.error("No pending recipients"); return; }
-    setSending(true); setSummary(null);
+    if (!pending.length) { toast.error("Zero targets ready for dispatch"); return; }
+    
+    setSending(true);
+    setSummary(null);
     setRecipients((rs) => rs.map((r) => r._status === "failed" ? { ...r, _status: "pending", _error: null } : r));
+
     try {
       const r = await sFetch(`${API}/mail/send`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ smtpEmail: fromEmail, smtpPassword: fromPwd, fromName, defaultCc, delayMs, subject, htmlBody: body, recipients: pending }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          smtpEmail: fromEmail,
+          smtpPassword: fromPwd,
+          fromName,
+          defaultCc,
+          delayMs,
+          subject,
+          htmlBody: currentBody,
+          recipients: pending
+        }),
       });
-      if (!r.ok) { const d = await r.json(); toast.error(d.message || "Failed"); setSending(false); return; }
+
+      if (!r.ok) {
+        const d = await r.json();
+        toast.error(d.message || "Pipeline start rejected");
+        setSending(false);
+        return;
+      }
+
       const { jobId: jid } = await r.json();
-      setJobId(jid); setRightTab("status");
+      setJobId(jid);
+      setRightTab("status");
+
       const es = new EventSource(`${API}/mail/progress/${jid}?token=${encodeURIComponent(getToken())}`);
       esSrc.current = es;
+
       es.onmessage = (ev) => {
         const d = JSON.parse(ev.data);
-        if (d.type === "snapshot") { setJobStatus(d.jobStatus); setSummary(d.summary); setRecipients((rs) => rs.map((r, i) => d.rows[i] ? { ...r, _status: d.rows[i]._status, _error: d.rows[i]._error } : r)); }
-        else if (d.type === "update") { setRecipients((rs) => rs.map((r, i) => i === d.index ? { ...r, _status: d.status, _error: d.error || null } : r)); }
-        else if (d.type === "done") { setSummary(d); setJobStatus("done"); setSending(false); es.close(); toast.success(`Done — ${d.sent} sent, ${d.failed} failed`); }
-        else if (d.type === "stopped") { setSummary(d); setJobStatus("stopped"); setSending(false); es.close(); toast("Stopped"); }
-        else if (d.type === "error") { toast.error(d.message); setJobStatus("error"); setSending(false); es.close(); }
+        if (d.type === "snapshot") {
+          setJobStatus(d.jobStatus);
+          setSummary(d.summary);
+          setRecipients((rs) => rs.map((r, i) => d.rows[i] ? { ...r, _status: d.rows[i]._status, _error: d.rows[i]._error } : r));
+        } else if (d.type === "update") {
+          setRecipients((rs) => rs.map((r, i) => i === d.index ? { ...r, _status: d.status, _error: d.error || null } : r));
+        } else if (d.type === "done") {
+          setSummary(d);
+          setJobStatus("done");
+          setSending(false);
+          es.close();
+          toast.success(`Complete: ${d.sent} transmitted, ${d.failed} dropped`);
+        } else if (d.type === "stopped") {
+          setSummary(d);
+          setJobStatus("stopped");
+          setSending(false);
+          es.close();
+          toast("Pipeline halted manually");
+        } else if (d.type === "error") {
+          toast.error(d.message);
+          setJobStatus("error");
+          setSending(false);
+          es.close();
+        }
       };
       es.onerror = () => { es.close(); setSending(false); };
-    } catch { toast.error("Network error"); setSending(false); }
+    } catch {
+      toast.error("Network disconnect occurred");
+      setSending(false);
+    }
   };
 
-  const stopSend = async () => { if (!jobId) return; await sFetch(`${API}/mail/stop/${jobId}`, { method: "POST" }); esSrc.current?.close(); };
+  const stopSend = async () => {
+    if (!jobId) return;
+    await sFetch(`${API}/mail/stop/${jobId}`, { method: "POST" });
+    esSrc.current?.close();
+  };
 
-  /* derived */
   const sentCount = recipients.filter((r) => r._status === "sent").length;
   const failCount = recipients.filter((r) => r._status === "failed").length;
   const pendCount = recipients.filter((r) => r._status === "pending").length;
   const total = recipients.length;
   const progress = total ? Math.round(((sentCount + failCount) / total) * 100) : 0;
   const previewRow = recipients[previewIdx] || {};
-  const body = getBody();
+  const currentBody = getBody();
   const filteredDrafts = draftSearch
     ? drafts.filter((d) => d.name.toLowerCase().includes(draftSearch.toLowerCase()) || (d.subject || "").toLowerCase().includes(draftSearch.toLowerCase()))
     : drafts;
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+      <SectionHeader
+        title="High-Volume Mail Dispatcher"
+        subtitle="Industrial SMTP delivery pipeline with dynamic variable templating and delivery monitors"
+      />
 
-      {/* SMTP */}
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
-        <div style={{ padding: "12px 16px", display: "flex", alignItems: "flex-end", gap: 10, flexWrap: "wrap", borderBottom: advOpen ? `1px solid ${T.border}` : "none" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 6, alignSelf: "center", flexShrink: 0 }}>
-            <div style={{ width: 6, height: 6, borderRadius: "50%", background: fromEmail && fromPwd ? T.success : T.danger }} />
-            <span style={{ fontSize: 10, color: T.muted, fontWeight: 600 }}>{fromEmail && fromPwd ? "Ready" : "Not configured"}</span>
+      {/* SMTP Configuration Bar */}
+      <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, padding: "16px 20px" }}>
+        <div style={{ display: "flex", alignItems: "flex-end", gap: 14, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, paddingBottom: 10 }}>
+            <div style={{ width: 10, height: 10, borderRadius: "50%", background: fromEmail && fromPwd ? T.success : T.danger }} />
+            <span style={{ fontSize: 12, fontWeight: 800, color: fromEmail && fromPwd ? T.success : T.danger, fontFamily: MONO }}>
+              {fromEmail && fromPwd ? "SMTP READY" : "UNCONFIGURED"}
+            </span>
           </div>
-          <div style={{ flex: "1 1 200px" }}>
-            <Label>From Email *</Label>
-            <input type="email" placeholder="internship@iitg.ac.in" value={fromEmail} onChange={(e) => setFromEmail(e.target.value)}
-              style={{ ...inp, borderColor: fromEmail ? T.success : T.danger }} />
+
+          <div style={{ flex: "1 1 240px" }}>
+            <FieldLabel required>Sender Email Account</FieldLabel>
+            <input
+              type="email"
+              placeholder="e.g. placement@iitg.ac.in"
+              value={fromEmail}
+              onChange={(e) => setFromEmail(e.target.value)}
+              style={inpStyle}
+            />
           </div>
-          <div style={{ flex: "1 1 180px" }}>
-            <Label>Password *</Label>
+
+          <div style={{ flex: "1 1 220px" }}>
+            <FieldLabel required>Google App Password / SMTP Token</FieldLabel>
             <div style={{ position: "relative" }}>
-              <input type={showPwd ? "text" : "password"} placeholder="App password" value={fromPwd} onChange={(e) => setFromPwd(e.target.value)}
-                style={{ ...inp, paddingRight: 44, fontFamily: "monospace", borderColor: fromPwd ? T.success : T.danger }} />
-              <button onClick={() => setShowPwd((p) => !p)}
-                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 11, color: T.muted, fontFamily: FONT }}>
-                {showPwd ? "Hide" : "Show"}
+              <input
+                type={showPwd ? "text" : "password"}
+                placeholder="16-character app token"
+                value={fromPwd}
+                onChange={(e) => setFromPwd(e.target.value)}
+                style={{ ...inpStyle, fontFamily: MONO, paddingRight: 60 }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPwd((p) => !p)}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 11, fontWeight: 800, color: T.textSec }}
+              >
+                {showPwd ? "HIDE" : "SHOW"}
               </button>
             </div>
           </div>
-          <Btn onClick={() => setAdvOpen((o) => !o)} style={{ alignSelf: "flex-end" }}>{advOpen ? "Less" : "More"}</Btn>
+
+          <Btn onClick={() => setAdvOpen((o) => !o)}>
+            {advOpen ? "Close Advanced Options" : "Server Advanced Settings"}
+          </Btn>
         </div>
 
         {advOpen && (
-          <div style={{ padding: "14px 16px", background: T.bg, borderTop: `1px solid ${T.border}` }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10, marginBottom: 14 }}>
-              {[["From Name", fromName, setFromName, "text"], ["Default CC", defaultCc, setDefaultCc, "text"], ["Delay (ms)", delayMs, (v) => setDelayMs(Number(v)), "number"]].map(([label, val, set, type]) => (
-                <div key={label}>
-                  <Label>{label}</Label>
-                  <input type={type} value={val} onChange={(e) => set(e.target.value)} style={inp} />
-                </div>
-              ))}
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1.5px solid ${T.border}` }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 12, marginBottom: 16 }}>
+              <div>
+                <FieldLabel>Display From Name</FieldLabel>
+                <input type="text" value={fromName} onChange={(e) => setFromName(e.target.value)} style={inpStyle} />
+              </div>
+              <div>
+                <FieldLabel>Default Carbon Copy (CC)</FieldLabel>
+                <input type="text" value={defaultCc} onChange={(e) => setDefaultCc(e.target.value)} style={inpStyle} />
+              </div>
+              <div>
+                <FieldLabel>Throttle Delay Per Message (ms)</FieldLabel>
+                <input type="number" value={delayMs} onChange={(e) => setDelayMs(Number(e.target.value))} style={inpStyle} />
+              </div>
             </div>
-            <div style={{ borderTop: `1px solid ${T.border}`, paddingTop: 12 }}>
-              <Label>Send test email</Label>
-              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                <input type="email" placeholder="test@example.com" value={testTo} onChange={(e) => setTestTo(e.target.value)} style={{ ...inp, flex: "1 1 200px" }} />
-                <Btn onClick={sendTest} disabled={testBusy || !fromEmail || !fromPwd}>{testBusy ? "Sending…" : "Send Test"}</Btn>
+
+            <div style={{ background: T.sunken, border: `1px solid ${T.border}`, padding: 14, borderRadius: 5 }}>
+              <FieldLabel>Validate Sender via Test Email</FieldLabel>
+              <div style={{ display: "flex", gap: 10, maxWidth: 500 }}>
+                <input
+                  type="email"
+                  placeholder="Target test recipient address"
+                  value={testTo}
+                  onChange={(e) => setTestTo(e.target.value)}
+                  style={{ ...inpStyle, flex: 1 }}
+                />
+                <Btn onClick={sendTest} disabled={testBusy || !fromEmail || !fromPwd}>
+                  {testBusy ? "Sending…" : "Send Probe"}
+                </Btn>
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* 3-col */}
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 260px", gap: 10, alignItems: "start" }}>
+      {/* Main Mail Layout */}
+      <div style={{ display: "grid", gridTemplateColumns: "280px 1fr 320px", gap: 14, alignItems: "start" }}>
 
-        {/* Recipients */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
-          <div style={{ padding: "10px 12px", borderBottom: `1px solid ${T.border}` }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>Recipients</div>
-            <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{total > 0 ? `${total} loaded · ${pendCount} pending` : "Upload CSV or Excel"}</div>
+        {/* Recipients Sidebar */}
+        <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ padding: "12px 14px", borderBottom: `2px solid ${T.border}`, background: T.sunken }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: T.text }}>Target Recipients</div>
+            <div style={{ fontSize: 11, fontWeight: 600, color: T.textSec, marginTop: 2 }}>
+              {total > 0 ? `${total} loaded (${pendCount} unsent)` : "Upload candidates dataset"}
+            </div>
           </div>
-          <div style={{ padding: 10 }}>
-            <input type="file" accept=".csv,.xlsx,.xls"
-              onChange={(e) => { if (e.target.files[0]) { parseFile(e.target.files[0]); e.target.value = ""; } }}
-              style={{ ...inp, fontSize: 11, cursor: "pointer", color: T.muted, padding: "6px 8px", border: `1px dashed ${T.border}` }} />
+          <div style={{ padding: 12 }}>
+            <label style={{ display: "block", marginBottom: 12 }}>
+              <input
+                type="file"
+                accept=".csv,.xlsx,.xls"
+                onChange={(e) => { if (e.target.files[0]) { parseFile(e.target.files[0]); e.target.value = ""; } }}
+                style={{ display: "none" }}
+              />
+              <div style={{
+                padding: "8px",
+                background: T.sunken,
+                border: `1.5px dashed ${T.borderHi}`,
+                borderRadius: 4,
+                textAlign: "center",
+                fontSize: 12,
+                fontWeight: 700,
+                color: T.text,
+                cursor: "pointer",
+              }}>
+                Import CSV / Excel File
+              </div>
+            </label>
+
             {columns.length > 0 && (
-              <div style={{ marginTop: 10 }}>
-                <div style={{ fontSize: 9, fontWeight: 600, color: T.muted, marginBottom: 5, letterSpacing: "0.05em", textTransform: "uppercase" }}>Insert into subject</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 3 }}>
+              <div style={{ marginBottom: 14, padding: "8px 10px", background: T.sunken, borderRadius: 5, border: `1px solid ${T.border}` }}>
+                <div style={{ fontSize: 10, fontWeight: 800, color: T.textSec, marginBottom: 6, letterSpacing: "0.04em" }}>CLICK TO INSERT VARIABLE</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                   {columns.map((c) => (
-                    <span key={c} onClick={() => setSubject((s) => s + `{{${c}}}`)}
-                      style={{ padding: "2px 6px", background: T.elevated, color: T.accent, border: `1px solid ${T.border}`, borderRadius: 3, fontSize: 10, cursor: "pointer" }}>
+                    <button
+                      key={c}
+                      type="button"
+                      onClick={() => setSubject((s) => s + `{{${c}}}`)}
+                      style={{
+                        padding: "3px 7px",
+                        background: T.elevated,
+                        color: T.text,
+                        border: `1px solid ${T.borderHi}`,
+                        borderRadius: 3,
+                        fontSize: 11,
+                        fontFamily: MONO,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                      }}
+                    >
                       {`{{${c}}}`}
-                    </span>
+                    </button>
                   ))}
                 </div>
               </div>
             )}
-            <div style={{ maxHeight: 280, overflowY: "auto", marginTop: 8 }}>
+
+            <div style={{ maxHeight: 360, overflowY: "auto", display: "flex", flexDirection: "column", gap: 2 }}>
               {recipients.map((r, i) => (
-                <div key={i} onClick={() => setPreviewIdx(i)}
-                  style={{ padding: "4px 6px", borderRadius: 3, marginBottom: 1, cursor: "pointer", fontSize: 11, display: "flex", alignItems: "center", gap: 6, background: previewIdx === i ? T.elevated : "transparent" }}>
-                  <div style={{ width: 5, height: 5, borderRadius: "50%", flexShrink: 0, background: r._status === "sent" ? T.success : r._status === "failed" ? T.danger : T.border }} />
-                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: previewIdx === i ? T.text : T.muted }}>{r.email || r.Email || r.EMAIL || `Row ${i + 1}`}</span>
+                <div
+                  key={i}
+                  onClick={() => setPreviewIdx(i)}
+                  style={{
+                    padding: "6px 8px",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: previewIdx === i ? T.elevated : "transparent",
+                    border: `1px solid ${previewIdx === i ? T.borderHi : "transparent"}`,
+                  }}
+                >
+                  <div style={{
+                    width: 6,
+                    height: 6,
+                    borderRadius: "50%",
+                    flexShrink: 0,
+                    background: r._status === "sent" ? T.success : r._status === "failed" ? T.danger : T.borderHi
+                  }} />
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: previewIdx === i ? T.text : T.textSec, fontFamily: MONO, fontSize: 11 }}>
+                    {r.email || r.Email || r.EMAIL || `Entry #${i + 1}`}
+                  </span>
                 </div>
               ))}
             </div>
           </div>
         </div>
 
-        {/* Compose */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
-          <div style={{ padding: "10px 12px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-            <div style={{ fontSize: 11, fontWeight: 700, color: T.text }}>Compose</div>
-            <button onClick={() => { setShowSavePanel((s) => !s); setDraftName(""); }}
-              style={{ padding: "3px 10px", background: "transparent", color: showSavePanel ? T.accent : T.muted, border: `1px solid ${showSavePanel ? T.accent : T.border}`, borderRadius: 3, cursor: "pointer", fontSize: 11, fontWeight: 600, fontFamily: FONT }}>
-              {showSavePanel ? "Cancel" : "Save Draft"}
-            </button>
+        {/* Compose Window */}
+        <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ padding: "12px 16px", borderBottom: `2px solid ${T.border}`, background: T.sunken, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ fontSize: 13, fontWeight: 800, color: T.text }}>Mail Template Composer</span>
+            <Btn size="sm" onClick={() => { setShowSavePanel((s) => !s); setDraftName(""); }}>
+              {showSavePanel ? "Cancel" : "Save as Reusable Draft"}
+            </Btn>
           </div>
 
           {showSavePanel && (
-            <div style={{ padding: "8px 12px", background: T.bg, borderBottom: `1px solid ${T.border}`, display: "flex", gap: 6 }}>
-              <input autoFocus value={draftName} onChange={(e) => setDraftName(e.target.value)}
+            <div style={{ padding: "12px 16px", background: T.elevated, borderBottom: `2px solid ${T.border}`, display: "flex", gap: 8 }}>
+              <input
+                autoFocus
+                value={draftName}
+                onChange={(e) => setDraftName(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && saveDraft()}
-                placeholder="Draft name…"
-                style={{ ...inp, flex: 1 }} />
-              <Btn onClick={saveDraft}>Save</Btn>
+                placeholder="Template Title (e.g. Shortlist Announcement Batch 1)"
+                style={{ ...inpStyle, flex: 1 }}
+              />
+              <Btn variant="primary" size="md" onClick={saveDraft}>Save</Btn>
             </div>
           )}
 
-          <div style={{ padding: 12 }}>
-            <div style={{ marginBottom: 10 }}>
-              <Label>Subject</Label>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)}
-                placeholder="Subject — {{column}}"
-                style={inp} />
+          <div style={{ padding: 16 }}>
+            <div style={{ marginBottom: 14 }}>
+              <FieldLabel required>Email Subject</FieldLabel>
+              <input
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="Subject line with optional {{name}} substitution"
+                style={{ ...inpStyle, fontSize: 14, fontWeight: 700 }}
+              />
             </div>
+
             <div>
-              <Label>Body</Label>
+              <FieldLabel required>HTML Announcement Body</FieldLabel>
               <style>{`
-                .wd .rdw-editor-wrapper{background:${T.elevated};border-radius:4px;border:1px solid ${T.border}}
-                .wd .rdw-editor-toolbar{background:${T.surface};border:none;border-bottom:1px solid ${T.border};padding:5px 6px}
-                .wd .rdw-option-wrapper{background:${T.elevated};border:1px solid ${T.border};border-radius:2px;min-width:22px;height:22px}
-                .wd .rdw-option-wrapper:hover{background:${T.bg};border-color:${T.accent}}
-                .wd .rdw-option-active{background:${T.accent}22;border-color:${T.accent}}
-                .wd .rdw-option-wrapper img{filter:invert(0.7)}
-                .wd .rdw-dropdown-wrapper{background:${T.elevated};border:1px solid ${T.border};border-radius:2px}
-                .wd .rdw-dropdown-wrapper:hover{background:${T.bg}}
-                .wd .rdw-dropdown-selectedtext{color:${T.text};font-family:${FONT};font-size:11px}
-                .wd .rdw-dropdownoption-default{background:${T.surface};color:${T.text};font-family:${FONT};font-size:11px}
-                .wd .rdw-dropdownoption-default:hover{background:${T.elevated}}
-                .wd .rdw-dropdownoption-active{background:${T.accent}22}
-                .wd .rdw-editor-main{color:${T.text};font-family:${FONT};font-size:13px;min-height:200px;max-height:320px;overflow-y:auto;padding:10px 12px}
-                .wd .DraftEditor-root{color:${T.text}}
-                .wd .public-DraftEditorPlaceholder-root{color:${T.muted}}
-                .wd .rdw-colorpicker-modal,.wd .rdw-link-modal{background:${T.surface};border:1px solid ${T.border};color:${T.text}}
-                .wd .rdw-link-modal-label{color:${T.muted}}
-                .wd .rdw-link-modal-input{background:${T.elevated};border:1px solid ${T.border};color:${T.text};border-radius:3px;padding:4px 8px;font-family:${FONT}}
-                .wd .rdw-link-modal-btn{background:${T.accent};color:#fff;border:none;border-radius:3px;padding:4px 12px;cursor:pointer;font-family:${FONT}}
-                .wd .rdw-dropdown-carettoopen,.wd .rdw-dropdown-carettoclose{border-top-color:${T.muted};border-bottom-color:${T.muted}}
+                .wd-industrial .rdw-editor-wrapper {
+                  background: ${T.sunken};
+                  border-radius: 5px;
+                  border: 1.5px solid ${T.border};
+                }
+                .wd-industrial .rdw-editor-toolbar {
+                  background: ${T.surface};
+                  border: none;
+                  border-bottom: 1.5px solid ${T.border};
+                  padding: 8px;
+                }
+                .wd-industrial .rdw-option-wrapper {
+                  background: ${T.elevated};
+                  border: 1px solid ${T.border};
+                  border-radius: 3px;
+                  min-width: 26px;
+                  height: 26px;
+                }
+                .wd-industrial .rdw-option-wrapper:hover {
+                  background: ${T.bg};
+                  border-color: ${T.borderHi};
+                }
+                .wd-industrial .rdw-option-active {
+                  background: #ffffff !important;
+                  border-color: #ffffff !important;
+                }
+                .wd-industrial .rdw-option-active img {
+                  filter: invert(1) !important;
+                }
+                .wd-industrial .rdw-option-wrapper img {
+                  filter: invert(0.8);
+                }
+                .wd-industrial .rdw-dropdown-wrapper {
+                  background: ${T.elevated};
+                  border: 1px solid ${T.border};
+                  border-radius: 3px;
+                  height: 26px;
+                }
+                .wd-industrial .rdw-dropdown-selectedtext {
+                  color: ${T.text};
+                  font-family: ${FONT};
+                  font-size: 12px;
+                  font-weight: 700;
+                }
+                .wd-industrial .rdw-dropdownoption-default {
+                  background: ${T.surface};
+                  color: ${T.text};
+                  font-family: ${FONT};
+                  font-size: 12px;
+                  font-weight: 600;
+                }
+                .wd-industrial .rdw-dropdownoption-default:hover {
+                  background: ${T.elevated};
+                }
+                .wd-industrial .rdw-editor-main {
+                  color: ${T.text};
+                  font-family: ${FONT};
+                  font-size: 14px;
+                  min-height: 260px;
+                  max-height: 380px;
+                  overflow-y: auto;
+                  padding: 14px 16px;
+                  line-height: 1.6;
+                }
+                .wd-industrial .DraftEditor-root {
+                  color: ${T.text};
+                }
+                .wd-industrial .public-DraftEditorPlaceholder-root {
+                  color: ${T.muted};
+                }
+                .wd-industrial .rdw-dropdown-carettoopen,
+                .wd-industrial .rdw-dropdown-carettoclose {
+                  border-top-color: ${T.textSec};
+                  border-bottom-color: ${T.textSec};
+                }
               `}</style>
-              <div className="wd">
+
+              <div className="wd-industrial">
                 <Editor
-                  editorState={editorState} onEditorStateChange={setEditorState}
-                  wrapperStyle={{ margin: 0 }} toolbarStyle={{ margin: 0 }} editorStyle={{ lineHeight: 1.6 }}
-                  placeholder="Dear {{name}}, Greetings from CCD, IIT Guwahati…"
+                  editorState={editorState}
+                  onEditorStateChange={setEditorState}
+                  wrapperStyle={{ margin: 0 }}
+                  toolbarStyle={{ margin: 0 }}
+                  placeholder="Draft email content here. Use {{column_name}} tokens to inject student parameters dynamically."
                   handlePastedText={handlePastedText}
                   blockRendererFn={blockRendererFn}
                   toolbarCustomButtons={[<HrButton key="hr" />]}
                   toolbar={{
-                    options: ["inline", "blockType", "fontSize", "list", "textAlign", "colorPicker", "link", "history"],
+                    options: ["inline", "blockType", "fontSize", "list", "textAlign", "link", "history"],
                     inline: { options: ["bold", "italic", "underline", "strikethrough"] },
                     blockType: { options: ["Normal", "H1", "H2", "H3", "Blockquote"] },
-                    fontSize: { options: [10, 11, 12, 13, 14, 16, 18, 24, 36] },
+                    fontSize: { options: [12, 13, 14, 16, 18, 22] },
                     list: { options: ["ordered", "unordered"] },
                     textAlign: { options: ["left", "center", "right"] },
                     link: { defaultTargetOption: "_blank" },
@@ -749,71 +1345,128 @@ function MailTab() {
           </div>
         </div>
 
-        {/* Preview / Status */}
-        <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
-          <div style={{ display: "flex", borderBottom: `1px solid ${T.border}` }}>
+        {/* Preview / Dispatch Monitor */}
+        <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ display: "flex", borderBottom: `2px solid ${T.border}` }}>
             {["preview", "status"].map((t) => (
-              <button key={t} onClick={() => setRightTab(t)}
-                style={{ flex: 1, padding: "9px 0", border: "none", background: "transparent", fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: FONT, borderBottom: `2px solid ${rightTab === t ? T.accent : "transparent"}`, color: rightTab === t ? T.text : T.muted }}>
-                {t === "preview" ? "Preview" : "Status"}
+              <button
+                key={t}
+                onClick={() => setRightTab(t)}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  border: "none",
+                  background: rightTab === t ? T.surface : T.sunken,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  cursor: "pointer",
+                  fontFamily: FONT,
+                  color: rightTab === t ? T.text : T.muted,
+                  borderBottom: `2px solid ${rightTab === t ? T.primary : "transparent"}`,
+                  letterSpacing: "0.02em"
+                }}
+              >
+                {t.toUpperCase()}
               </button>
             ))}
           </div>
 
           {rightTab === "preview" && (
-            <div style={{ padding: 10 }}>
+            <div style={{ padding: 12 }}>
               {recipients.length > 0 && (
-                <div style={{ marginBottom: 8 }}>
-                  <Label>For</Label>
-                  <select value={previewIdx} onChange={(e) => setPreviewIdx(Number(e.target.value))} style={{ ...inp, cursor: "pointer" }}>
-                    {recipients.map((r, i) => <option key={i} value={i}>{r.email || r.Email || `Row ${i + 1}`}</option>)}
+                <div style={{ marginBottom: 10 }}>
+                  <FieldLabel>Sample With Row Target</FieldLabel>
+                  <select
+                    value={previewIdx}
+                    onChange={(e) => setPreviewIdx(Number(e.target.value))}
+                    style={{ ...inpStyle, cursor: "pointer" }}
+                  >
+                    {recipients.map((r, i) => (
+                      <option key={i} value={i}>
+                        Row {i + 1}: {r.email || r.Email || "No Email"}
+                      </option>
+                    ))}
                   </select>
                 </div>
               )}
-              <div style={{ marginBottom: 6, fontSize: 11, color: T.muted }}>
+              
+              <div style={{ marginBottom: 8, fontSize: 12, fontWeight: 700, color: T.textSec }}>
                 Subject: <span style={{ color: T.text }}>{sub(subject, previewRow) || "—"}</span>
               </div>
-              <div style={{ border: `1px solid ${T.border}`, borderRadius: 4, overflow: "hidden", height: 280 }}>
-                {body
-                  ? <iframe srcDoc={`<!DOCTYPE html><html><body style="font-family:sans-serif;padding:12px;margin:0;font-size:13px">${sub(body, previewRow)}</body></html>`}
-                      style={{ width: "100%", height: "100%", border: "none", background: "white" }} title="preview" />
-                  : <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: T.border, fontSize: 12 }}>Write body to preview</div>
-                }
+
+              <div style={{ border: `1.5px solid ${T.border}`, borderRadius: 4, overflow: "hidden", height: 320, background: "#ffffff" }}>
+                {currentBody ? (
+                  <iframe
+                    srcDoc={`<!DOCTYPE html><html><body style="font-family:-apple-system,BlinkMacSystemFont,sans-serif;padding:16px;margin:0;font-size:14px;line-height:1.5;color:#111827">${sub(currentBody, previewRow)}</body></html>`}
+                    style={{ width: "100%", height: "100%", border: "none" }}
+                    title="rendered-preview"
+                  />
+                ) : (
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#9ca3af", fontSize: 13, fontWeight: 600 }}>
+                    Type body content to inspect preview
+                  </div>
+                )}
               </div>
             </div>
           )}
 
           {rightTab === "status" && (
-            <div style={{ padding: 10 }}>
+            <div style={{ padding: 12 }}>
               {jobStatus && (
-                <div style={{ marginBottom: 10 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, marginBottom: 4 }}>
-                    <span style={{ color: jobStatus === "done" ? T.success : T.accent, fontWeight: 600 }}>{jobStatus === "done" ? "Complete" : jobStatus === "stopped" ? "Stopped" : "Sending…"}</span>
-                    <span style={{ color: T.muted }}>{sentCount + failCount}/{total}</span>
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, fontWeight: 800, marginBottom: 6 }}>
+                    <span style={{ color: jobStatus === "done" ? T.success : T.primary }}>
+                      {jobStatus === "done" ? "BATCH FINISHED" : jobStatus === "stopped" ? "ABORTED" : "TRANSMITTING…"}
+                    </span>
+                    <span style={{ fontFamily: MONO }}>{sentCount + failCount} / {total}</span>
                   </div>
-                  <div style={{ background: T.elevated, borderRadius: 3, height: 4, overflow: "hidden" }}>
-                    <div style={{ height: "100%", background: jobStatus === "done" ? T.success : T.accent, width: `${progress}%`, transition: "width .3s" }} />
+
+                  <div style={{ background: T.sunken, borderRadius: 3, height: 6, overflow: "hidden", border: `1px solid ${T.border}` }}>
+                    <div style={{ height: "100%", background: jobStatus === "done" ? T.success : T.primary, width: `${progress}%`, transition: "width .2s ease" }} />
                   </div>
-                  <div style={{ display: "flex", gap: 4, marginTop: 8 }}>
-                    {[[sentCount, "Sent", T.success], [failCount, "Failed", T.danger], [pendCount, "Pending", T.muted]].map(([n, l, c]) => (
-                      <div key={l} style={{ flex: 1, textAlign: "center", padding: "5px 2px", background: T.elevated, borderRadius: 3 }}>
-                        <div style={{ fontSize: 14, fontWeight: 700, color: c }}>{n}</div>
-                        <div style={{ fontSize: 9, color: T.muted, textTransform: "uppercase", letterSpacing: "0.04em" }}>{l}</div>
-                      </div>
-                    ))}
+
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 6, marginTop: 10 }}>
+                    <div style={{ textAlign: "center", padding: "8px 4px", background: T.sunken, borderRadius: 4, border: `1px solid ${T.border}` }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: T.success, fontFamily: MONO }}>{sentCount}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.textSec }}>SENT</div>
+                    </div>
+                    <div style={{ textAlign: "center", padding: "8px 4px", background: T.sunken, borderRadius: 4, border: `1px solid ${T.border}` }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: T.danger, fontFamily: MONO }}>{failCount}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.textSec }}>FAILED</div>
+                    </div>
+                    <div style={{ textAlign: "center", padding: "8px 4px", background: T.sunken, borderRadius: 4, border: `1px solid ${T.border}` }}>
+                      <div style={{ fontSize: 16, fontWeight: 800, color: T.textSec, fontFamily: MONO }}>{pendCount}</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: T.textSec }}>LEFT</div>
+                    </div>
                   </div>
                 </div>
               )}
-              <div style={{ maxHeight: 240, overflowY: "auto", fontSize: 11 }}>
+
+              <div style={{ maxHeight: 270, overflowY: "auto", display: "flex", flexDirection: "column", gap: 3 }}>
                 {recipients.map((r, i) => (
-                  <div key={i} style={{ padding: "4px 6px", marginBottom: 1, borderRadius: 3, display: "flex", gap: 6, alignItems: "flex-start", background: r._status === "failed" ? "#1a0a0a" : "transparent" }}>
-                    <span style={{ flexShrink: 0, color: r._status === "sent" ? T.success : r._status === "failed" ? T.danger : T.border }}>
-                      {r._status === "sent" ? "+" : r._status === "failed" ? "×" : r._status === "skipped" ? "–" : "·"}
+                  <div
+                    key={i}
+                    style={{
+                      padding: "6px 8px",
+                      borderRadius: 4,
+                      fontSize: 11,
+                      fontFamily: MONO,
+                      fontWeight: 600,
+                      background: r._status === "failed" ? T.dangerBg : T.sunken,
+                      border: `1px solid ${r._status === "failed" ? T.danger + "44" : T.border}`,
+                      display: "flex",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: T.text, maxWidth: 180 }}>
+                      {r.email || r.Email || `Entry #${i + 1}`}
                     </span>
-                    <div>
-                      <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: T.muted, maxWidth: 200 }}>{r.email || r.Email || `Row ${i + 1}`}</div>
-                      {r._error && <div style={{ color: T.danger, fontSize: 10 }}>{r._error}</div>}
-                    </div>
+                    <span style={{
+                      fontWeight: 800,
+                      color: r._status === "sent" ? T.success : r._status === "failed" ? T.danger : T.muted
+                    }}>
+                      {r._status ? r._status.toUpperCase() : "QUEUED"}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -822,78 +1475,130 @@ function MailTab() {
         </div>
       </div>
 
-      {/* Send bar */}
-      <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, padding: "12px 16px", display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-        {!sending && jobStatus !== "done" && (
-          <button disabled={!total || !subject || !body || !fromEmail || !fromPwd} onClick={startSend}
-            style={{ padding: "8px 20px", background: T.accent, color: "#fff", border: "none", borderRadius: 4, fontSize: 13, fontWeight: 700, cursor: (!total || !subject || !body || !fromEmail || !fromPwd) ? "not-allowed" : "pointer", opacity: (!total || !subject || !body || !fromEmail || !fromPwd) ? 0.4 : 1, fontFamily: FONT }}>
-            Send to {pendCount || total} recipient{(pendCount || total) !== 1 ? "s" : ""}
-          </button>
-        )}
-        {sending && (
-          <>
-            <Btn danger onClick={stopSend}>Stop</Btn>
-            <span style={{ fontSize: 12, color: T.muted }}>Sending {sentCount + failCount}/{total}…</span>
-          </>
-        )}
-        {jobStatus === "done" && (
-          <>
-            <Btn onClick={() => { setJobId(null); setJobStatus(null); setSummary(null); setRecipients((rs) => rs.map((r) => ({ ...r, _status: "pending", _error: null }))); }}>Send Again</Btn>
-            {summary && <span style={{ fontSize: 12, color: T.muted }}>{summary.sent} sent · {summary.failed} failed</span>}
-          </>
-        )}
+      {/* Main Send Action Bar */}
+      <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, padding: "14px 20px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12 }}>
+        <div>
+          {!sending && jobStatus !== "done" && (
+            <Btn
+              variant="primary"
+              size="lg"
+              disabled={!total || !subject || !currentBody || !fromEmail || !fromPwd}
+              onClick={startSend}
+            >
+              Dispatch Batch to {pendCount || total} Recipient{(pendCount || total) !== 1 ? "s" : ""}
+            </Btn>
+          )}
+          {sending && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Btn variant="danger" size="lg" onClick={stopSend}>Emergency Abort</Btn>
+              <span style={{ fontSize: 13, fontWeight: 700, color: T.textSec, fontFamily: MONO }}>
+                Transmitting sequence ({sentCount + failCount} / {total})…
+              </span>
+            </div>
+          )}
+          {jobStatus === "done" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Btn
+                size="lg"
+                onClick={() => {
+                  setJobId(null);
+                  setJobStatus(null);
+                  setSummary(null);
+                  setRecipients((rs) => rs.map((r) => ({ ...r, _status: "pending", _error: null })));
+                }}
+              >
+                Reset Queue For Next Run
+              </Btn>
+              {summary && (
+                <span style={{ fontSize: 13, fontWeight: 700, color: T.textSec }}>
+                  Finished: {summary.sent} successful deliveries, {summary.failed} dropouts.
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+        <div style={{ fontSize: 12, fontWeight: 600, color: T.muted }}>
+          Double check active throttle speed and CC list before firing batches.
+        </div>
       </div>
 
-      {/* Drafts section */}
-      <div style={{ marginTop: 20 }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, gap: 10, flexWrap: "wrap" }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: T.text }}>
-            Saved Drafts {drafts.length > 0 && <span style={{ color: T.muted, fontWeight: 400 }}>({drafts.length})</span>}
+      {/* Reusable Drafts Collection */}
+      <div style={{ marginTop: 8 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 800, color: T.text, letterSpacing: "-0.01em" }}>Saved Announcement Templates</h3>
+            <p style={{ margin: "3px 0 0", fontSize: 12, color: T.textSec, fontWeight: 500 }}>Stored locally for future recruitment seasons</p>
           </div>
-          {drafts.length > 1 && (
-            <input type="text" placeholder="Search…" value={draftSearch} onChange={(e) => setDraftSearch(e.target.value)}
-              style={{ ...inp, width: 200 }} />
+          {drafts.length > 0 && (
+            <input
+              type="text"
+              placeholder="Search saved templates…"
+              value={draftSearch}
+              onChange={(e) => setDraftSearch(e.target.value)}
+              style={{ ...inpStyle, width: 220 }}
+            />
           )}
         </div>
 
         {drafts.length === 0 ? (
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, padding: "36px 20px", textAlign: "center", color: T.muted, fontSize: 12 }}>
-            No drafts saved. Write a template and click "Save Draft" to store it here.
+          <div style={{ background: T.surface, border: `2px dashed ${T.border}`, borderRadius: 6, padding: "36px 20px", textAlign: "center" }}>
+            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: T.textSec }}>Zero Saved Templates</p>
+            <p style={{ margin: "4px 0 0", fontSize: 12, color: T.muted }}>Draft an announcement above and click "Save as Reusable Draft" to pin it here.</p>
           </div>
         ) : filteredDrafts.length === 0 ? (
-          <div style={{ color: T.muted, fontSize: 12, padding: "24px 0", textAlign: "center" }}>No drafts match "{draftSearch}"</div>
+          <div style={{ color: T.muted, fontSize: 13, padding: "20px 0", textAlign: "center" }}>
+            No drafts matching search criteria "{draftSearch}"
+          </div>
         ) : (
-          <div style={{ background: T.surface, border: `1px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
+          <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
             {filteredDrafts.map((draft, idx) => (
-              <div key={draft.id}
-                style={{ padding: "12px 14px", borderBottom: idx < filteredDrafts.length - 1 ? `1px solid ${T.border}` : "none", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-
-                {/* Name / rename */}
-                <div style={{ flex: 1, minWidth: 200 }}>
+              <div
+                key={draft.id}
+                style={{
+                  padding: "14px 18px",
+                  borderBottom: idx < filteredDrafts.length - 1 ? `1px solid ${T.border}` : "none",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div style={{ flex: "1 1 240px" }}>
                   {editingId === draft.id ? (
-                    <div style={{ display: "flex", gap: 6 }}>
-                      <input autoFocus value={renameName} onChange={(e) => setRenameName(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === "Enter") renameDraft(draft.id); if (e.key === "Escape") setEditingId(null); }}
-                        style={{ ...inp, flex: 1, height: 30, fontSize: 12 }} />
-                      <Btn small onClick={() => renameDraft(draft.id)}>OK</Btn>
-                      <Btn small ghost onClick={() => setEditingId(null)}>×</Btn>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <input
+                        autoFocus
+                        value={renameName}
+                        onChange={(e) => setRenameName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") renameDraft(draft.id);
+                          if (e.key === "Escape") setEditingId(null);
+                        }}
+                        style={{ ...inpStyle, height: 32, fontSize: 13 }}
+                      />
+                      <Btn size="sm" variant="primary" onClick={() => renameDraft(draft.id)}>Save</Btn>
+                      <Btn size="sm" onClick={() => setEditingId(null)}>Cancel</Btn>
                     </div>
                   ) : (
                     <div>
-                      <span style={{ fontWeight: 700, fontSize: 13, color: T.text }}>{draft.name}</span>
-                      {draft.subject && <span style={{ fontSize: 11, color: T.muted, marginLeft: 8 }}>— {draft.subject.slice(0, 50)}{draft.subject.length > 50 ? "…" : ""}</span>}
-                      <div style={{ fontSize: 10, color: T.muted, marginTop: 2 }}>{fmtDate(draft.savedAt)}</div>
+                      <div style={{ fontWeight: 800, fontSize: 14, color: T.text }}>{draft.name}</div>
+                      <div style={{ fontSize: 12, color: T.textSec, marginTop: 2, fontWeight: 500 }}>
+                        Subject: {draft.subject || "—"}
+                      </div>
+                      <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 4 }}>
+                        Modified: {fmtDate(draft.savedAt)}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                {/* Actions */}
-                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                  <Btn small onClick={() => loadDraft(draft)}>Load</Btn>
-                  <Btn small onClick={() => updateDraft(draft.id)} title="Overwrite with current editor">Update</Btn>
-                  <Btn small ghost onClick={() => { setEditingId(draft.id); setRenameName(draft.name); }}>Rename</Btn>
-                  <Btn small ghost onClick={() => duplicateDraft(draft)}>Duplicate</Btn>
-                  <Btn small danger onClick={() => { if (window.confirm(`Delete "${draft.name}"?`)) deleteDraft(draft.id); }}>Delete</Btn>
+                <div style={{ display: "flex", gap: 6 }}>
+                  <Btn size="sm" onClick={() => loadDraft(draft)}>Load</Btn>
+                  <Btn size="sm" onClick={() => updateDraft(draft.id)} title="Overwrite this template with currently drafted subject and body">Overwrite</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => { setEditingId(draft.id); setRenameName(draft.name); }}>Rename</Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => duplicateDraft(draft)}>Clone</Btn>
+                  <Btn size="sm" variant="danger" onClick={() => { if (window.confirm(`Delete "${draft.name}"?`)) deleteDraft(draft.id); }}>Delete</Btn>
                 </div>
               </div>
             ))}
@@ -904,56 +1609,110 @@ function MailTab() {
   );
 }
 
-/* ─── Main Page ──────────────────────────────────────────────────────────── */
+/* ─── Main Page Shell ────────────────────────────────────────────────────── */
 export default function SharePage() {
-  useMontserrat();
+  useDesignFont();
   const [authed, setAuthed] = useState(() => !!sessionStorage.getItem(TOKEN_KEY));
   const [tab, setTab] = useState("upload");
 
-  if (!authed) return (
-    <>
-      <Toaster position="top-right" toastOptions={{ style: { background: T.surface, color: T.text, border: `1px solid ${T.border}`, fontFamily: FONT, fontSize: 13 } }} />
-      <PasswordGate onAuth={() => setAuthed(true)} />
-    </>
-  );
+  if (!authed) {
+    return (
+      <>
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            style: {
+              background: T.surface,
+              color: T.text,
+              border: `2px solid ${T.borderHi}`,
+              fontFamily: FONT,
+              fontSize: 13,
+              fontWeight: 700,
+            }
+          }}
+        />
+        <PasswordGate onAuth={() => setAuthed(true)} />
+      </>
+    );
+  }
 
   const TABS = [
-    { id: "upload", label: "Upload & Tools" },
-    { id: "excel",  label: "Excel Creator" },
-    { id: "files",  label: "All Files" },
-    { id: "mail",   label: "Mail Sender" },
+    { id: "upload", label: "Upload & File Tools" },
+    { id: "excel",  label: "Spreadsheet Scratchpad" },
+    { id: "files",  label: "File Registry & Links" },
+    { id: "mail",   label: "Batch Mail Dispatcher" },
   ];
 
   return (
     <div style={{ minHeight: "100vh", background: T.bg, fontFamily: FONT, color: T.text }}>
-      <Toaster position="top-right" toastOptions={{ style: { background: T.surface, color: T.text, border: `1px solid ${T.border}`, fontFamily: FONT, fontSize: 13 } }} />
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: T.surface,
+            color: T.text,
+            border: `2px solid ${T.borderHi}`,
+            fontFamily: FONT,
+            fontSize: 13,
+            fontWeight: 700,
+          }
+        }}
+      />
 
-      {/* Header */}
-      <div style={{ padding: "12px 24px", borderBottom: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <div>
-          <span style={{ fontSize: 15, fontWeight: 700, color: T.text }}>Share for Care</span>
-          <span style={{ marginLeft: 12, fontSize: 11, color: T.muted }}>CCD — IIT Guwahati</span>
+      {/* Top Navigation Bar */}
+      <header style={{ padding: "14px 28px", borderBottom: `2px solid ${T.border}`, background: T.surface, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <span style={{ fontSize: 18, fontWeight: 800, color: T.text, letterSpacing: "-0.02em" }}>Share for Care</span>
+          <span style={{ height: 16, width: 1.5, background: T.borderHi }} />
+          <span style={{ fontSize: 12, fontWeight: 700, color: T.textSec, letterSpacing: "0.04em" }}>CENTRE FOR CAREER DEVELOPMENT • IIT GUWAHATI</span>
         </div>
-        <Btn ghost small onClick={() => { sessionStorage.removeItem(TOKEN_KEY); setAuthed(false); }}>Logout</Btn>
-      </div>
+        <Btn
+          size="sm"
+          variant="ghost"
+          onClick={() => {
+            sessionStorage.removeItem(TOKEN_KEY);
+            setAuthed(false);
+          }}
+        >
+          Sign Out
+        </Btn>
+      </header>
 
-      {/* Tabs */}
-      <div style={{ borderBottom: `1px solid ${T.border}`, padding: "0 24px", display: "flex" }}>
-        {TABS.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)}
-            style={{ padding: "10px 14px", border: "none", background: "transparent", cursor: "pointer", fontSize: 12, fontWeight: 600, fontFamily: FONT, color: tab === t.id ? T.text : T.muted, borderBottom: `2px solid ${tab === t.id ? T.accent : "transparent"}` }}>
-            {t.label}
-          </button>
-        ))}
-      </div>
+      {/* Primary Section Switcher */}
+      <nav style={{ borderBottom: `2px solid ${T.border}`, padding: "0 28px", background: T.sunken, display: "flex", gap: 4 }}>
+        {TABS.map((t) => {
+          const active = tab === t.id;
+          return (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              style={{
+                padding: "13px 18px",
+                border: "none",
+                background: active ? T.surface : "transparent",
+                cursor: "pointer",
+                fontSize: 13,
+                fontWeight: 800,
+                fontFamily: FONT,
+                color: active ? T.text : T.muted,
+                borderBottom: `2.5px solid ${active ? T.primary : "transparent"}`,
+                letterSpacing: "-0.01em",
+                transition: "color 0.1s ease",
+              }}
+            >
+              {t.label}
+            </button>
+          );
+        })}
+      </nav>
 
-      {/* Content */}
-      <div style={{ padding: "24px", maxWidth: 1400, margin: "0 auto" }}>
+      {/* Active Work Area */}
+      <main style={{ padding: "28px", maxWidth: 1440, margin: "0 auto" }}>
         {tab === "upload" && <UploadToolsTab />}
         {tab === "excel"  && <ExcelCreatorTab />}
         {tab === "files"  && <FilesTab />}
         {tab === "mail"   && <MailTab />}
-      </div>
+      </main>
     </div>
   );
 }
