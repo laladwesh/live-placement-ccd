@@ -723,44 +723,44 @@ const STANDARD_DRAFTS = [
     id: "std-placement-invite-2027",
     name: "Placement Invitation 2026–27",
     subject: "IIT Guwahati <> {{company_name}} – Invitation for Placements 2026–27",
-    body: `<p>Dear {{contact_name}},</p>
-<p><em><strong>Greetings from the Centre for Career Development, IIT Guwahati.</strong></em></p>
-<p>We are pleased to invite <strong>{{company_name}}</strong> to participate in the <strong>On-Campus Placement Season 2026–27</strong> at IIT Guwahati for the graduating Batch of 2027. Recognized as one of India's premier institutions for engineering, research, and innovation, IIT Guwahati is ranked <strong>8th in Engineering in the NIRF 2025 Rankings</strong> and <strong>#115 in the QS Asia University Rankings 2026</strong>. The Institute also has a strong global research footprint, ranking <strong>42nd globally in Citations per Faculty (QS World University Rankings 2025)</strong>.</p>
-<p>These rankings reflect the strong academic, research, and technical capabilities of our students. Our graduating cohort across <strong>EEE, ECE, and CSE</strong> offers {{company_name}} access to a highly skilled talent pool with expertise in <strong>power electronics, power systems, control and automation, electric mobility, embedded systems, electronics, AI/ML, and software development</strong>. This enables recruitment across <strong>R&amp;D, product development, power and energy solutions, industrial automation, EV technologies, embedded systems, and other engineering roles</strong> from a single campus.</p>
-<p><em><strong>Placement Timeline</strong></em></p>
-<p><strong>Phase 1</strong></p>
+    body: `<p>Dear <strong>{{contact_name}}</strong>,</p>
+<p><em><strong><span style="color:#1a56db;">Greetings from the Centre for Career Development, IIT Guwahati.</span></strong></em></p>
+<p>We are pleased to invite <strong>{{company_name}}</strong> to participate in the <strong>On-Campus Placement Season 2026–27</strong> at IIT Guwahati for the graduating Batch of 2027. Recognized as one of India's premier institutions for engineering, research, and innovation, IIT Guwahati is ranked <strong><span style="color:#c0392b;">8th in Engineering in the NIRF 2025 Rankings</span></strong> and <strong><span style="color:#c0392b;">#115 in the QS Asia University Rankings 2026</span></strong>. The Institute also has a strong global research footprint, ranking <strong><span style="color:#c0392b;">42nd globally in Citations per Faculty (QS World University Rankings 2025)</span></strong>.</p>
+<p>These rankings reflect the strong academic, research, and technical capabilities of our students. Our graduating cohort across <strong>EEE, ECE, and CSE</strong> offers <strong>{{company_name}}</strong> access to a highly skilled talent pool with expertise in <strong>power electronics, power systems, control and automation, electric mobility, embedded systems, electronics, AI/ML, and software development</strong>. This enables recruitment across <strong>R&amp;D, product development, power and energy solutions, industrial automation, EV technologies, embedded systems, and other engineering roles</strong> from a single campus.</p>
+<p><strong><span style="color:#1a56db;">📅 Placement Timeline</span></strong></p>
+<p><strong><span style="color:#1a3d6e;">Phase 1</span></strong></p>
 <ul>
-<li>Online Assessments &amp; Pre-Placement Talks: September 25 – October 30, 2026</li>
-<li>Interviews: December onwards</li>
+<li>Online Assessments &amp; Pre-Placement Talks: <strong>September 25 – October 30, 2026</strong></li>
+<li>Interviews: <strong>December onwards</strong></li>
 </ul>
-<p><strong>Phase 2</strong></p>
+<p><strong><span style="color:#1a3d6e;">Phase 2</span></strong></p>
 <ul>
-<li>Online Assessments &amp; Pre-Placement Talks: January 15, 2027 onwards</li>
-<li>Interviews: January 15 – April 2027</li>
+<li>Online Assessments &amp; Pre-Placement Talks: <strong>January 15, 2027 onwards</strong></li>
+<li>Interviews: <strong>January 15 – April 2027</strong></li>
 </ul>
-<p><em>Joining:</em> From June 2027 onwards</p>
-<p>To register and participate, please submit the <strong>Job Application Form (JAF)</strong> via our <a href="https://iitg.ac.in/placements/auth/login/recruiter" target="_blank">Placement Portal</a>.</p>
-<p><em><strong>About IIT Guwahati</strong></em></p>
+<p><span style="color:#27ae60;"><em>Joining:</em></span> <strong>From June 2027 onwards</strong></p>
+<p>To register and participate, please submit the <strong>Job Application Form (JAF)</strong> via our <a href="https://iitg.ac.in/placements/auth/login/recruiter" target="_blank"><span style="color:#1a56db;"><strong>Placement Portal</strong></span></a>.</p>
+<p><strong><span style="color:#1a56db;">🏛️ About IIT Guwahati</span></strong></p>
 <p>Every year, leading organizations across diverse industries engage with IIT Guwahati to recruit some of the finest young minds in the country. The Institute's students consistently demonstrate their capabilities through national and international competitions, technical challenges, research initiatives, and industry-oriented projects.</p>
-<p><em><strong>Recent achievements of our students include:</strong></em></p>
+<p><strong><span style="color:#1a3d6e;">Recent achievements of our students include:</span></strong></p>
 <ul>
-<li>Rank 16 at the ICPC Asia West Finals</li>
-<li>Global Ranks 1, 6, 8, and 10 at the Creative Shock international case competition</li>
-<li>3rd position overall at Inter IIT Tech Meet 13.0</li>
-<li>11th Rank at IICPC Quantfest Finals</li>
-<li>Special Innovation Prize at Smart India Hackathon 2025</li>
-<li>1st Runner-Up finishes at the LAM Research Challenge and V-Guard Big Idea Tech Design Competition</li>
-<li>2nd Runner-Up finishes at Convolve and SARCathon, IIT Bombay</li>
+<li>Rank <strong><span style="color:#c0392b;">16</span></strong> at the ICPC Asia West Finals</li>
+<li>Global Ranks <strong><span style="color:#c0392b;">1, 6, 8, and 10</span></strong> at the Creative Shock international case competition</li>
+<li><strong><span style="color:#c0392b;">3rd position overall</span></strong> at Inter IIT Tech Meet 13.0</li>
+<li><strong>11th Rank</strong> at IICPC Quantfest Finals</li>
+<li><strong>Special Innovation Prize</strong> at Smart India Hackathon 2025</li>
+<li><strong>1st Runner-Up</strong> at the LAM Research Challenge and V-Guard Big Idea Tech Design Competition</li>
+<li><strong>2nd Runner-Up</strong> at Convolve and SARCathon, IIT Bombay</li>
 </ul>
 <p>We are confident our students will bring exceptional value to your organization.</p>
-<p><strong>Faculty Coordinators:</strong></p>
+<p><strong><span style="color:#1a3d6e;">Faculty Coordinators:</span></strong></p>
 <ul>
-<li><strong>Dr. Rishikesh D. Kulkarni</strong> (+91 7636892279)</li>
-<li><strong>Dr. Rajkumar P. Thummer</strong> (+91 70868 67025)</li>
+<li><strong>Dr. Rishikesh D. Kulkarni</strong> &nbsp;|&nbsp; <span style="color:#555555;">+91 7636892279</span></li>
+<li><strong>Dr. Rajkumar P. Thummer</strong> &nbsp;|&nbsp; <span style="color:#555555;">+91 70868 67025</span></li>
 </ul>
 <p>We look forward to welcoming <strong>{{company_name}}</strong> to our campus and building a successful partnership.</p>
 <p>Warm regards,</p>
-<p><em><strong>Chandrashekhar Rao</strong></em><br><em>Lead Student Placement Coordinator – Industry Liaison</em><br><em>Centre for Career Development</em><br><em>Indian Institute of Technology Guwahati</em><br><em>Contact: +91 7222940112</em></p>`,
+<p><strong><span style="color:#1a3d6e;">Chandrashekhar Rao</span></strong><br><em><span style="color:#555555;">Lead Student Placement Coordinator – Industry Liaison</span></em><br><em><span style="color:#555555;">Centre for Career Development</span></em><br><em><span style="color:#555555;">Indian Institute of Technology Guwahati</span></em><br><em><span style="color:#555555;">Contact: +91 7222940112</span></em></p>`,
     savedAt: "2026-09-17T00:00:00.000Z",
     isStandard: true,
   },
@@ -1416,6 +1416,41 @@ function MailTab() {
                   background: #ffffff;
                   border: 1px solid #d1d5db;
                   box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                  color: #111827;
+                }
+                .wd-industrial .rdw-colorpicker-modal-header {
+                  color: #111827;
+                }
+                .wd-industrial .rdw-colorpicker-modal-style-label {
+                  color: #374151;
+                  font-size: 12px;
+                }
+                .wd-industrial .rdw-colorpicker-modal-options {
+                  overflow: auto;
+                }
+                .wd-industrial .rdw-colorpicker-option {
+                  border: 1px solid #d1d5db;
+                }
+                .wd-industrial .rdw-link-modal-label,
+                .wd-industrial .rdw-image-modal-label {
+                  color: #374151;
+                  font-size: 12px;
+                }
+                .wd-industrial .rdw-link-modal-input,
+                .wd-industrial .rdw-image-modal-url-input {
+                  background: #f9fafb;
+                  border: 1px solid #d1d5db;
+                  color: #111827;
+                  border-radius: 3px;
+                  padding: 4px 8px;
+                }
+                .wd-industrial .rdw-link-modal-buttonsection button,
+                .wd-industrial .rdw-image-modal-btn {
+                  background: #1f2937;
+                  color: #ffffff;
+                  border: none;
+                  border-radius: 3px;
+                  cursor: pointer;
                 }
               `}</style>
 
@@ -1430,10 +1465,11 @@ function MailTab() {
                   blockRendererFn={blockRendererFn}
                   toolbarCustomButtons={[<HrButton key="hr" />]}
                   toolbar={{
-                    options: ["inline", "blockType", "fontSize", "list", "textAlign", "link", "history"],
+                    options: ["inline", "blockType", "fontSize", "colorPicker", "list", "textAlign", "link", "history"],
                     inline: { options: ["bold", "italic", "underline", "strikethrough"] },
                     blockType: { options: ["Normal", "H1", "H2", "H3", "Blockquote"] },
                     fontSize: { options: [12, 13, 14, 16, 18, 22] },
+                    colorPicker: { colors: ["#000000","#222222","#444444","#666666","#888888","#cc0000","#c0392b","#e74c3c","#e67e22","#f39c12","#27ae60","#1a56db","#2980b9","#8e44ad","#6b21a8","#ffffff"] },
                     list: { options: ["ordered", "unordered"] },
                     textAlign: { options: ["left", "center", "right"] },
                     link: { defaultTargetOption: "_blank" },
