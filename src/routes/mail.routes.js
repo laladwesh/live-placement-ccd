@@ -64,20 +64,26 @@ function getPortalUrl(fromEmail) {
 function buildFooterHtml(fromEmail) {
   const portalUrl = getPortalUrl(fromEmail);
   const logoTag = LOGO_PATH
-    ? `<img src="cid:iitg_mail_image" width="72" height="72" alt="IIT Guwahati" style="display:block;">`
+    ? `<img src="cid:iitg_mail_image" width="76" height="76" alt="IIT Guwahati" style="display:block;">`
     : "";
   return `
-<hr style="border:none;border-top:1px solid #cccccc;margin:10px 0 12px 0;">
-<table cellpadding="0" cellspacing="0" border="0" style="font-family:Arial,Helvetica,sans-serif;font-size:13.5px;color:#222222;line-height:1.8;">
+<hr style="border:none;border-top:2px solid #ffffff;margin:14px 0 0 0;">
+<table cellpadding="0" cellspacing="0" border="0" width="100%" style="background:#1a3d6e;font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#ffffff;line-height:1.4;">
   <tr>
-    ${LOGO_PATH ? `<td style="padding-right:16px;vertical-align:middle;">${logoTag}</td>` : ""}
-    <td style="vertical-align:middle;">
-      Visit us at <a href="https://www.iitg.ac.in/ccd" style="color:#1a56db;text-decoration:none;">www.iitg.ac.in/ccd</a><br>
-      <a href="https://www.linkedin.com/school/iit-guwahati/" style="color:#1a56db;text-decoration:none;">LinkedIn</a>
-      &nbsp;|&nbsp;
-      <a href="${portalUrl}" style="color:#1a56db;text-decoration:none;">Portal</a><br>
-      <strong>Centre for Career Development</strong><br>
-      IIT Guwahati
+    <td style="padding:14px 18px;">
+      <table cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          ${LOGO_PATH ? `<td style="padding-right:18px;vertical-align:middle;">${logoTag}</td>` : ""}
+          <td style="vertical-align:middle;color:#ffffff;">
+            Visit us at <a href="https://www.iitg.ac.in/ccd" style="color:#ffffff;text-decoration:underline;">www.iitg.ac.in/ccd</a>
+            &nbsp;&nbsp;<span style="color:#aac4ff;">|</span>&nbsp;&nbsp;
+            <a href="https://www.linkedin.com/school/iit-guwahati/" style="color:#ffffff;text-decoration:underline;">LinkedIn</a>
+            &nbsp;<span style="color:#aac4ff;">|</span>&nbsp;
+            <a href="${portalUrl}" style="color:#ffffff;text-decoration:underline;">Portal</a><br>
+            <strong style="font-size:15px;">Centre for Career Development &nbsp;&bull;&nbsp; IIT Guwahati</strong>
+          </td>
+        </tr>
+      </table>
     </td>
   </tr>
 </table>`;
