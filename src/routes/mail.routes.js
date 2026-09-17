@@ -77,7 +77,7 @@ function buildFooterHtml(fromEmail) {
           <td style="vertical-align:middle;color:#ffffff;">
             Visit us at <a href="https://www.iitg.ac.in/ccd" style="color:#ffffff;text-decoration:underline;">www.iitg.ac.in/ccd</a>
             &nbsp;&nbsp;<span style="color:#aac4ff;">|</span>&nbsp;&nbsp;
-            <a href="https://www.linkedin.com/school/iit-guwahati/" style="color:#ffffff;text-decoration:underline;">LinkedIn</a>
+            <a href="https://www.linkedin.com/in/ccdiitg/" style="color:#ffffff;text-decoration:underline;">LinkedIn</a>
             &nbsp;<span style="color:#aac4ff;">|</span>&nbsp;
             <a href="${portalUrl}" style="color:#ffffff;text-decoration:underline;">Portal</a><br>
             <strong style="font-size:15px;">Centre for Career Development &nbsp;&bull;&nbsp; IIT Guwahati</strong>
