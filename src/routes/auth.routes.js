@@ -7,7 +7,6 @@ const router = express.Router();
 // Only login (no public register)
 router.post("/login", login);
 
-// OAuth routes for Azure & Google
 router.use("/oauth", oauthRouter);
 
 // SSO handoff from the Placement Portal — signed-token verified, not session-gated
