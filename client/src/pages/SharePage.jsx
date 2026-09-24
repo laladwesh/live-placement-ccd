@@ -573,6 +573,10 @@ function FilesTab() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
   const [busy, setBusy] = useState(false);
+  const [showLinkForm, setShowLinkForm] = useState(false);
+  const [linkName, setLinkName] = useState("");
+  const [linkUrl, setLinkUrl] = useState("");
+  const [linkBusy, setLinkBusy] = useState(false);
 
   const fetch_ = useCallback(async () => {
     const p = new URLSearchParams();
@@ -583,6 +587,29 @@ function FilesTab() {
       if (r.ok) setFiles(await r.json());
     } catch {}
   }, [search, filter]);
+
+  const saveLink = async () => {
+    if (!linkName.trim() || !linkUrl.trim()) { toast.error("Name and URL are required"); return; }
+    let url = linkUrl.trim();
+    if (!/^https?:\/\//i.test(url)) url = "https://" + url;
+    setLinkBusy(true);
+    try {
+      const r = await sFetch(`${API}/share/links`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: linkName.trim(), url, isPermanent: true }),
+      });
+      if (r.ok) {
+        toast.success("Link saved");
+        setLinkName(""); setLinkUrl(""); setShowLinkForm(false);
+        fetch_();
+      } else {
+        const e = await r.json().catch(() => ({}));
+        toast.error(e.message || "Failed to save link");
+      }
+    } catch { toast.error("Network error"); }
+    setLinkBusy(false);
+  };
 
   useEffect(() => { fetch_(); }, [fetch_]);
   useEffect(() => { const id = setInterval(fetch_, 15000); return () => clearInterval(id); }, [fetch_]);
@@ -619,30 +646,65 @@ function FilesTab() {
   return (
     <div>
       <SectionHeader
-        title="File Registry"
-        subtitle="Manage public distribution links, expiration monitors, and storage allocation"
+        title="File & Link Registry"
+        subtitle="Manage files, shared links, expiration monitors, and storage"
         action={
           <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
             <input
               type="text"
-              placeholder="Search filename…"
+              placeholder="Search…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              style={{ ...inpStyle, width: 220 }}
+              style={{ ...inpStyle, width: 180 }}
             />
             <select
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               style={{ ...inpStyle, width: 140, cursor: "pointer" }}
             >
-              <option value="all">All Storage</option>
-              <option value="permanent">Permanent Only</option>
-              <option value="temporary">Temporary (15m)</option>
+              <option value="all">All</option>
+              <option value="permanent">Permanent</option>
+              <option value="temporary">Temporary</option>
             </select>
-            <Btn onClick={fetch_} size="md">Sync</Btn>
+            <Btn onClick={() => setShowLinkForm(v => !v)} variant={showLinkForm ? "primary" : "default"}>
+              {showLinkForm ? "Cancel" : "+ Add Link"}
+            </Btn>
+            <Btn onClick={fetch_}>Sync</Btn>
           </div>
         }
       />
+
+      {showLinkForm && (
+        <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, padding: "16px 20px", marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 12 }}>Add Shared Link</div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
+            <div style={{ flex: "1 1 200px" }}>
+              <FieldLabel required>Display Name</FieldLabel>
+              <input
+                type="text"
+                placeholder="e.g. JAF Form 2026–27"
+                value={linkName}
+                onChange={(e) => setLinkName(e.target.value)}
+                style={inpStyle}
+              />
+            </div>
+            <div style={{ flex: "2 1 300px" }}>
+              <FieldLabel required>URL</FieldLabel>
+              <input
+                type="text"
+                placeholder="https://docs.google.com/..."
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && saveLink()}
+                style={inpStyle}
+              />
+            </div>
+            <Btn variant="primary" onClick={saveLink} disabled={linkBusy}>
+              {linkBusy ? "Saving…" : "Save Link"}
+            </Btn>
+          </div>
+        </div>
+      )}
 
       <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, overflow: "hidden" }}>
         {!files.length ? (
@@ -654,10 +716,10 @@ function FilesTab() {
           <table style={{ borderCollapse: "collapse", width: "100%" }}>
             <thead>
               <tr style={{ background: T.sunken, borderBottom: `2px solid ${T.border}`, textAlign: "left" }}>
-                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec }}>DOCUMENT / PAYLOAD</th>
-                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 110 }}>SIZE</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec }}>NAME / URL</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 90 }}>TYPE</th>
                 <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 130 }}>LIFECYCLE</th>
-                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 90 }}>D/L</th>
+                <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, width: 70 }}>D/L</th>
                 <th style={{ padding: "12px 16px", fontSize: 12, fontWeight: 800, color: T.textSec, textAlign: "right" }}>ACTIONS</th>
               </tr>
             </thead>
@@ -665,14 +727,24 @@ function FilesTab() {
               {files.map((f, idx) => (
                 <tr key={f._id} style={{ borderBottom: idx < files.length - 1 ? `1px solid ${T.border}` : "none" }}>
                   <td style={{ padding: "12px 16px" }}>
-                    <div style={{ fontWeight: 700, fontSize: 14, color: T.text, wordBreak: "break-all" }}>{f.originalName}</div>
-                    <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 3 }}>ID: {f._id}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      {f.isLink && (
+                        <span style={{ fontSize: 10, fontWeight: 800, color: T.accent, border: `1px solid ${T.accent}55`, borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>LINK</span>
+                      )}
+                      <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>{f.originalName}</div>
+                    </div>
+                    {f.isLink && f.linkUrl && (
+                      <div style={{ fontSize: 11, fontFamily: MONO, color: T.accent, marginTop: 3, wordBreak: "break-all" }}>{f.linkUrl}</div>
+                    )}
+                    {!f.isLink && (
+                      <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 3 }}>{fmtSize(f.fileSize)}</div>
+                    )}
                   </td>
-                  <td style={{ padding: "12px 16px", fontSize: 12, fontFamily: MONO, fontWeight: 600, color: T.textSec }}>
-                    {fmtSize(f.fileSize)}
+                  <td style={{ padding: "12px 16px", fontSize: 11, fontFamily: MONO, fontWeight: 700, color: T.textSec }}>
+                    {f.isLink ? "URL" : (f.mimeType?.split("/")[1]?.toUpperCase() || "FILE")}
                   </td>
                   <td style={{ padding: "12px 16px" }}>
-                    {f.isPermanent ? (
+                    {f.isPermanent || f.isLink ? (
                       <span style={{ fontSize: 11, fontWeight: 800, color: T.success, background: T.successBg, border: `1px solid ${T.success}44`, padding: "3px 8px", borderRadius: 4 }}>
                         PERMANENT
                       </span>
@@ -683,28 +755,22 @@ function FilesTab() {
                     )}
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: 13, fontFamily: MONO, fontWeight: 700, color: T.text }}>
-                    {f.downloadCount}
+                    {f.isLink ? "—" : f.downloadCount}
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "inline-flex", gap: 6 }}>
-                      <Btn
-                        size="sm"
-                        onClick={() => {
-                          const url = `${window.location.origin}/dday/api/share/file/${f.shareUrl}`;
-                          navigator.clipboard.writeText(url).then(
-                            () => toast.success("URL copied"),
-                            () => toast.error("Copy failed")
-                          );
-                        }}
-                      >
-                        Copy URL
-                      </Btn>
-                      <Btn size="sm" onClick={() => download(f.shareUrl, f.originalName)} disabled={busy}>
-                        Download
-                      </Btn>
-                      <Btn size="sm" variant="danger" onClick={() => del(f._id)}>
-                        Wipe
-                      </Btn>
+                      {f.isLink ? (
+                        <>
+                          <Btn size="sm" variant="primary" onClick={() => window.open(f.linkUrl, "_blank")}>Open</Btn>
+                          <Btn size="sm" onClick={() => navigator.clipboard.writeText(f.linkUrl).then(() => toast.success("URL copied"), () => toast.error("Copy failed"))}>Copy URL</Btn>
+                        </>
+                      ) : (
+                        <>
+                          <Btn size="sm" onClick={() => { const url = `${window.location.origin}/dday/api/share/file/${f.shareUrl}`; navigator.clipboard.writeText(url).then(() => toast.success("URL copied"), () => toast.error("Copy failed")); }}>Copy URL</Btn>
+                          <Btn size="sm" onClick={() => download(f.shareUrl, f.originalName)} disabled={busy}>Download</Btn>
+                        </>
+                      )}
+                      <Btn size="sm" variant="danger" onClick={() => del(f._id)}>Delete</Btn>
                     </div>
                   </td>
                 </tr>

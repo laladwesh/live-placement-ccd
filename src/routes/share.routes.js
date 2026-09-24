@@ -124,9 +124,51 @@ router.get("/files", shareMiddleware, async (req, res) => {
     if (search) query.originalName = { $regex: search, $options: "i" };
     if (permanent !== undefined) query.isPermanent = permanent === "true";
     const files = await SharedFile.find(query).sort({ createdAt: -1 });
-    const valid = files.filter(f => f.isPermanent || new Date() < new Date(f.expiresAt));
+    const valid = files.filter(f => f.isLink || f.isPermanent || new Date() < new Date(f.expiresAt));
     res.json(valid);
   } catch { res.status(500).json({ message: "Failed to fetch files" }); }
+});
+
+router.post("/links", shareMiddleware, async (req, res) => {
+  const { name, url, isPermanent } = req.body;
+  if (!name || !url) return res.status(400).json({ message: "Name and URL are required" });
+  try {
+    const shareUrl = await generateShareUrl(name);
+    const permanent = isPermanent !== false;
+    const doc = await SharedFile.create({
+      originalName: name,
+      isLink: true,
+      linkUrl: url,
+      isPermanent: permanent,
+      expiresAt: permanent ? null : new Date(Date.now() + 15 * 60 * 1000),
+      shareUrl,
+      uploadedBy: req.user?.emailId || "admin",
+    });
+    res.status(201).json({ message: "Link saved", file: doc });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to save link", error: err.message });
+  }
+});
+
+router.post("/texts", shareMiddleware, async (req, res) => {
+  const { name, content, isPermanent } = req.body;
+  if (!name || !content) return res.status(400).json({ message: "Name and content are required" });
+  try {
+    const shareUrl = await generateShareUrl(name);
+    const permanent = isPermanent !== false;
+    const doc = await SharedFile.create({
+      originalName: name,
+      isText: true,
+      textContent: content,
+      isPermanent: permanent,
+      expiresAt: permanent ? null : new Date(Date.now() + 15 * 60 * 1000),
+      shareUrl,
+      uploadedBy: req.user?.emailId || "admin",
+    });
+    res.status(201).json({ message: "Text saved", file: doc });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to save text", error: err.message });
+  }
 });
 
 router.post("/upload", shareMiddleware, upload.single("file"), async (req, res) => {
@@ -152,7 +194,7 @@ router.delete("/files/:id", shareMiddleware, async (req, res) => {
   try {
     const file = await SharedFile.findById(req.params.id);
     if (!file) return res.status(404).json({ message: "File not found" });
-    cleanupFiles(path.join(UPLOAD_DIR, file.fileName));
+    if (!file.isLink && file.fileName) cleanupFiles(path.join(UPLOAD_DIR, file.fileName));
     await SharedFile.findByIdAndDelete(req.params.id);
     res.json({ message: "Deleted" });
   } catch { res.status(500).json({ message: "Delete failed" }); }
