@@ -124,7 +124,7 @@ router.get("/files", shareMiddleware, async (req, res) => {
     if (search) query.originalName = { $regex: search, $options: "i" };
     if (permanent !== undefined) query.isPermanent = permanent === "true";
     const files = await SharedFile.find(query).sort({ createdAt: -1 });
-    const valid = files.filter(f => f.isLink || f.isPermanent || new Date() < new Date(f.expiresAt));
+    const valid = files.filter(f => f.isLink || f.isText || f.isPermanent || new Date() < new Date(f.expiresAt));
     res.json(valid);
   } catch { res.status(500).json({ message: "Failed to fetch files" }); }
 });

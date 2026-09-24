@@ -8,7 +8,7 @@ const sharedFileSchema = new mongoose.Schema({
   isPermanent:  { type: Boolean, default: false },
   expiresAt: {
     type: Date,
-    required: function () { return !this.isPermanent && !this.isLink; },
+    required: function () { return !this.isPermanent && !this.isLink && !this.isText; },
   },
   downloadCount: { type: Number, default: 0 },
   uploadedBy:    { type: String, default: "admin" },

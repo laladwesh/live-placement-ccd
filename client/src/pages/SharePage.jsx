@@ -577,6 +577,11 @@ function FilesTab() {
   const [linkName, setLinkName] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
   const [linkBusy, setLinkBusy] = useState(false);
+  const [showTextForm, setShowTextForm] = useState(false);
+  const [textName, setTextName] = useState("");
+  const [textContent, setTextContent] = useState("");
+  const [textBusy, setTextBusy] = useState(false);
+  const [viewText, setViewText] = useState(null);
 
   const fetch_ = useCallback(async () => {
     const p = new URLSearchParams();
@@ -609,6 +614,27 @@ function FilesTab() {
       }
     } catch { toast.error("Network error"); }
     setLinkBusy(false);
+  };
+
+  const saveText = async () => {
+    if (!textName.trim() || !textContent.trim()) { toast.error("Title and content are required"); return; }
+    setTextBusy(true);
+    try {
+      const r = await sFetch(`${API}/share/texts`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: textName.trim(), content: textContent.trim(), isPermanent: true }),
+      });
+      if (r.ok) {
+        toast.success("Text saved");
+        setTextName(""); setTextContent(""); setShowTextForm(false);
+        fetch_();
+      } else {
+        const e = await r.json().catch(() => ({}));
+        toast.error(e.message || "Failed to save text");
+      }
+    } catch { toast.error("Network error"); }
+    setTextBusy(false);
   };
 
   useEffect(() => { fetch_(); }, [fetch_]);
@@ -666,8 +692,11 @@ function FilesTab() {
               <option value="permanent">Permanent</option>
               <option value="temporary">Temporary</option>
             </select>
-            <Btn onClick={() => setShowLinkForm(v => !v)} variant={showLinkForm ? "primary" : "default"}>
+            <Btn onClick={() => { setShowLinkForm(v => !v); setShowTextForm(false); }} variant={showLinkForm ? "primary" : "default"}>
               {showLinkForm ? "Cancel" : "+ Add Link"}
+            </Btn>
+            <Btn onClick={() => { setShowTextForm(v => !v); setShowLinkForm(false); }} variant={showTextForm ? "primary" : "default"}>
+              {showTextForm ? "Cancel" : "+ Paste Text"}
             </Btn>
             <Btn onClick={fetch_}>Sync</Btn>
           </div>
@@ -680,28 +709,59 @@ function FilesTab() {
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" }}>
             <div style={{ flex: "1 1 200px" }}>
               <FieldLabel required>Display Name</FieldLabel>
-              <input
-                type="text"
-                placeholder="e.g. JAF Form 2026–27"
-                value={linkName}
-                onChange={(e) => setLinkName(e.target.value)}
-                style={inpStyle}
-              />
+              <input type="text" placeholder="e.g. JAF Form 2026–27" value={linkName} onChange={(e) => setLinkName(e.target.value)} style={inpStyle} />
             </div>
             <div style={{ flex: "2 1 300px" }}>
               <FieldLabel required>URL</FieldLabel>
-              <input
-                type="text"
-                placeholder="https://docs.google.com/..."
-                value={linkUrl}
-                onChange={(e) => setLinkUrl(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && saveLink()}
-                style={inpStyle}
+              <input type="text" placeholder="https://docs.google.com/..." value={linkUrl} onChange={(e) => setLinkUrl(e.target.value)} onKeyDown={(e) => e.key === "Enter" && saveLink()} style={inpStyle} />
+            </div>
+            <Btn variant="primary" onClick={saveLink} disabled={linkBusy}>{linkBusy ? "Saving…" : "Save Link"}</Btn>
+          </div>
+        </div>
+      )}
+
+      {showTextForm && (
+        <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 6, padding: "16px 20px", marginBottom: 14 }}>
+          <div style={{ fontSize: 13, fontWeight: 800, color: T.text, marginBottom: 12 }}>Paste & Save Text</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            <div>
+              <FieldLabel required>Title</FieldLabel>
+              <input type="text" placeholder="e.g. Shortlist — Batch A" value={textName} onChange={(e) => setTextName(e.target.value)} style={inpStyle} />
+            </div>
+            <div>
+              <FieldLabel required>Content</FieldLabel>
+              <textarea
+                placeholder="Paste any text here — student lists, notes, announcements, roll numbers…"
+                value={textContent}
+                onChange={(e) => setTextContent(e.target.value)}
+                rows={6}
+                style={{ ...inpStyle, resize: "vertical", fontFamily: MONO, fontSize: 12, lineHeight: 1.6 }}
               />
             </div>
-            <Btn variant="primary" onClick={saveLink} disabled={linkBusy}>
-              {linkBusy ? "Saving…" : "Save Link"}
-            </Btn>
+            <div style={{ display: "flex", gap: 8 }}>
+              <Btn variant="primary" onClick={saveText} disabled={textBusy}>{textBusy ? "Saving…" : "Save Text"}</Btn>
+              <span style={{ fontSize: 12, color: T.muted, alignSelf: "center" }}>{textContent.length} chars</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Text viewer modal */}
+      {viewText && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 999, display: "flex", alignItems: "center", justifyContent: "center", padding: 24 }}
+          onClick={() => setViewText(null)}>
+          <div style={{ background: T.surface, border: `2px solid ${T.border}`, borderRadius: 8, padding: 24, width: "100%", maxWidth: 680, maxHeight: "80vh", display: "flex", flexDirection: "column" }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+              <div style={{ fontWeight: 800, fontSize: 16, color: T.text }}>{viewText.originalName}</div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <Btn size="sm" onClick={() => navigator.clipboard.writeText(viewText.textContent).then(() => toast.success("Copied"), () => toast.error("Copy failed"))}>Copy All</Btn>
+                <Btn size="sm" variant="danger" onClick={() => setViewText(null)}>Close</Btn>
+              </div>
+            </div>
+            <pre style={{ flex: 1, overflow: "auto", margin: 0, fontFamily: MONO, fontSize: 13, color: T.text, background: T.sunken, border: `1px solid ${T.border}`, borderRadius: 5, padding: "14px 16px", lineHeight: 1.7, whiteSpace: "pre-wrap", wordBreak: "break-word" }}>
+              {viewText.textContent}
+            </pre>
           </div>
         </div>
       )}
@@ -731,20 +791,28 @@ function FilesTab() {
                       {f.isLink && (
                         <span style={{ fontSize: 10, fontWeight: 800, color: T.accent, border: `1px solid ${T.accent}55`, borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>LINK</span>
                       )}
+                      {f.isText && (
+                        <span style={{ fontSize: 10, fontWeight: 800, color: "#7c3aed", border: "1px solid #7c3aed55", borderRadius: 3, padding: "1px 5px", whiteSpace: "nowrap" }}>TEXT</span>
+                      )}
                       <div style={{ fontWeight: 700, fontSize: 14, color: T.text }}>{f.originalName}</div>
                     </div>
                     {f.isLink && f.linkUrl && (
                       <div style={{ fontSize: 11, fontFamily: MONO, color: T.accent, marginTop: 3, wordBreak: "break-all" }}>{f.linkUrl}</div>
                     )}
-                    {!f.isLink && (
+                    {f.isText && f.textContent && (
+                      <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 3, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", maxWidth: 340 }}>
+                        {f.textContent.slice(0, 120)}{f.textContent.length > 120 ? "…" : ""}
+                      </div>
+                    )}
+                    {!f.isLink && !f.isText && (
                       <div style={{ fontSize: 11, fontFamily: MONO, color: T.muted, marginTop: 3 }}>{fmtSize(f.fileSize)}</div>
                     )}
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: 11, fontFamily: MONO, fontWeight: 700, color: T.textSec }}>
-                    {f.isLink ? "URL" : (f.mimeType?.split("/")[1]?.toUpperCase() || "FILE")}
+                    {f.isLink ? "URL" : f.isText ? "TEXT" : (f.mimeType?.split("/")[1]?.toUpperCase() || "FILE")}
                   </td>
                   <td style={{ padding: "12px 16px" }}>
-                    {f.isPermanent || f.isLink ? (
+                    {f.isPermanent || f.isLink || f.isText ? (
                       <span style={{ fontSize: 11, fontWeight: 800, color: T.success, background: T.successBg, border: `1px solid ${T.success}44`, padding: "3px 8px", borderRadius: 4 }}>
                         PERMANENT
                       </span>
@@ -755,7 +823,7 @@ function FilesTab() {
                     )}
                   </td>
                   <td style={{ padding: "12px 16px", fontSize: 13, fontFamily: MONO, fontWeight: 700, color: T.text }}>
-                    {f.isLink ? "—" : f.downloadCount}
+                    {f.isLink || f.isText ? "—" : f.downloadCount}
                   </td>
                   <td style={{ padding: "12px 16px", textAlign: "right" }}>
                     <div style={{ display: "inline-flex", gap: 6 }}>
@@ -763,6 +831,11 @@ function FilesTab() {
                         <>
                           <Btn size="sm" variant="primary" onClick={() => window.open(f.linkUrl, "_blank")}>Open</Btn>
                           <Btn size="sm" onClick={() => navigator.clipboard.writeText(f.linkUrl).then(() => toast.success("URL copied"), () => toast.error("Copy failed"))}>Copy URL</Btn>
+                        </>
+                      ) : f.isText ? (
+                        <>
+                          <Btn size="sm" variant="primary" onClick={() => setViewText(f)}>View</Btn>
+                          <Btn size="sm" onClick={() => navigator.clipboard.writeText(f.textContent || "").then(() => toast.success("Text copied"), () => toast.error("Copy failed"))}>Copy Text</Btn>
                         </>
                       ) : (
                         <>
