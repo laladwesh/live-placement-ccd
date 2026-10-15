@@ -5,23 +5,21 @@ import api from "../api/axios";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 const STAGE_LABELS = {
-  shortlisted: "Shortlisted",
-  r1:          "Round 1",
-  r2:          "Round 2",
-  r3:          "Round 3",
-  r4:          "Round 4",
-  offered:     "Offered",
-  rejected:    "Rejected",
+  applied:        "Applied",
+  oa_appeared:    "OA Appeared",
+  oa_shortlisted: "OA Shortlisted",
+  interview_call: "Interview Call",
+  offered:        "Offered",
+  placed:         "Placed",
 };
 
 const STAGE_COLORS = {
-  shortlisted: "bg-slate-100 text-slate-700",
-  r1:          "bg-blue-100 text-blue-700",
-  r2:          "bg-indigo-100 text-indigo-700",
-  r3:          "bg-purple-100 text-purple-700",
-  r4:          "bg-violet-100 text-violet-700",
-  offered:     "bg-emerald-100 text-emerald-700",
-  rejected:    "bg-rose-100 text-rose-600",
+  applied:        "bg-slate-100 text-slate-700",
+  oa_appeared:    "bg-blue-100 text-blue-700",
+  oa_shortlisted: "bg-indigo-100 text-indigo-700",
+  interview_call: "bg-amber-100 text-amber-700",
+  offered:        "bg-emerald-100 text-emerald-700",
+  placed:         "bg-emerald-200 text-emerald-800",
 };
 
 function Check({ value }) {
@@ -165,11 +163,14 @@ export default function PlacementStatsDetail() {
           {data.final_offer && (
             <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-6">
               <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-700 mb-3">
-                Final Offer {data.final_offer.is_off_campus && <span className="ml-2 text-xs font-semibold bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full">Off-Campus</span>}
+                Final Offer
+                {data.final_offer.is_off_campus && (
+                  <span className="ml-2 text-xs font-semibold bg-emerald-200 text-emerald-800 px-2 py-0.5 rounded-full">Off-Campus</span>
+                )}
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
                 <InfoItem label="Company" value={data.final_offer.company} />
-                <InfoItem label="Slot / Role" value={data.final_offer.role || data.final_offer.slot} />
+                <InfoItem label="Role / Slot" value={data.final_offer.role || data.final_offer.slot} />
                 <InfoItem label="Approved At" value={data.final_offer.approved_at ? new Date(data.final_offer.approved_at).toLocaleString() : "—"} />
               </div>
             </div>
@@ -179,11 +180,13 @@ export default function PlacementStatsDetail() {
           {data.totals && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Placement Funnel</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                <FunnelTile label="Shortlisted At" value={data.totals.applications} color="text-slate-900" />
-                <FunnelTile label="Interview Calls" value={data.totals.in_interviews} color="text-blue-700" />
-                <FunnelTile label="Offers" value={data.totals.offers} color="text-amber-700" />
-                <FunnelTile label="Placed" value={data.totals.placed} color="text-emerald-700" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+                <FunnelTile label="Applications"    value={data.totals.applications}    color="text-slate-900" />
+                <FunnelTile label="OA Appeared"     value={data.totals.oa_appeared}     color="text-blue-700" />
+                <FunnelTile label="OA Shortlisted"  value={data.totals.oa_shortlisted}  color="text-indigo-700" />
+                <FunnelTile label="Interview Calls" value={data.totals.interview_calls} color="text-amber-700" />
+                <FunnelTile label="Offers"          value={data.totals.offers}          color="text-orange-600" />
+                <FunnelTile label="Placed"          value={data.totals.placed}          color="text-emerald-700" />
               </div>
             </div>
           )}
@@ -193,7 +196,7 @@ export default function PlacementStatsDetail() {
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="px-6 py-4 border-b border-slate-100">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">
-                  Shortlist Trail — {data.trail.length} {data.trail.length === 1 ? "company" : "companies"}
+                  Application Trail — {data.trail.length} {data.trail.length === 1 ? "company" : "companies"}
                 </h2>
               </div>
               <div className="overflow-x-auto">
@@ -202,17 +205,18 @@ export default function PlacementStatsDetail() {
                     <tr className="bg-slate-50/50 border-b border-slate-100">
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Company</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Designation</th>
-                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Shortlisted</th>
-                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">R1</th>
-                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">R2</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Applied</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">OA Appeared</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">OA Shortlisted</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Interview Call</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Offered</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Current Stage</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {data.trail.map((entry) => (
+                    {data.trail.map((entry, idx) => (
                       <tr
-                        key={entry.job_id}
+                        key={entry.job_id || idx}
                         className={`hover:bg-slate-50/80 transition-colors ${entry.is_placed_here ? "bg-emerald-50/40" : ""}`}
                       >
                         <td className="px-5 py-3.5 text-sm font-medium text-slate-900">
@@ -222,10 +226,11 @@ export default function PlacementStatsDetail() {
                           )}
                         </td>
                         <td className="px-5 py-3.5 text-sm text-slate-600">{entry.designation || "—"}</td>
-                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages.shortlisted} /></td>
-                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages.r1} /></td>
-                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages.r2} /></td>
-                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages.offered} /></td>
+                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.applied} /></td>
+                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.oa_appeared} /></td>
+                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.oa_shortlisted} /></td>
+                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.interview_call} /></td>
+                        <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.offered} /></td>
                         <td className="px-5 py-3.5"><StageBadge stage={entry.current_stage} /></td>
                       </tr>
                     ))}
@@ -237,7 +242,7 @@ export default function PlacementStatsDetail() {
 
           {data.trail && data.trail.length === 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center text-slate-500">
-              No shortlist trail for this student yet.
+              No application trail for this student yet.
             </div>
           )}
         </div>
