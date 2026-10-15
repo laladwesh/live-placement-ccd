@@ -25,6 +25,7 @@ import MailSenderPage  from "./pages/MailSenderPage";
 import InternMasterData from "./pages/InternMasterData";
 import InternStatsLive from "./pages/InternStatsLive";
 import InternStatsLiveDetail from "./pages/InternStatsLiveDetail";
+import PlacementStatsDetail from "./pages/PlacementStatsDetail";
 import PrevPlacementData from "./pages/PrevPlacementData";
 import Footer          from "./components/Footer";
 
@@ -70,6 +71,7 @@ function App() {
             <Route path="/intern-master-data"                 element={<InternMasterData />} />
             <Route path="/intern-stats-live"                  element={<InternStatsLive />} />
             <Route path="/intern-stats-live/:rollNumber"      element={<InternStatsLiveDetail />} />
+            <Route path="/placement-stats/:rollNumber"        element={<PlacementStatsDetail />} />
             <Route path="/prev-placement"                     element={<PrevPlacementData />} />
           </Route>
         </Routes>

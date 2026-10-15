@@ -304,7 +304,12 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
                 </thead>
                 <tbody className="divide-y divide-slate-200">
                   {students.map((student) => (
-                    <tr key={student._id} className="hover:bg-slate-50">
+                    <tr
+                      key={student._id}
+                      className="hover:bg-blue-50 cursor-pointer"
+                      onClick={() => student.rollNumber && navigate(`/placement-stats/${student.rollNumber}`)}
+                      title={student.rollNumber ? `View placement stats for ${student.userId?.name || student.rollNumber}` : undefined}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                         {student.userId?.name || "N/A"}
                       </td>
