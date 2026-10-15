@@ -105,7 +105,7 @@ export const getPlacementStatsByRoll = async (req, res) => {
   if (PLACEMENT_API) {
     try {
       const upstream = await axios.get(
-        `${PLACEMENT_API}/external/dday/placement-stats/${encodeURIComponent(rollNumber)}`,
+        `${PLACEMENT_API}/sync/placement-stats/${encodeURIComponent(rollNumber)}`,
         { headers: { "x-sync-signature": hmacForGet() }, timeout: 12000 }
       );
       // Portal wraps response in { status, data } — unwrap before forwarding
