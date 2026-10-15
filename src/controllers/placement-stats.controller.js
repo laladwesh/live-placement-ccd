@@ -108,7 +108,9 @@ export const getPlacementStatsByRoll = async (req, res) => {
         `${PLACEMENT_API}/external/dday/placement-stats/${encodeURIComponent(rollNumber)}`,
         { headers: { "x-sync-signature": hmacForGet() }, timeout: 12000 }
       );
-      return res.json(upstream.data);
+      // Portal wraps response in { status, data } — unwrap before forwarding
+      const payload = upstream.data?.data ?? upstream.data;
+      return res.json(payload);
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 404) {
