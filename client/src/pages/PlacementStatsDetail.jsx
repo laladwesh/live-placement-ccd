@@ -182,8 +182,8 @@ export default function PlacementStatsDetail() {
               <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400 mb-4">Placement Funnel</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
                 <FunnelTile label="Applications"    value={data.totals.applications}    color="text-slate-900" />
-                <FunnelTile label="OA Appeared"     value={data.totals.oa_appeared}     color="text-blue-700" />
-                <FunnelTile label="OA Shortlisted"  value={data.totals.oa_shortlisted}  color="text-indigo-700" />
+                <FunnelTile label="OA Shortlisted"  value={data.totals.oa_shortlisted}  color="text-blue-700" />
+                <FunnelTile label="OA Appeared"     value={data.totals.oa_appeared}     color="text-indigo-700" />
                 <FunnelTile label="Interview Calls" value={data.totals.interview_calls} color="text-amber-700" />
                 <FunnelTile label="Offers"          value={data.totals.offers}          color="text-orange-600" />
                 <FunnelTile label="Placed"          value={data.totals.placed}          color="text-emerald-700" />
