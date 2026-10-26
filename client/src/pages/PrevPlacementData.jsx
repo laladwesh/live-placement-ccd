@@ -464,6 +464,7 @@ export default function PrevPlacementData() {
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
                       <Th>#</Th><Th>Company</Th><Th>Venue</Th><Th>Description</Th><Th>POCs</Th>
+                      <Th>Students</Th>
                       {canEdit && <Th>Action</Th>}
                     </tr>
                   </thead>
@@ -485,6 +486,14 @@ export default function PrevPlacementData() {
                             ))
                           }
                         </Td>
+                        <td className="px-5 py-3.5">
+                          <button
+                            onClick={() => navigate(`/poc/companies/${c._id}/students`)}
+                            className="px-3 py-1.5 text-xs font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors whitespace-nowrap"
+                          >
+                            View Students
+                          </button>
+                        </td>
                         {canEdit && (
                           <td className="px-5 py-3.5">
                             <button
