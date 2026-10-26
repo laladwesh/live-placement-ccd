@@ -128,7 +128,7 @@ export default function Login() {
       style={{ backgroundImage: `url(${iitgimg})` }}
     >
       {/* Semi-transparent overlay matching portal #EEF1F4 */}
-      <div className="absolute inset-0" style={{ background: "rgba(238,241,244,0.35)" }} />
+      <div className="absolute inset-0" style={{ background: "rgba(238,241,244,0.15)" }} />
 
       <div
         className="relative z-10 w-full max-w-md bg-white p-8"
