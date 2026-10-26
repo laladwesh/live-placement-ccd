@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import api from "../api/axios";
 import { useNavigate } from "react-router-dom";
-import iitgimg from "../assets/iitg2.jpeg";
+import iitgimg from "../assets/iitg-campus-bg.jpg";
 
 const MicrosoftIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 23 23" width="15" height="15" fill="currentColor" aria-hidden="true">
