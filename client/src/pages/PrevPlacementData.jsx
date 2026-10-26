@@ -487,12 +487,14 @@ export default function PrevPlacementData() {
                           }
                         </Td>
                         <td className="px-5 py-3.5">
-                          <button
-                            onClick={() => navigate(`/poc/companies/${c._id}/students`)}
+                          <a
+                            href={`${process.env.REACT_APP_BASE_PATH || ""}/poc/companies/${c._id}/students`}
+                            target="_blank"
+                            rel="noreferrer"
                             className="px-3 py-1.5 text-xs font-semibold rounded-md bg-indigo-600 text-white hover:bg-indigo-700 transition-colors whitespace-nowrap"
                           >
                             View Students
-                          </button>
+                          </a>
                         </td>
                         {canEdit && (
                           <td className="px-5 py-3.5">
