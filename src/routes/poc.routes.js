@@ -19,13 +19,12 @@ const router = express.Router();
 // All routes require authentication and POC/admin role
 router.use(authMiddleware);
 router.get("/student/:studentId/details", permit("poc", "admin", "viewer"), getStudentCrossCompanyDetails);
+// Read-only — also open to viewer role for prev-year analytics
+router.get("/companies/:companyId/students", permit("poc", "admin", "viewer"), getPOCCompanyStudents);
 router.use(permit("poc", "admin"));
 
 // Get POC's assigned companies
 router.get("/companies", getPOCCompanies);
-
-// Get students for a specific company
-router.get("/companies/:companyId/students", getPOCCompanyStudents);
 
 // Update interview stage
 router.patch("/shortlist/:shortlistId/stage", updateInterviewStage);
@@ -47,8 +46,5 @@ router.post("/companies/:companyId/walkin", addWalkInStudent);
 
 // Mark company process as completed
 router.post("/companies/:companyId/complete", markProcessCompleted);
-
-// Get student cross-company details
-
 
 export default router;
