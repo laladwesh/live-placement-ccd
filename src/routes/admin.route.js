@@ -12,6 +12,7 @@ import {
   syncOffCampusPlacementsFromPortal,
   syncCompaniesFromPortal,
   syncShortlistFromPortal,
+  syncAllShortlistsFromPortal,
 } from "../controllers/admin.controller.js";
 import {
   uploadStudentsCSV,
@@ -52,6 +53,7 @@ router.get('/students/:studentId/details', authMiddleware, permit('admin'), getS
 router.post("/sync/students", authMiddleware, permit("admin"), syncStudentsFromPortal);
 router.post("/sync/off-campus", authMiddleware, permit("admin"), syncOffCampusPlacementsFromPortal);
 router.post("/sync/companies", authMiddleware, permit("admin"), syncCompaniesFromPortal);
+router.post("/sync/shortlists", authMiddleware, permit("admin"), syncAllShortlistsFromPortal);
 router.post("/sync/companies/:companyId/shortlist", authMiddleware, permit("admin"), syncShortlistFromPortal);
 
 export default router;

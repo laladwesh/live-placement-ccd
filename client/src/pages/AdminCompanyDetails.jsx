@@ -18,6 +18,8 @@ export default function AdminCompanyDetails() {
   const [searchTerm, setSearchTerm] = useState("");
   const [syncingCompanies, setSyncingCompanies] = useState(false);
   const [companySyncResult, setCompanySyncResult] = useState(null);
+  const [syncingShortlists, setSyncingShortlists] = useState(false);
+  const [shortlistsSyncResult, setShortlistsSyncResult] = useState(null);
 
   useEffect(() => {
     if (!user) {
@@ -104,6 +106,22 @@ export default function AdminCompanyDetails() {
     }
   };
 
+  // One-click: pulls the interview shortlist for every company already linked to a
+  // placement portal job, instead of clicking "Sync" on each CompanyCard individually.
+  const handleSyncAllShortlists = async () => {
+    setSyncingShortlists(true);
+    setShortlistsSyncResult(null);
+    try {
+      const res = await api.post("/admin/sync/shortlists");
+      setShortlistsSyncResult(res.data);
+      fetchCompanies();
+    } catch (err) {
+      setShortlistsSyncResult({ error: err.response?.data?.message || "Sync failed" });
+    } finally {
+      setSyncingShortlists(false);
+    }
+  };
+
   const filteredCompanies = companies.filter(company => {
     
     const q = (searchTerm || "").trim().toLowerCase();
@@ -163,6 +181,17 @@ export default function AdminCompanyDetails() {
                 </svg>
                 {syncingCompanies ? "Syncing…" : "Sync All Companies"}
               </button>
+              <button
+                onClick={handleSyncAllShortlists}
+                disabled={syncingShortlists}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Pull the interview shortlist for every company linked to a placement portal job"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                {syncingShortlists ? "Syncing…" : "Sync All Shortlists"}
+              </button>
             </div>
           </div>
           <p className="text-slate-500 text-sm mt-1">
@@ -197,6 +226,17 @@ export default function AdminCompanyDetails() {
               {companySyncResult.error
                 ? companySyncResult.error
                 : `Sync done — ${companySyncResult.total} companies found: ${companySyncResult.created} added, ${companySyncResult.skipped} already present`}
+            </div>
+          )}
+
+          {shortlistsSyncResult && (
+            <div className={`mb-3 px-4 py-2 rounded text-sm ${shortlistsSyncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
+              {shortlistsSyncResult.error
+                ? shortlistsSyncResult.error
+                : `Shortlist sync done — ${shortlistsSyncResult.companiesProcessed}/${shortlistsSyncResult.companies} companies synced: ${shortlistsSyncResult.added} students added, ${shortlistsSyncResult.skipped} already shortlisted` +
+                  (shortlistsSyncResult.companiesFailed
+                    ? `, ${shortlistsSyncResult.companiesFailed} company sync(s) failed (${shortlistsSyncResult.failures.map(f => f.companyName).join(", ")})`
+                    : "")}
             </div>
           )}
 

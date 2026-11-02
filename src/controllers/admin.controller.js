@@ -734,6 +734,83 @@ export const syncCompaniesFromPortal = async (req, res) => {
   }
 };
 
+// Pulls one company's interview shortlist from the placement portal and upserts it,
+// append+dedup. Shared by the single-company route below and the "sync all" route, so
+// a one-click "sync every company" doesn't duplicate this logic per company.
+async function pullShortlistForCompany(company) {
+  const { data } = await axios.get(
+    `${PLACEMENT_API}/sync/shortlist/${company.placementPortalJobId}`,
+    { headers: { "x-sync-signature": makeSyncHmacForGet() }, timeout: 15000 }
+  );
+  if (data.status !== "success") {
+    throw new Error("Placement portal returned error");
+  }
+
+  let added = 0, skipped = 0;
+  for (const s of data.data) {
+    // Respect OA policy — only sync students who were OA-present (or OA not required)
+    if (!s.oaPresent) { skipped++; continue; }
+
+    const email = s.email?.toLowerCase();
+    if (!email) continue;
+
+    // Upsert user
+    let user = await User.findOne({ emailId: email });
+    if (!user) {
+      const phoneValid = s.phoneNo && /^\d{10}$/.test(s.phoneNo);
+      user = await User.create({
+        name: s.name || email,
+        emailId: email,
+        ...(phoneValid ? { phoneNo: s.phoneNo } : {}),
+        role: "student",
+        isAllowed: true,
+      });
+    }
+
+    // Ensure Student sidecar
+    let studentDoc = await Student.findOne({ userId: user._id });
+    if (!studentDoc) {
+      const rollValid = s.rollNumber && /^\d{9}$/.test(s.rollNumber);
+      studentDoc = await Student.create({ userId: user._id, rollNumber: rollValid ? s.rollNumber : "" });
+    } else if (studentDoc.placementYear !== null && studentDoc.placementYear !== undefined) {
+      // Archived student being shortlisted in a new season — reactivate
+      studentDoc.placementYear = null;
+      studentDoc.isPlaced = false;
+      studentDoc.shortlistedCompanies = [];
+      studentDoc.waitlistedCompanies = [];
+      studentDoc.placedCompany = null;
+      if (s.rollNumber && /^\d{9}$/.test(s.rollNumber)) studentDoc.rollNumber = s.rollNumber;
+      await studentDoc.save();
+    }
+
+    // Append-only — skip if already shortlisted for this company
+    const exists = await Shortlist.findOne({ studentId: user._id, companyId: company._id });
+    if (exists) { skipped++; continue; }
+
+    await Shortlist.create({
+      companyId: company._id,
+      companyName: company.name,
+      studentId: user._id,
+      studentEmail: email,
+      status: Status.SHORTLISTED,
+    });
+
+    if (!studentDoc.shortlistedCompanies.includes(company._id)) {
+      studentDoc.shortlistedCompanies.push(company._id);
+      await studentDoc.save();
+    }
+
+    if (!company.shortlistedStudents.includes(user._id)) {
+      company.shortlistedStudents.push(user._id);
+    }
+    added++;
+  }
+
+  if (added > 0) await company.save();
+
+  return { total: data.data.length, added, skipped };
+}
+
 // POST /admin/sync/companies/:companyId/shortlist  — pull interview shortlist for one company, append+dedup
 export const syncShortlistFromPortal = async (req, res) => {
   try {
@@ -745,80 +822,51 @@ export const syncShortlistFromPortal = async (req, res) => {
       return res.status(400).json({ message: "Company is not linked to a placement portal job" });
     }
 
-    const { data } = await axios.get(
-      `${PLACEMENT_API}/sync/shortlist/${company.placementPortalJobId}`,
-      { headers: { "x-sync-signature": makeSyncHmacForGet() }, timeout: 15000 }
-    );
-    if (data.status !== "success") {
-      return res.status(502).json({ message: "Placement portal returned error" });
-    }
-
-    let added = 0, skipped = 0;
-    for (const s of data.data) {
-      // Respect OA policy — only sync students who were OA-present (or OA not required)
-      if (!s.oaPresent) { skipped++; continue; }
-
-      const email = s.email?.toLowerCase();
-      if (!email) continue;
-
-      // Upsert user
-      let user = await User.findOne({ emailId: email });
-      if (!user) {
-        const phoneValid = s.phoneNo && /^\d{10}$/.test(s.phoneNo);
-        user = await User.create({
-          name: s.name || email,
-          emailId: email,
-          ...(phoneValid ? { phoneNo: s.phoneNo } : {}),
-          role: "student",
-          isAllowed: true,
-        });
-      }
-
-      // Ensure Student sidecar
-      let studentDoc = await Student.findOne({ userId: user._id });
-      if (!studentDoc) {
-        const rollValid = s.rollNumber && /^\d{9}$/.test(s.rollNumber);
-        studentDoc = await Student.create({ userId: user._id, rollNumber: rollValid ? s.rollNumber : "" });
-      } else if (studentDoc.placementYear !== null && studentDoc.placementYear !== undefined) {
-        // Archived student being shortlisted in a new season — reactivate
-        studentDoc.placementYear = null;
-        studentDoc.isPlaced = false;
-        studentDoc.shortlistedCompanies = [];
-        studentDoc.waitlistedCompanies = [];
-        studentDoc.placedCompany = null;
-        if (s.rollNumber && /^\d{9}$/.test(s.rollNumber)) studentDoc.rollNumber = s.rollNumber;
-        await studentDoc.save();
-      }
-
-      // Append-only — skip if already shortlisted for this company
-      const exists = await Shortlist.findOne({ studentId: user._id, companyId: company._id });
-      if (exists) { skipped++; continue; }
-
-      await Shortlist.create({
-        companyId: company._id,
-        companyName: company.name,
-        studentId: user._id,
-        studentEmail: email,
-        status: Status.SHORTLISTED,
-      });
-
-      if (!studentDoc.shortlistedCompanies.includes(company._id)) {
-        studentDoc.shortlistedCompanies.push(company._id);
-        await studentDoc.save();
-      }
-
-      if (!company.shortlistedStudents.includes(user._id)) {
-        company.shortlistedStudents.push(user._id);
-      }
-      added++;
-    }
-
-    if (added > 0) await company.save();
-
-    logger.info(`[sync] Shortlist ${companyId} — total: ${data.data.length}, added: ${added}, skipped: ${skipped}`);
-    return res.json({ status: "success", total: data.data.length, added, skipped });
+    const result = await pullShortlistForCompany(company);
+    logger.info(`[sync] Shortlist ${companyId} — total: ${result.total}, added: ${result.added}, skipped: ${result.skipped}`);
+    return res.json({ status: "success", ...result });
   } catch (err) {
     logger.error("syncShortlistFromPortal error:", err.message);
+    return res.status(500).json({ message: "Sync failed", error: err.message });
+  }
+};
+
+// POST /admin/sync/shortlists  — one-click: pull interview shortlists for EVERY company
+// already linked to a placement portal job, instead of syncing one company at a time.
+export const syncAllShortlistsFromPortal = async (req, res) => {
+  try {
+    const companies = await Company.find({ placementPortalJobId: { $ne: null } });
+
+    let companiesProcessed = 0, companiesFailed = 0, totalAdded = 0, totalSkipped = 0;
+    const failures = [];
+
+    for (const company of companies) {
+      try {
+        const result = await pullShortlistForCompany(company);
+        companiesProcessed++;
+        totalAdded += result.added;
+        totalSkipped += result.skipped;
+      } catch (err) {
+        companiesFailed++;
+        failures.push({ companyId: company._id, companyName: company.name, error: err.message });
+        logger.error(`[sync] Shortlist (bulk) ${company._id} failed:`, err.message);
+      }
+    }
+
+    logger.info(
+      `[sync] All shortlists — companies: ${companies.length}, processed: ${companiesProcessed}, failed: ${companiesFailed}, added: ${totalAdded}, skipped: ${totalSkipped}`
+    );
+    return res.json({
+      status: "success",
+      companies: companies.length,
+      companiesProcessed,
+      companiesFailed,
+      added: totalAdded,
+      skipped: totalSkipped,
+      failures,
+    });
+  } catch (err) {
+    logger.error("syncAllShortlistsFromPortal error:", err.message);
     return res.status(500).json({ message: "Sync failed", error: err.message });
   }
 };
