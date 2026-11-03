@@ -8,10 +8,11 @@ const TENURES = {
       { name: "Gaurav Anand",   department: "BTech, CE",  email: "g.anand@iitg.ac.in",   linkedin: "https://www.linkedin.com/in/gaurav-anand-26b380296/", photo: "/dday/gaurav.jpg" },
     ],
     coordinators: [
-      { name: "Bibek Nath",           department: "CL",   email: "n.bibek@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/bibek-nath-944254170/",   photo: "/dday/Bibek.jpeg" },
-      { name: "Hari Chakravarthy",    department: "ECE",  email: "c.nomula@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/nhc1866/",                photo: "/dday/Hari.jpeg" },
-      { name: "Kabya Ranjan Chaubey", department: "EEE",  email: "c.kabya@iitg.ac.in",          linkedin: "https://www.linkedin.com/in/kbchaubey25/",            photo: "/dday/Kabya.jpeg" },
-      { name: "Raman Agrawal",        department: "EEE",  email: "raman.agrawal@iitg.ac.in",    linkedin: "https://www.linkedin.com/in/raman-agrawal-7a24bb326", photo: "/dday/Raman.jpeg" },
+      { name: "Bibek Nath",           department: "BTech, CL",    email: "n.bibek@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/bibek-nath-944254170/",   photo: "/dday/Bibek.jpeg" },
+      { name: "Hari Chakravarthy",    department: "BTech, ECE",   email: "c.nomula@iitg.ac.in",         linkedin: "https://www.linkedin.com/in/nhc1866/",                photo: "/dday/Hari.jpeg" },
+      { name: "Kabya Ranjan Chaubey", department: "BTech, EEE",   email: "c.kabya@iitg.ac.in",          linkedin: "https://www.linkedin.com/in/kbchaubey25/",            photo: "/dday/Kabya.jpeg" },
+      { name: "Raman Agrawal",        department: "BTech, EEE",   email: "raman.agrawal@iitg.ac.in",    linkedin: "https://www.linkedin.com/in/raman-agrawal-7a24bb326", photo: "/dday/Raman.jpeg" },
+      { name: "Yash Raghav",          department: "BTech, BSBE", email: "r.yash@iitg.ac.in",    linkedin: "https://www.linkedin.com/in/yash-raghav25/",                                                   photo: "/dday/yash_raghav.png" },
     ],
     gratitude: [
       { name: "Shivam", department: "BDES, DOD", email: "shivam.bdes@iitg.ac.in", linkedin: "https://www.linkedin.com/in/shivam-umaru/", photo: "https://iitg.ac.in/ccd/assets/img/LSC26-27/Shivam.png" },
