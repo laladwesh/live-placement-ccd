@@ -207,7 +207,7 @@ export default function StudentDashboard() {
         {/* Shortlists Table */}
 {filteredShortlists.length === 0 ? (
   <div className="bg-white rounded-lg shadow-sm p-12 text-center">
-    <div style={{ fontSize: 20, fontWeight: 600, color: '#14213D', marginBottom: 4 }}>dw, ccd believes in you cudie 👉👈🎀.</div>
+    <div style={{ fontSize: 20, fontWeight: 600, color: '#14213D', marginBottom: 4 }}>dw, ccd believes in you buddie 👉👈🎀.</div>
     <div style={{ fontSize: 13, color: '#8D9096', marginBottom: 12 }}>regards, avinash and gaurav</div>
     <h3 className="text-xl font-semibold text-slate-900 mb-2">
       {searchTerm || filterStage !== "ALL" ? "No matching applications" : "No applications yet"}
