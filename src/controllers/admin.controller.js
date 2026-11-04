@@ -159,11 +159,13 @@ export const getConfirmedOffers = async (req, res) => {
       .sort({ approvedAt: -1, createdAt: -1 });
 
     // Batch-load Student docs (one query instead of N) to get rollNumber
-    const confUserIds = confirmedOffers.map(o => o.studentId._id);
+    // Filter out offers whose studentId ref was deleted (populate returns null)
+    const validOffers = confirmedOffers.filter(o => o.studentId != null);
+    const confUserIds = validOffers.map(o => o.studentId._id);
     const confStudentDocs = await Student.find({ userId: { $in: confUserIds } }).select('userId rollNumber').lean();
     const confRollMap = new Map(confStudentDocs.map(s => [s.userId.toString(), s.rollNumber]));
 
-    const enrichedOffers = confirmedOffers.map(offer => {
+    const enrichedOffers = validOffers.map(offer => {
       const offerObj = offer.toObject();
       offerObj.studentId.rollNumber = confRollMap.get(offer.studentId._id.toString()) || "";
       offerObj.studentId.programme = offerObj.studentId.programme || null;
