@@ -748,7 +748,7 @@ async function pullShortlistForCompany(company) {
     throw new Error("Placement portal returned error");
   }
 
-  let added = 0, skipped = 0;
+  let added = 0, updated = 0, skipped = 0;
   for (const s of data.data) {
     // Respect OA policy — only sync students who were OA-present (or OA not required)
     if (!s.oaPresent) { skipped++; continue; }
@@ -785,32 +785,70 @@ async function pullShortlistForCompany(company) {
       await studentDoc.save();
     }
 
-    // Append-only — skip if already shortlisted for this company
+    const isWaitlisted = s.status === "waitlisted";
+    const newStatus = isWaitlisted ? Status.WAITLISTED : Status.SHORTLISTED;
+
+    // Already synced for this company: never create a duplicate, but DO reconcile the
+    // shortlisted/waitlisted status with the placement portal. Previously these rows were
+    // skipped outright, so anyone first synced as "shortlisted" stayed that way forever even
+    // after the portal marked them waitlisted. Rows a POC has already acted on (stage set or
+    // offered) are left untouched so live interview progress is never overwritten.
     const exists = await Shortlist.findOne({ studentId: user._id, companyId: company._id });
-    if (exists) { skipped++; continue; }
+    if (exists) {
+      if (exists.status !== newStatus && !exists.stage && !exists.isOffered) {
+        exists.status = newStatus;
+        await exists.save();
+
+        if (isWaitlisted) {
+          studentDoc.shortlistedCompanies.pull(company._id);
+          if (!studentDoc.waitlistedCompanies.includes(company._id)) studentDoc.waitlistedCompanies.push(company._id);
+          company.shortlistedStudents.pull(user._id);
+          if (!company.waitlistedStudents.includes(user._id)) company.waitlistedStudents.push(user._id);
+        } else {
+          studentDoc.waitlistedCompanies.pull(company._id);
+          if (!studentDoc.shortlistedCompanies.includes(company._id)) studentDoc.shortlistedCompanies.push(company._id);
+          company.waitlistedStudents.pull(user._id);
+          if (!company.shortlistedStudents.includes(user._id)) company.shortlistedStudents.push(user._id);
+        }
+        await studentDoc.save();
+        updated++;
+      } else {
+        skipped++;
+      }
+      continue;
+    }
 
     await Shortlist.create({
       companyId: company._id,
       companyName: company.name,
       studentId: user._id,
       studentEmail: email,
-      status: Status.SHORTLISTED,
+      status: isWaitlisted ? Status.WAITLISTED : Status.SHORTLISTED,
     });
 
-    if (!studentDoc.shortlistedCompanies.includes(company._id)) {
-      studentDoc.shortlistedCompanies.push(company._id);
-      await studentDoc.save();
-    }
-
-    if (!company.shortlistedStudents.includes(user._id)) {
-      company.shortlistedStudents.push(user._id);
+    if (isWaitlisted) {
+      if (!studentDoc.waitlistedCompanies.includes(company._id)) {
+        studentDoc.waitlistedCompanies.push(company._id);
+        await studentDoc.save();
+      }
+      if (!company.waitlistedStudents.includes(user._id)) {
+        company.waitlistedStudents.push(user._id);
+      }
+    } else {
+      if (!studentDoc.shortlistedCompanies.includes(company._id)) {
+        studentDoc.shortlistedCompanies.push(company._id);
+        await studentDoc.save();
+      }
+      if (!company.shortlistedStudents.includes(user._id)) {
+        company.shortlistedStudents.push(user._id);
+      }
     }
     added++;
   }
 
-  if (added > 0) await company.save();
+  if (added > 0 || updated > 0) await company.save();
 
-  return { total: data.data.length, added, skipped };
+  return { total: data.data.length, added, updated, skipped };
 }
 
 // POST /admin/sync/companies/:companyId/shortlist  — pull interview shortlist for one company, append+dedup
