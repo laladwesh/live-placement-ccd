@@ -69,7 +69,7 @@ export const createUser = async (req, res) => {
 };
 
 /**
- * Get all pending offers (waiting for admin approval)
+ * Get all pending (unapproved) offers (waiting for admin approval)
  * GET /api/admin/offers/pending
  */
 export const getPendingOffers = async (req, res) => {
