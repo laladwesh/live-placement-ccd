@@ -1,9 +1,6 @@
 ﻿// src/pages/AdminStudents.jsx
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Table, Input, Button, Tag, Upload, Space } from "antd";
-import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
-import toast from "react-hot-toast";
 import api from "../api/axios";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
@@ -12,15 +9,12 @@ export default function AdminStudents() {
   const [user, setUser] = useState(() => getCachedUser());
   const [students, setStudents] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const [uploadResult, setUploadResult] = useState(null);
-  const [selectedFile, setSelectedFile] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
   const [search, setSearch] = useState("");
 
   useEffect(() => {
-    if (user) return; // Already have user from cache
+    if (user) return;
     api.get("/users/me").then(res => {
       setCachedUser(res.data.user);
       setUser(res.data.user);
@@ -53,57 +47,6 @@ export default function AdminStudents() {
     }
   };
 
-  const handleFileChange = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      if (!file.name.endsWith('.csv')) {
-        toast.error("Please select a CSV file");
-        return;
-      }
-      setSelectedFile(file);
-      setUploadResult(null);
-    }
-  };
-
-  const handleUpload = async () => {
-    if (!selectedFile) {
-      toast.error("Please select a file first");
-      return;
-    }
-
-    setUploading(true);
-    setUploadResult(null);
-
-    try {
-      const formData = new FormData();
-      formData.append("file", selectedFile);
-
-      const res = await api.post("/admin/students/upload", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
-        }
-      });
-
-      setUploadResult(res.data);
-      setSelectedFile(null);
-      
-      // Clear file input
-      document.getElementById("csvFileInput").value = "";
-      
-      // Refresh students list
-      fetchStudents();
-    } catch (err) {
-      console.error("Error uploading CSV:", err);
-      setUploadResult({
-        success: false,
-        message: err.response?.data?.message || "Failed to upload CSV",
-        error: err.response?.data?.error
-      });
-    } finally {
-      setUploading(false);
-    }
-  };
-
   const handleSyncFromPortal = async () => {
     setSyncing(true);
     setSyncResult(null);
@@ -118,154 +61,45 @@ export default function AdminStudents() {
     }
   };
 
-  const downloadSampleCSV = () => {
-    const csvContent = `email,name,rollNumber,phoneNo
-student1@iitg.ac.in,Student One,210101001,9876543210
-student2@iitg.ac.in,Student Two,210101002,9876543211
-student3@iitg.ac.in,Student Three,210101003,9876543212`;
-
-    const blob = new Blob([csvContent], { type: 'text/csv' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'sample-students.csv';
-    a.click();
-    window.URL.revokeObjectURL(url);
-  };
-
   return (
     <div className="bg-slate-50 p-6">
-
       <div className="px-6">
-        
+
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold text-slate-900">Student Management</h1>
-          <p className="text-slate-600 mt-1">Upload and manage student data</p>
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-slate-900">Student Management</h1>
+            <p className="text-slate-600 mt-1">Students synced from the placement portal</p>
+          </div>
+          <button
+            onClick={handleSyncFromPortal}
+            disabled={syncing}
+            className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start sm:self-auto"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {syncing ? "Syncing…" : "Sync from Placement Portal"}
+          </button>
         </div>
 
-        {/* Upload Section */}
-        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-semibold text-slate-900">Upload Students CSV</h2>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handleSyncFromPortal}
-                disabled={syncing}
-                className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
-                {syncing ? "Syncing…" : "Sync from Placement Portal"}
-              </button>
-            </div>
-          </div>
-          {syncResult && (
-            <div className={`mb-4 px-4 py-2 rounded text-sm ${syncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
-              {syncResult.error ? (
-                syncResult.error
-              ) : (
-                <>
-                  {`Sync done — ${syncResult.total} students: ${syncResult.created} created, ${syncResult.updated} updated`}
-                  {syncResult.offCampus && (
-                    syncResult.offCampus.error
-                      ? ` | Off-campus placements: sync failed (${syncResult.offCampus.error})`
-                      : ` | Off-campus placements: ${syncResult.offCampus.created} added, ${syncResult.offCampus.updated} updated`
-                  )}
-                </>
-              )}
-            </div>
-          )}
-          
-          <div className="space-y-4">
-            {/* File Input */}
-            <div className="flex items-center gap-4">
-              <input
-                id="csvFileInput"
-                type="file"
-                accept=".csv"
-                onChange={handleFileChange}
-                className="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer"
-              />
-              <button
-                onClick={handleUpload}
-                disabled={!selectedFile || uploading}
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
-              >
-                {uploading ? "Uploading..." : "Upload CSV"}
-              </button>
-            </div>
-
-            {/* Download Sample */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={downloadSampleCSV}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
-              >
-                Download Sample CSV Format
-              </button>
-              {/* <span className="text-sm text-slate-500">
-                (Format: email,name,rollNumber,phoneNo)
-              </span> */}
-            </div>
-
-            {/* Upload Result */}
-            {uploadResult && (
-              <div className={`p-4 rounded-lg ${uploadResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-                <div className="flex items-center gap-2 mb-2">
-                  {uploadResult.success ? (
-                    <svg className="h-5 w-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  ) : (
-                    <svg className="h-5 w-5 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                  )}
-                  <h3 className={`font-semibold ${uploadResult.success ? 'text-green-900' : 'text-red-900'}`}>
-                    {uploadResult.success ? 'Upload Successful' : 'Upload Failed'}
-                  </h3>
-                </div>
-                <p className={`text-sm ${uploadResult.success ? 'text-green-700' : 'text-red-700'}`}>
-                  {uploadResult.message}
-                </p>
-                
-                {uploadResult.summary && (
-                  <div className="mt-3 grid grid-cols-4 gap-4 text-sm">
-                    <div className="bg-white p-2 rounded">
-                      <div className="font-semibold text-slate-900">{uploadResult.summary.total}</div>
-                      <div className="text-slate-600">Total</div>
-                    </div>
-                    <div className="bg-white p-2 rounded">
-                      <div className="font-semibold text-green-600">{uploadResult.summary.created}</div>
-                      <div className="text-slate-600">Created</div>
-                    </div>
-                    <div className="bg-white p-2 rounded">
-                      <div className="font-semibold text-blue-600">{uploadResult.summary.updated}</div>
-                      <div className="text-slate-600">Updated</div>
-                    </div>
-                    <div className="bg-white p-2 rounded">
-                      <div className="font-semibold text-yellow-600">{uploadResult.summary.skipped}</div>
-                      <div className="text-slate-600">Skipped</div>
-                    </div>
-                  </div>
+        {/* Sync result banner */}
+        {syncResult && (
+          <div className={`mb-6 px-4 py-3 rounded-lg text-sm ${syncResult.error ? "bg-red-50 text-red-700 border border-red-200" : "bg-emerald-50 text-emerald-800 border border-emerald-200"}`}>
+            {syncResult.error ? (
+              syncResult.error
+            ) : (
+              <>
+                {`Sync done — ${syncResult.total} students: ${syncResult.created} created, ${syncResult.updated} updated`}
+                {syncResult.offCampus && (
+                  syncResult.offCampus.error
+                    ? ` | Off-campus placements: sync failed (${syncResult.offCampus.error})`
+                    : ` | Off-campus placements: ${syncResult.offCampus.created} added, ${syncResult.offCampus.updated} updated`
                 )}
-
-                {uploadResult.details?.errors?.length > 0 && (
-                  <div className="mt-3">
-                    <p className="font-semibold text-red-900 mb-1">Errors:</p>
-                    <ul className="list-disc list-inside text-sm text-red-700">
-                      {uploadResult.details.errors.map((error, idx) => (
-                        <li key={idx}>{error}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </div>
+              </>
             )}
           </div>
-        </div>
+        )}
 
         {/* Students Table */}
         <div className="bg-white rounded-lg shadow-sm">
@@ -309,7 +143,7 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
             <div className="p-12 text-center text-slate-500">Loading students...</div>
           ) : students.length === 0 ? (
             <div className="p-12 text-center text-slate-500">
-              No students found. Upload a CSV file to add students.
+              No students found. Sync from the placement portal to populate.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -369,8 +203,6 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
           )}
         </div>
       </div>
-
     </div>
   );
 }
-
