@@ -517,11 +517,14 @@ export const getStudentDetails = async (req, res) => {
       };
     });
 
+    const studentDoc = await Student.findOne({ userId: studentId }).select('rollNumber').lean();
+
     return res.json({
       student: {
         name: studentUser.name,
         email: studentUser.emailId,
         phone: studentUser.phoneNo,
+        rollNumber: studentDoc?.rollNumber || null,
         programme: studentUser.programme || null,
         department: studentUser.department || null,
         cpi: typeof studentUser.cpi === 'number' ? studentUser.cpi : null
