@@ -5,7 +5,6 @@ import { Table, Input, Button, Tag, Upload, Space } from "antd";
 import { SearchOutlined, UploadOutlined } from "@ant-design/icons";
 import toast from "react-hot-toast";
 import api from "../api/axios";
-import AddStudentToMasterModal from "../components/AddStudentToMasterModal";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
 export default function AdminStudents() {
@@ -16,9 +15,9 @@ export default function AdminStudents() {
   const [uploading, setUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState(null);
   const [selectedFile, setSelectedFile] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState(null);
+  const [search, setSearch] = useState("");
 
   useEffect(() => {
     if (user) return; // Already have user from cache
@@ -160,15 +159,6 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
                 </svg>
                 {syncing ? "Syncing…" : "Sync from Placement Portal"}
               </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-400 transition flex items-center gap-2"
-              >
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                </svg>
-                Add Student Manually
-              </button>
             </div>
           </div>
           {syncResult && (
@@ -279,8 +269,40 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
 
         {/* Students Table */}
         <div className="bg-white rounded-lg shadow-sm">
-          <div className="p-6 border-b">
-            <h2 className="text-xl font-semibold text-slate-900">All Students ({students.length})</h2>
+          <div className="p-6 border-b flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <h2 className="text-xl font-semibold text-slate-900">
+              All Students&nbsp;
+              <span className="text-slate-400 font-normal text-base">
+                ({search
+                  ? `${students.filter(s =>
+                      [s.userId?.name, s.userId?.emailId, s.rollNumber]
+                        .some(v => v?.toLowerCase().includes(search.toLowerCase()))
+                    ).length} of ${students.length}`
+                  : students.length})
+              </span>
+            </h2>
+            <div className="relative w-full sm:w-72">
+              <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+              </svg>
+              <input
+                type="text"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Search name, email or roll…"
+                className="w-full pl-9 pr-8 py-2 text-sm border border-slate-200 rounded-lg bg-slate-50 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
@@ -303,7 +325,10 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {students.map((student) => (
+                  {students.filter(s =>
+                    !search || [s.userId?.name, s.userId?.emailId, s.rollNumber]
+                      .some(v => v?.toLowerCase().includes(search.toLowerCase()))
+                  ).map((student) => (
                     <tr
                       key={student._id}
                       className="hover:bg-blue-50 cursor-pointer"
@@ -345,16 +370,6 @@ student3@iitg.ac.in,Student Three,210101003,9876543212`;
         </div>
       </div>
 
-      {/* Add Student Modal */}
-      {showAddModal && (
-        <AddStudentToMasterModal
-          onClose={() => setShowAddModal(false)}
-          onSuccess={() => {
-            fetchStudents();
-            setShowAddModal(false);
-          }}
-        />
-      )}
     </div>
   );
 }
