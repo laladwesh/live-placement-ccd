@@ -5,7 +5,6 @@ import toast from "react-hot-toast";
 import api from "../api/axios";
 import StudentInterviewRow from "../components/StudentInterviewRow";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
-import AddWalkInModal from "../components/AddWalkInModal";
 import StudentDetailsModal from "../components/StudentDetailsModal";
 import ConfirmDialog from "../components/ConfirmDialog";
 import { useSocket } from "../context/SocketContext";
@@ -21,8 +20,7 @@ export default function POCCompanyStudents() {
   const [shortlists, setShortlists] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showWalkInModal, setShowWalkInModal] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
+const [searchTerm, setSearchTerm] = useState("");
   const [filterStage, setFilterStage] = useState("all");
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
   const [downloading, setDownloading] = useState(false);
@@ -215,12 +213,7 @@ export default function POCCompanyStudents() {
     fetchCompanyStudents();
   };
 
-  const handleWalkInAdded = () => {
-    setShowWalkInModal(false);
-    fetchCompanyStudents();
-  };
-
-  const handleStudentClick = (studentId) => {
+const handleStudentClick = (studentId) => {
     setSelectedStudentId(studentId);
     setShowDetailsModal(true);
   };
@@ -505,27 +498,6 @@ export default function POCCompanyStudents() {
                   Download PDF
                 </button>
 
-                {user?.role === "admin" && (
-                  <button
-                    onClick={() => setShowWalkInModal(true)}
-                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition flex items-center gap-2 w-full sm:w-auto justify-center"
-                  >
-                    <svg
-                      className="w-5 h-5"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M12 4v16m8-8H4"
-                      />
-                    </svg>
-                    Add Walk-In
-                  </button>
-                )}
 
                 {!company?.isProcessCompleted && (
                   <button
@@ -741,15 +713,6 @@ export default function POCCompanyStudents() {
         onClose={() => setShowDetailsModal(false)}
         studentId={selectedStudentId}
       />
-
-      {/* Walk-In Modal */}
-      {showWalkInModal && (
-        <AddWalkInModal
-          companyId={companyId}
-          onClose={() => setShowWalkInModal(false)}
-          onSuccess={handleWalkInAdded}
-        />
-      )}
 
       {/* Confirm Process Complete Dialog */}
       <ConfirmDialog
