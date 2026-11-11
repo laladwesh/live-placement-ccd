@@ -2,6 +2,8 @@
 
 A secure, real-time dashboard for managing campus placement activities at Indian Institute of Technology Guwahati. This portal streamlines coordination between placement administrators, company representatives (POCs), and 1500+ students during peak placement season.
 
+###Walkin Feature Added
+
 **Live Deployment:** https://iitg.ac.in/dday/
 
 ## Overview
