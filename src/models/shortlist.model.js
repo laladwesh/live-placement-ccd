@@ -42,6 +42,12 @@ const ShortlistSchema = new mongoose.Schema({
   interviewStatus: { type: String, enum: Object.values(InterviewStatus), required: false },
   isOffered: { type: Boolean, default: false },
   previousStage: { type: String, required: false }, // Store previous stage for undo operations
+
+  // Set whenever a POC/admin manually flips shortlisted <-> waitlisted (updateShortlistStatus).
+  // Guards this row against being silently reverted by a later placement-portal pull
+  // (pullShortlistForCompany) if the push-back to the portal ever fails — see that
+  // function's reconciliation branch.
+  manualStatusOverride: { type: Boolean, default: false },
   
   // Placement tracking fields
   isStudentPlaced: { type: Boolean, default: false },

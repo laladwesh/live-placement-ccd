@@ -15,6 +15,12 @@ const SYNC_KEY = process.env.DDAY_SYNC_KEY || "";
 function makeSyncHmacForGet() {
   return SYNC_KEY ? crypto.createHmac("sha256", SYNC_KEY).update("{}").digest("hex") : "";
 }
+function makeSyncHeaders(body) {
+  const sig = SYNC_KEY
+    ? crypto.createHmac("sha256", SYNC_KEY).update(JSON.stringify(body)).digest("hex")
+    : "";
+  return { "x-sync-signature": sig, "Content-Type": "application/json" };
+}
 
 /**
  * Get POC's assigned companies
@@ -293,7 +299,7 @@ export const updateShortlistStatus = async (req, res) => {
 
     const shortlist = await Shortlist.findById(shortlistId)
       .populate('studentId', 'name emailId')
-      .populate('companyId', 'name POCs');
+      .populate('companyId', 'name POCs isProcessCompleted placementPortalJobId');
 
     if (!shortlist) {
       return res.status(404).json({ message: "Shortlist entry not found" });
@@ -333,16 +339,45 @@ export const updateShortlistStatus = async (req, res) => {
 
     // Update status
     shortlist.status = status;
-    
+    shortlist.manualStatusOverride = true;
+
     // Clear stage if requested (when moving back from rounds to shortlisted)
     if (clearStage) {
       shortlist.stage = null;
       shortlist.interviewStatus = null;
     }
-    
+
     await shortlist.save();
 
     logger.info(`POC ${req.user.emailId} updated ${shortlist.studentId.emailId} status to ${status}${clearStage ? ' (cleared stage)' : ''}`);
+
+    // Fire-and-forget write-back to the placement portal so a later shortlist pull
+    // (pullShortlistForCompany) doesn't stomp this manual change — see
+    // manualStatusOverride on the model for the fallback if this call fails.
+    if (shortlist.companyId.placementPortalJobId) {
+      const webhookBody = { studentEmail: shortlist.studentId.emailId, status };
+      axios
+        .post(
+          `${PLACEMENT_API}/sync/shortlist/${shortlist.companyId.placementPortalJobId}/status`,
+          webhookBody,
+          { headers: makeSyncHeaders(webhookBody), timeout: 8000 }
+        )
+        .then((r) =>
+          logger.info(
+            `[sync] Placement portal shortlist status updated for ${shortlist.studentId.emailId} ` +
+              `(HTTP ${r.status}: ${JSON.stringify(r.data)})`
+          )
+        )
+        .catch((err) =>
+          logger.error(
+            `[sync] Placement portal shortlist-status webhook failed for ${shortlist.studentId.emailId} ` +
+              `→ ${PLACEMENT_API}/sync/shortlist/${shortlist.companyId.placementPortalJobId}/status : ` +
+              (err.response
+                ? `HTTP ${err.response.status} ${JSON.stringify(err.response.data)}`
+                : `${err.code || ""} ${err.message}`)
+          )
+        );
+    }
 
     // Emit socket event for real-time update
     emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {

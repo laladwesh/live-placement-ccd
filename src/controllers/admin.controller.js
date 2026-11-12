@@ -794,11 +794,14 @@ async function pullShortlistForCompany(company) {
     // Already synced for this company: never create a duplicate, but DO reconcile the
     // shortlisted/waitlisted status with the placement portal. Previously these rows were
     // skipped outright, so anyone first synced as "shortlisted" stayed that way forever even
-    // after the portal marked them waitlisted. Rows a POC has already acted on (stage set or
-    // offered) are left untouched so live interview progress is never overwritten.
+    // after the portal marked them waitlisted. Rows a POC has already acted on (stage set,
+    // offered, or manually flipped shortlisted/waitlisted — manualStatusOverride) are left
+    // untouched so live interview progress is never overwritten. manualStatusOverride rows are
+    // normally already in sync anyway, since updateShortlistStatus pushes the change to the
+    // portal when it's set — this guard is the fallback for when that push failed.
     const exists = await Shortlist.findOne({ studentId: user._id, companyId: company._id });
     if (exists) {
-      if (exists.status !== newStatus && !exists.stage && !exists.isOffered) {
+      if (exists.status !== newStatus && !exists.stage && !exists.isOffered && !exists.manualStatusOverride) {
         exists.status = newStatus;
         await exists.save();
 
