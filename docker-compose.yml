@@ -7,6 +7,7 @@ services:
         REACT_APP_BASE_PATH: /dday
     container_name: dday2026-app
     restart: unless-stopped
+    mem_limit: 4g
     network_mode: host          # container shares host network → can reach 127.0.0.1:27017 (systemd mongod)
     environment:
       NODE_ENV: production

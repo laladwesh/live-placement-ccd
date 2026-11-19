@@ -1,8 +1,15 @@
 import axios from "axios";
 import { logger } from "../utils/logger.js";
 
-// 30-second in-memory cache for the list endpoint only
+// 30-second in-memory cache for the list endpoint
 let listCache = null; // { data: <upstream response body>, fetchedAt: <ms timestamp> }
+
+// Same convention, per-roll-number, for the by-roll lookup below — bounded by total
+// student count, not an unbounded-growth risk. Also means a slow/unreachable intern
+// portal doesn't force every repeated lookup of the same roll number to wait out the
+// full upstream timeout.
+const byRollCache = new Map(); // rollNumber -> { data, fetchedAt }
+const BY_ROLL_CACHE_TTL_MS = 30_000;
 
 function internClient() {
   const base = process.env.INTERN_PORTAL_BASE_URL;
@@ -12,7 +19,9 @@ function internClient() {
   }
   return axios.create({
     baseURL: base,
-    timeout: 12000,
+    // Shortened from 12s — a slow/unreachable intern portal shouldn't stall a D-Day viewer
+    // request for that long.
+    timeout: 3000,
     headers: { "X-API-KEY": key },
   });
 }
@@ -58,6 +67,15 @@ export const getInternStats = async (req, res) => {
  */
 export const getInternStatsByRoll = async (req, res) => {
   try {
+    const { rollNumber } = req.params;
+    const cacheBust = req.query.refresh === "1";
+    const now = Date.now();
+
+    const cached = byRollCache.get(rollNumber);
+    if (!cacheBust && cached && now - cached.fetchedAt < BY_ROLL_CACHE_TTL_MS) {
+      return res.json(cached.data);
+    }
+
     const client = internClient();
     if (!client) {
       return res.status(502).json({
@@ -66,10 +84,10 @@ export const getInternStatsByRoll = async (req, res) => {
       });
     }
 
-    const { rollNumber } = req.params;
     const upstream = await client.get(
       `/external/dday/intern-stats/${encodeURIComponent(rollNumber)}`
     );
+    byRollCache.set(rollNumber, { data: upstream.data, fetchedAt: now });
     return res.json(upstream.data);
   } catch (err) {
     logger.error("getInternStatsByRoll upstream error:", err?.message || err);

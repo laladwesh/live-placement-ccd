@@ -7,6 +7,14 @@ import { logger } from "../utils/logger.js";
 
 const PLACEMENT_API = process.env.PLACEMENT_PORTAL_API;
 const SYNC_KEY = process.env.DDAY_SYNC_KEY || "";
+const CACHE_TTL_MS = 30_000;
+// Per-roll-number cache, same 30s convention as intern-stats.controller.js's list cache.
+// Bounded by total student count (a few thousand at most) — not an unbounded-growth risk.
+// Many D-Day viewers look up the same popular roll numbers repeatedly; this also means a
+// slow/degraded main portal (the failure mode this endpoint was already built to tolerate
+// via the local-DB fallback below) doesn't force every single lookup to wait out the
+// upstream timeout before serving a response.
+const statsCache = new Map(); // rollNumber -> { data, fetchedAt }
 
 function hmacForGet() {
   return SYNC_KEY
@@ -100,16 +108,26 @@ async function buildFromLocalDB(rollNumber) {
  */
 export const getPlacementStatsByRoll = async (req, res) => {
   const { rollNumber } = req.params;
+  const cacheBust = req.query.refresh === "1";
+  const now = Date.now();
+
+  const cached = statsCache.get(rollNumber);
+  if (!cacheBust && cached && now - cached.fetchedAt < CACHE_TTL_MS) {
+    return res.json(cached.data);
+  }
 
   // ── Try placement portal first ──────────────────────────────────────────
   if (PLACEMENT_API) {
     try {
       const upstream = await axios.get(
         `${PLACEMENT_API}/sync/placement-stats/${encodeURIComponent(rollNumber)}`,
-        { headers: { "x-sync-signature": hmacForGet() }, timeout: 12000 }
+        // Shortened from 12s — if the main portal is slow/degraded, a viewer shouldn't be
+        // stuck waiting that long before even reaching the local-DB fallback below.
+        { headers: { "x-sync-signature": hmacForGet() }, timeout: 3000 }
       );
       // Portal wraps response in { status, data } — unwrap before forwarding
       const payload = upstream.data?.data ?? upstream.data;
+      statsCache.set(rollNumber, { data: payload, fetchedAt: now });
       return res.json(payload);
     } catch (err) {
       const status = err?.response?.status;
@@ -127,6 +145,7 @@ export const getPlacementStatsByRoll = async (req, res) => {
     if (!local) {
       return res.status(404).json({ message: "Student not found" });
     }
+    statsCache.set(rollNumber, { data: local, fetchedAt: now });
     return res.json(local);
   } catch (err) {
     logger.error("getPlacementStatsByRoll local fallback error:", err);
