@@ -11,17 +11,17 @@ export default function Footer() {
     return (
       <footer
         className="absolute bottom-0 left-0 right-0 z-20"
-        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0) 100%)" }}
+        style={{ background: "linear-gradient(to top, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.3) 60%, rgba(0,0,0,0) 100%)", paddingTop: "32px" }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4 flex flex-col sm:flex-row items-center justify-between">
-            <div className="text-xs mb-1 sm:mb-0" style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}>
+            <div className="text-xs mb-1 sm:mb-0 font-medium" style={{ color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>
               © {currentYear} Technical Team CCD IITG. All rights reserved.
             </div>
             <Link
               to="/team"
-              className="text-xs font-medium transition-colors"
-              style={{ color: "rgba(255,255,255,0.9)", textShadow: "0 1px 3px rgba(0,0,0,0.4)" }}
+              className="text-xs font-semibold transition-colors hover:underline"
+              style={{ color: "#fff", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}
             >
               Meet the Team
             </Link>
