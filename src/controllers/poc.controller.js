@@ -43,7 +43,8 @@ export const getPOCCompanies = async (req, res) => {
     // Find companies where this POC is assigned
     const companies = await Company.find(query)
       .populate('POCs', 'name emailId phoneNo')
-      .sort({ name: 1 });
+      .sort({ name: 1 })
+      .lean();
 
     return res.json({ companies });
   } catch (err) {
@@ -69,14 +70,15 @@ export const getPOCCompanyStudents = async (req, res) => {
     if (userRole === 'admin') {
       // Admin can access any company (even completed processes)
       company = await Company.findById(companyId)
-        .populate('POCs', 'name emailId phoneNo');
+        .populate('POCs', 'name emailId phoneNo')
+        .lean();
     } else {
       // POC must be assigned to this company AND process must not be completed
-      company = await Company.findOne({ 
-        _id: companyId, 
+      company = await Company.findOne({
+        _id: companyId,
         POCs: userId,
         isProcessCompleted: false  // POCs cannot access completed processes
-      }).populate('POCs', 'name emailId phoneNo');
+      }).populate('POCs', 'name emailId phoneNo').lean();
     }
 
     if (!company) {
@@ -90,26 +92,37 @@ export const getPOCCompanyStudents = async (req, res) => {
     // Get all shortlisted students
     const shortlists = await Shortlist.find({ companyId: companyId })
       .populate('studentId', 'name emailId phoneNo')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Get Student documents for placement status
     const studentIds = shortlists.map(s => s.studentId._id);
-    const students = await Student.find({ userId: { $in: studentIds } });
+    const students = await Student.find({ userId: { $in: studentIds } }).lean();
     const studentMap = new Map(students.map(s => [s.userId.toString(), s]));
 
     // Get all offers for these students to check for rejected offers
-    const offers = await Offer.find({ 
+    const offers = await Offer.find({
       companyId: companyId,
       studentId: { $in: studentIds }
-    });
+    }).lean();
     const offerMap = new Map(offers.map(o => [o.studentId.toString(), o]));
 
+    // Batch-resolve placed-company names in one query instead of one findById per
+    // placed student below — this loop runs on every POC dashboard refresh, and as more
+    // students get placed through the day this N+1 got proportionally slower each time.
+    const placedCompanyIds = [...new Set(
+      students.filter(s => s.isPlaced && s.placedCompany).map(s => s.placedCompany.toString())
+    )];
+    const placedCompanies = placedCompanyIds.length
+      ? await Company.find({ _id: { $in: placedCompanyIds } }).select('name').lean()
+      : [];
+    const placedCompanyNameMap = new Map(placedCompanies.map(c => [c._id.toString(), c.name]));
+
     // Enrich shortlists with placement status and format for frontend
-    // Use an async mapping so we can resolve placed company names from Student docs when needed
-    const enrichedShortlists = await Promise.all(shortlists.map(async (s) => {
+    const enrichedShortlists = shortlists.map((s) => {
       const studentDoc = studentMap.get(s.studentId._id.toString());
       const offer = offerMap.get(s.studentId._id.toString());
-      
+
       // Determine currentStage based on isOffered, stage, or status
       let currentStage;
       if (s.isOffered) {
@@ -121,20 +134,14 @@ export const getPOCCompanyStudents = async (req, res) => {
       }
 
       // Check if student is placed at THIS specific company (matching ObjectId)
-      const isPlacedAtThisCompany = studentDoc?.isPlaced && 
-        studentDoc?.placedCompany && 
+      const isPlacedAtThisCompany = studentDoc?.isPlaced &&
+        studentDoc?.placedCompany &&
         studentDoc.placedCompany.toString() === companyId.toString();
 
       // Compute whether student is placed anywhere (from Student doc) OR tracked on the Shortlist
-      let studentPlacedCompanyNameFromDoc = "";
-      if (studentDoc && studentDoc.isPlaced && studentDoc.placedCompany) {
-        try {
-          const placedComp = await Company.findById(studentDoc.placedCompany).select('name');
-          studentPlacedCompanyNameFromDoc = placedComp?.name || "";
-        } catch (e) {
-          studentPlacedCompanyNameFromDoc = "";
-        }
-      }
+      const studentPlacedCompanyNameFromDoc = (studentDoc && studentDoc.isPlaced && studentDoc.placedCompany)
+        ? (placedCompanyNameMap.get(studentDoc.placedCompany.toString()) || "")
+        : "";
 
       const isStudentPlacedFlag = !!(studentDoc?.isPlaced) || !!s.isStudentPlaced;
       const studentPlacedCompanyFinal = studentPlacedCompanyNameFromDoc || s.studentPlacedCompany || "";
@@ -165,7 +172,7 @@ export const getPOCCompanyStudents = async (req, res) => {
           isBlocked: studentDoc?.isBlocked || false
         }
       };
-    }));
+    });
 
     // Calculate stats based on company's maxRounds
     const maxRounds = company.maxRounds || 4;
@@ -919,7 +926,7 @@ export const getStudentCrossCompanyDetails = async (req, res) => {
     const { studentId } = req.params;
     
     // Find student user
-    const studentUser = await User.findById(studentId);
+    const studentUser = await User.findById(studentId).lean();
     if (!studentUser) {
       return res.status(404).json({ message: "Student not found" });
     }
@@ -934,7 +941,8 @@ export const getStudentCrossCompanyDetails = async (req, res) => {
           select: 'name phoneNo emailId'
         }
       })
-      .sort({ 'companyId.name': 1 });
+      .sort({ 'companyId.name': 1 })
+      .lean();
 
     // Format response
     const companyDetails = shortlists.map(s => {

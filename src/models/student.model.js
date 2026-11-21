@@ -44,5 +44,8 @@ const StudentSchema = new mongoose.Schema({
 StudentSchema.index({ userId: 1 });
 StudentSchema.index({ isPlaced: 1 });
 StudentSchema.index({ placementYear: 1 });
+// placement-stats.controller.js looks students up by rollNumber directly (viewer-facing,
+// hit repeatedly) — was an unindexed full collection scan without this.
+StudentSchema.index({ rollNumber: 1 });
 
 export default mongoose.model("Student", StudentSchema);

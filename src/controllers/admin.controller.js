@@ -84,7 +84,8 @@ export const getPendingOffers = async (req, res) => {
     })
       .populate('studentId', 'name emailId phoneNo')
       .populate('companyId', 'name venue')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Batch-load Student docs (one query instead of N) to get rollNumber
     const userIds = pendingOffers.map(o => o.studentId._id);
@@ -92,9 +93,8 @@ export const getPendingOffers = async (req, res) => {
     const rollMap = new Map(studentDocs.map(s => [s.userId.toString(), s.rollNumber]));
 
     const enrichedOffers = pendingOffers.map(offer => {
-      const offerObj = offer.toObject();
-      offerObj.studentId.rollNumber = rollMap.get(offer.studentId._id.toString()) || "";
-      return offerObj;
+      offer.studentId.rollNumber = rollMap.get(offer.studentId._id.toString()) || "";
+      return offer;
     });
 
     return res.json({
@@ -156,7 +156,8 @@ export const getConfirmedOffers = async (req, res) => {
       .populate('studentId', 'name emailId phoneNo programme department cpi')
       .populate('companyId', 'name venue')
       .populate('approvedBy', 'name emailId')
-      .sort({ approvedAt: -1, createdAt: -1 });
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .lean();
 
     // Batch-load Student docs (one query instead of N) to get rollNumber
     // Filter out offers whose studentId ref was deleted (populate returns null)
@@ -166,18 +167,17 @@ export const getConfirmedOffers = async (req, res) => {
     const confRollMap = new Map(confStudentDocs.map(s => [s.userId.toString(), s.rollNumber]));
 
     const enrichedOffers = validOffers.map(offer => {
-      const offerObj = offer.toObject();
-      offerObj.studentId.rollNumber = confRollMap.get(offer.studentId._id.toString()) || "";
-      offerObj.studentId.programme = offerObj.studentId.programme || null;
-      offerObj.studentId.department = offerObj.studentId.department || null;
-      offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
+      offer.studentId.rollNumber = confRollMap.get(offer.studentId._id.toString()) || "";
+      offer.studentId.programme = offer.studentId.programme || null;
+      offer.studentId.department = offer.studentId.department || null;
+      offer.studentId.cpi = (typeof offer.studentId.cpi === 'number') ? offer.studentId.cpi : null;
       // Off-campus offers have no companyId doc — shape a stand-in so every
       // existing "offer.companyId.name / .venue" read on the frontend keeps
       // working unmodified.
-      if (offerObj.isOffCampus && !offerObj.companyId) {
-        offerObj.companyId = { name: offerObj.offCampusCompanyName || "Off-Campus", venue: "Off-Campus" };
+      if (offer.isOffCampus && !offer.companyId) {
+        offer.companyId = { name: offer.offCampusCompanyName || "Off-Campus", venue: "Off-Campus" };
       }
-      return offerObj;
+      return offer;
     });
 
     return res.json({
@@ -479,7 +479,7 @@ export const getStudentDetails = async (req, res) => {
     const { studentId } = req.params;
 
     // Find student user
-    const studentUser = await User.findById(studentId);
+    const studentUser = await User.findById(studentId).lean();
     if (!studentUser) {
       return res.status(404).json({ message: "Student not found" });
     }
@@ -494,7 +494,8 @@ export const getStudentDetails = async (req, res) => {
           select: 'name phoneNo emailId'
         }
       })
-      .sort({ 'companyId.name': 1 });
+      .sort({ 'companyId.name': 1 })
+      .lean();
 
     // Format response
     const companyDetails = shortlists.map(s => {

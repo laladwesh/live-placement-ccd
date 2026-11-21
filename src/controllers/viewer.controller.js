@@ -51,7 +51,8 @@ export const getConfirmedForViewer = async (req, res) => {
       .populate('studentId', 'name emailId phoneNo programme department cpi')
       .populate('companyId', 'name venue')
       .populate('approvedBy', 'name emailId')
-      .sort({ approvedAt: -1, createdAt: -1 });
+      .sort({ approvedAt: -1, createdAt: -1 })
+      .lean();
 
     // Batch-load Student docs (one query instead of N) to get rollNumber
     const vUserIds = confirmedOffers.map(o => o.studentId._id);
@@ -59,18 +60,17 @@ export const getConfirmedForViewer = async (req, res) => {
     const vRollMap = new Map(vStudentDocs.map(s => [s.userId.toString(), s.rollNumber]));
 
     const enrichedOffers = confirmedOffers.map(offer => {
-      const offerObj = offer.toObject();
-      offerObj.studentId.rollNumber = vRollMap.get(offer.studentId._id.toString()) || "";
-      offerObj.studentId.programme = offerObj.studentId.programme || null;
-      offerObj.studentId.department = offerObj.studentId.department || null;
-      offerObj.studentId.cpi = (typeof offerObj.studentId.cpi === 'number') ? offerObj.studentId.cpi : null;
+      offer.studentId.rollNumber = vRollMap.get(offer.studentId._id.toString()) || "";
+      offer.studentId.programme = offer.studentId.programme || null;
+      offer.studentId.department = offer.studentId.department || null;
+      offer.studentId.cpi = (typeof offer.studentId.cpi === 'number') ? offer.studentId.cpi : null;
       // Off-campus offers have no companyId doc — shape a stand-in so every
       // existing "offer.companyId.name / .venue" read on the frontend keeps
       // working unmodified.
-      if (offerObj.isOffCampus && !offerObj.companyId) {
-        offerObj.companyId = { name: offerObj.offCampusCompanyName || "Off-Campus", venue: "Off-Campus" };
+      if (offer.isOffCampus && !offer.companyId) {
+        offer.companyId = { name: offer.offCampusCompanyName || "Off-Campus", venue: "Off-Campus" };
       }
-      return offerObj;
+      return offer;
     });
 
     return res.json({ success: true, count: enrichedOffers.length, offers: enrichedOffers });
@@ -88,17 +88,18 @@ export const getStudentDetailsForViewer = async (req, res) => {
   try {
     const { studentId } = req.params;
 
-    const user = await Student.findOne({ userId: studentId });
+    const user = await Student.findOne({ userId: studentId }).lean();
     // Also fetch the User doc for contact fields
     const UserModel = (await import('../models/user.model.js')).default;
-    const studentUser = await UserModel.findById(studentId).select('name emailId phoneNo programme department cpi');
+    const studentUser = await UserModel.findById(studentId).select('name emailId phoneNo programme department cpi').lean();
     if (!studentUser) return res.status(404).json({ message: 'Student not found' });
 
     // Get shortlists for this student
     const Shortlist = (await import('../models/shortlist.model.js')).default;
     const shortlists = await Shortlist.find({ studentId: studentId })
       .populate({ path: 'companyId', select: 'name description venue POCs', populate: { path: 'POCs', select: 'name phoneNo emailId' } })
-      .sort({ 'companyId.name': 1 });
+      .sort({ 'companyId.name': 1 })
+      .lean();
 
     const companyDetails = shortlists.map(s => {
       const comp = s.companyId || null;

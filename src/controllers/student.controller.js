@@ -25,14 +25,15 @@ export const getMyShortlists = async (req, res) => {
       select: "emailId name phoneNo",
     },
   })
-  .sort({ createdAt: -1 });
+  .sort({ createdAt: -1 })
+  .lean();
 
     // Get pending offers for this student to show "CCD Confirmation Pending"
     const pendingOffers = await Offer.find({
       studentId: studentId,
       approvalStatus: "PENDING"  // Only offers awaiting admin approval
-    }).select("companyId");
-    
+    }).select("companyId").lean();
+
     const pendingOfferCompanyIds = new Set(
       pendingOffers.map(o => o.companyId.toString())
     );
@@ -41,7 +42,7 @@ export const getMyShortlists = async (req, res) => {
     const rejectedOffers = await Offer.find({
       studentId: studentId,
       approvalStatus: "REJECTED"  // Admin rejected offers
-    }).select("companyId");
+    }).select("companyId").lean();
     
     const rejectedOfferCompanyIds = new Set(
       rejectedOffers.map(o => o.companyId.toString())
@@ -66,14 +67,12 @@ export const getMyShortlists = async (req, res) => {
 
     // Enrich shortlists with offer status
     const enrichedShortlists = activeShortlists.map(s => {
-      const shortlistObj = s.toObject();
-      
       // Check if there's a pending offer for this company
       if (pendingOfferCompanyIds.has(s.companyId._id.toString())) {
-        shortlistObj.hasPendingOffer = true;
+        s.hasPendingOffer = true;
       }
-      
-      return shortlistObj;
+
+      return s;
     });
 
     // Count statistics (only for active shortlists)
@@ -115,7 +114,7 @@ export const getShortlistDetails = async (req, res) => {
     const shortlist = await Shortlist.findOne({
       _id: shortlistId,
       studentId: studentId
-    }).populate("companyId", "name venue isProcessCompleted");
+    }).populate("companyId", "name venue isProcessCompleted").lean();
 
     if (!shortlist) {
       return res.status(404).json({
@@ -138,7 +137,7 @@ export const getShortlistDetails = async (req, res) => {
       offer = await Offer.findOne({
         studentId: studentId,
         companyId: shortlist.companyId._id
-      }).populate("acceptedBy", "name emailId");
+      }).populate("acceptedBy", "name emailId").lean();
     }
 
     logger.info(`Student ${studentId} viewed shortlist details ${shortlistId}`);
@@ -166,14 +165,15 @@ export const getMyOffers = async (req, res) => {
     const studentId = req.user._id;
 
     // Get only APPROVED offers (admin has approved them)
-    const offers = await Offer.find({ 
+    const offers = await Offer.find({
       studentId: studentId,
       approvalStatus: "APPROVED"  // Only show admin-approved offers
     })
       .populate("companyId", "name venue")
       .populate("acceptedBy", "name emailId")
       .populate("approvedBy", "name emailId")
-      .sort({ approvedAt: -1 });
+      .sort({ approvedAt: -1 })
+      .lean();
 
     logger.info(`Student ${studentId} fetched ${offers.length} approved offers`);
 
@@ -210,7 +210,8 @@ export const getMyProfile = async (req, res) => {
 
     // Get student-specific data
     const student = await Student.findOne({ userId })
-      .populate("placedCompany", "name");
+      .populate("placedCompany", "name")
+      .lean();
 
     // Get shortlist statistics
     const totalShortlists = await Shortlist.countDocuments({ studentId: userId });

@@ -161,7 +161,7 @@ export default function Login() {
 
         <div className="mt-5 pt-4" style={{ borderTop: "1px solid #E9E9EB" }}>
           <a
-            href="https://iitg.ac.in/placement"
+            href="https://iitg.ac.in/placements"
             target="_blank"
             rel="noopener noreferrer"
             className="w-full flex items-center justify-center gap-2 text-sm font-medium transition-colors hover:opacity-80"

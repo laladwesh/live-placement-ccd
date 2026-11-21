@@ -347,18 +347,19 @@ export const getCompanyShortlist = async (req, res) => {
   try {
     const { companyId } = req.params;
 
-    const company = await Company.findById(companyId);
+    const company = await Company.findById(companyId).lean();
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
     }
 
     const shortlists = await Shortlist.find({ companyId: companyId })
       .populate('studentId', 'name emailId phoneNo')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     // Get Student documents to check placement status
     const studentIds = shortlists.map(s => s.studentId._id);
-    const students = await Student.find({ userId: { $in: studentIds } });
+    const students = await Student.find({ userId: { $in: studentIds } }).lean();
     const studentMap = new Map(students.map(s => [s.userId.toString(), s]));
 
     // Enrich shortlists with placement status and format for frontend

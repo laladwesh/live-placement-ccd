@@ -17,7 +17,8 @@ export const getAllCompanies = async (req, res) => {
     // Archived seasons have placementYear set via Compass and appear only in /api/prev-placement.
     const companies = await Company.find({ placementYear: null })
       .populate('POCs', 'name emailId phoneNo')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
 
     return res.json({ companies });
   } catch (err) {
@@ -35,7 +36,8 @@ export const getCompanyById = async (req, res) => {
     const { id } = req.params;
 
     const company = await Company.findById(id)
-      .populate('POCs', 'name emailId phoneNo');
+      .populate('POCs', 'name emailId phoneNo')
+      .lean();
 
     if (!company) {
       return res.status(404).json({ message: "Company not found" });
@@ -205,7 +207,8 @@ export const getAllPOCs = async (req, res) => {
       isAllowed: true
     })
     .select('name emailId phoneNo role')
-    .sort({ name: 1 });
+    .sort({ name: 1 })
+    .lean();
 
     return res.json({ pocs });
   } catch (err) {
