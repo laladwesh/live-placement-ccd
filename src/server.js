@@ -5,6 +5,7 @@ import express from "express";
 import http from "http";
 import cookieParser from "cookie-parser";
 import cors from "cors";
+import compression from "compression";
 import helmet from "helmet";
 import morgan from "morgan";
 import path from "path";
@@ -46,8 +47,15 @@ await connectDB(MONGO_URI);
 // Initialize Socket.IO
 initializeSocket(server);
 
-// Morgan logger for development
-app.use(morgan('dev'));
+// Morgan logger for development only — 'dev' format re-formats and writes a line per request,
+// which is pure overhead in production; skip it there entirely.
+if (process.env.NODE_ENV !== "production") {
+  app.use(morgan('dev'));
+}
+
+// Gzip every response — most importantly the React build's JS/CSS bundles served below via
+// express.static, which were going out over the wire completely uncompressed.
+app.use(compression());
 
 // basic middleware
 app.use(express.json());
