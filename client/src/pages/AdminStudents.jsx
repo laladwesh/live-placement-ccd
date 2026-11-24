@@ -121,6 +121,10 @@ export default function AdminStudents() {
   if (shortlistFilter === "no")  visible = visible.filter(s => (s.shortlistedCompanies?.length || 0) === 0);
 
   visible = [...visible].sort((a, b) => {
+    // Always push orphaned students (no User doc) to the bottom
+    const aOrphan = !a.userId, bOrphan = !b.userId;
+    if (aOrphan !== bOrphan) return aOrphan ? 1 : -1;
+
     if (sortBy === "roll") {
       const va = a.rollNumber || "", vb = b.rollNumber || "";
       return sortDir === "asc" ? va.localeCompare(vb) : vb.localeCompare(va);
@@ -287,8 +291,14 @@ export default function AdminStudents() {
                     title={student.rollNumber ? `View placement stats for ${student.userId?.name || student.rollNumber}` : undefined}
                   >
                     <td style={{ textAlign: "center", color: "#8D9096", fontSize: 12 }}>{idx + 1}</td>
-                    <td style={{ fontWeight: 600, color: "#1E2532" }}>{student.userId?.name || "—"}</td>
-                    <td style={{ color: "#8D9096" }}>{student.userId?.emailId || "—"}</td>
+                    <td style={{ fontWeight: 600, color: student.userId ? "#1E2532" : "#8D9096" }}>
+                      {student.userId?.name || (
+                        <span style={{ fontStyle: "italic", fontWeight: 400, fontSize: 12, color: "#C8CAD0" }}>
+                          no account · {student.rollNumber || "—"}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ color: "#8D9096" }}>{student.userId?.emailId || <span style={{ color: "#C8CAD0", fontSize: 12, fontStyle: "italic" }}>—</span>}</td>
                     <td style={{ fontFamily: "monospace", color: "#494D57" }}>{student.rollNumber || "—"}</td>
                     <td style={{ color: student.userId?.phoneNo ? "#494D57" : "#C8CAD0", fontStyle: student.userId?.phoneNo ? "normal" : "italic" }}>
                       {student.userId?.phoneNo || "not registered"}

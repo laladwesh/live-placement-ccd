@@ -181,7 +181,17 @@ export const getAllStudents = async (req, res) => {
       .populate('shortlistedCompanies', 'name')
       .populate('waitlistedCompanies', 'name')
       .populate('placedCompany', 'name')
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .lean();
+
+    // Find orphaned students (userId ref points to a deleted User doc)
+    const orphans = students.filter(s => !s.userId);
+    if (orphans.length > 0) {
+      logger.warn(`getAllStudents: ${orphans.length} orphaned Student doc(s) with missing User refs`);
+      // Attempt re-link: if a User exists with a matching emailId inferred from rollNumber,
+      // or if we can find a shortlist entry with a known studentId for this Student.
+      // For now just surface the data as-is; Sync from Portal will recreate User docs.
+    }
 
     return res.json({
       success: true,
