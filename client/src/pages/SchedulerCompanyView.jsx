@@ -5,15 +5,15 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCache";
 
-const STAGE_COLORS = {
-  SHORTLISTED: "bg-blue-100 text-blue-800",
-  WAITLISTED:  "bg-yellow-100 text-yellow-800",
-  R1: "bg-purple-100 text-purple-800",
-  R2: "bg-purple-100 text-purple-800",
-  R3: "bg-purple-100 text-purple-800",
-  R4: "bg-purple-100 text-purple-800",
-  OFFERED:  "bg-green-100 text-green-800",
-  REJECTED: "bg-red-100 text-red-800",
+const STAGE_STYLE = {
+  SHORTLISTED: { background: "#EBF2FC", color: "#14213D", border: "1px solid #BDD3F0" },
+  WAITLISTED:  { background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A" },
+  R1: { background: "#F2EEF9", color: "#5B21B6", border: "1px solid #C4B5FD" },
+  R2: { background: "#F2EEF9", color: "#5B21B6", border: "1px solid #C4B5FD" },
+  R3: { background: "#F2EEF9", color: "#5B21B6", border: "1px solid #C4B5FD" },
+  R4: { background: "#F2EEF9", color: "#5B21B6", border: "1px solid #C4B5FD" },
+  OFFERED:  { background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB" },
+  REJECTED: { background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6" },
 };
 
 // GripVertical icon

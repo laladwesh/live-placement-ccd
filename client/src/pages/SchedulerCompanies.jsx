@@ -7,10 +7,10 @@ import { getCachedUser, setCachedUser, clearCachedUser } from "../utils/userCach
 
 export default function SchedulerCompanies() {
   const navigate = useNavigate();
-  const [user, setUser]         = useState(() => getCachedUser());
+  const [user, setUser]           = useState(() => getCachedUser());
   const [companies, setCompanies] = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [search, setSearch]     = useState("");
+  const [loading, setLoading]     = useState(true);
+  const [search, setSearch]       = useState("");
 
   useEffect(() => {
     if (user) { fetchCompanies(); return; }
@@ -30,105 +30,139 @@ export default function SchedulerCompanies() {
       setLoading(true);
       const res = await api.get("/scheduler/companies");
       setCompanies(res.data.companies || []);
-    } catch (err) {
+    } catch {
       toast.error("Failed to load companies");
     } finally {
       setLoading(false);
     }
   };
 
-  const filtered = companies.filter(c =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.venue || "").toLowerCase().includes(search.toLowerCase())
-  );
+  const q = search.trim().toLowerCase();
+  const filtered = q
+    ? companies.filter(c =>
+        c.name.toLowerCase().includes(q) ||
+        (c.venue || "").toLowerCase().includes(q)
+      )
+    : companies;
 
   if (!user || loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
+        <div style={{ width: 28, height: 28, border: "2px solid #E9E9EB", borderTopColor: "#14213D", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div style={{ padding: "24px 28px", fontFamily: "Inter, -apple-system, sans-serif" }}>
+
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">Interview Scheduler</h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Drag students within a company to set your interview call order. Order is saved instantly and survives portal syncs.
+      <div style={{ marginBottom: 20 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1E2532", margin: 0 }}>Interview Scheduler</h1>
+        <p style={{ fontSize: 13, color: "#8D9096", marginTop: 3 }}>
+          Drag students within a company to set interview order. Order persists across portal syncs.
         </p>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-5">
-        <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search companies or venue…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-4 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-      </div>
+      {/* Card */}
+      <div className="pp-card">
 
-      {/* Stats row */}
-      <div className="flex gap-4 mb-5 text-sm text-slate-600">
-        <span><strong className="text-slate-900">{filtered.length}</strong> companies</span>
-        <span><strong className="text-green-700">{filtered.filter(c => !c.isProcessCompleted).length}</strong> active</span>
-        <span><strong className="text-slate-400">{filtered.filter(c => c.isProcessCompleted).length}</strong> completed</span>
-      </div>
+        {/* Toolbar */}
+        <div style={{
+          padding: "12px 16px",
+          borderBottom: "1px solid #E9E9EB",
+          display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap",
+        }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
+            <span style={{ fontSize: 15, fontWeight: 700, color: "#1E2532" }}>
+              Companies
+            </span>
+            <span style={{ fontSize: 13, color: "#8D9096" }}>
+              {filtered.length}{filtered.length !== companies.length ? ` / ${companies.length}` : ""}
+            </span>
+            <span style={{ fontSize: 12, color: "#1A6B2A" }}>
+              {filtered.filter(c => !c.isProcessCompleted).length} active
+            </span>
+            <span style={{ fontSize: 12, color: "#8D9096" }}>
+              {filtered.filter(c => c.isProcessCompleted).length} completed
+            </span>
+          </div>
 
-      {/* Company list */}
-      <div className="space-y-2">
+          {/* Search */}
+          <div style={{ position: "relative", width: 260 }}>
+            <svg style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#8D9096", pointerEvents: "none" }}
+              width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
+            </svg>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search company or venue…"
+              style={{
+                width: "100%", height: 30, paddingLeft: 28, paddingRight: search ? 28 : 10,
+                fontSize: 13, border: "1px solid #DBDDE0", borderRadius: 2, outline: "none",
+                fontFamily: "Inter, -apple-system, sans-serif", color: "#353B47", background: "#fff",
+                boxSizing: "border-box",
+              }}
+              onFocus={e => (e.target.style.borderColor = "#14213D")}
+              onBlur={e  => (e.target.style.borderColor = "#DBDDE0")}
+            />
+            {search && (
+              <button onClick={() => setSearch("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#8D9096", padding: 0, fontSize: 12 }}>
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Table */}
         {filtered.length === 0 ? (
-          <div className="text-center py-16 text-slate-400 text-sm">No companies found.</div>
-        ) : filtered.map(company => (
-          <button
-            key={company._id}
-            onClick={() => navigate(`/scheduler/companies/${company._id}`)}
-            className="w-full text-left bg-white rounded-lg border border-slate-200 px-5 py-4 flex items-center justify-between hover:border-blue-400 hover:shadow-sm transition-all group"
-          >
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-3">
-                <span className="font-semibold text-slate-900 truncate">{company.name}</span>
-                {company.isProcessCompleted && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 font-medium flex-shrink-0">
-                    Completed
-                  </span>
-                )}
-              </div>
-              {company.venue && (
-                <div className="text-xs text-slate-500 mt-0.5 flex items-center gap-1">
-                  <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  {company.venue}
-                </div>
-              )}
-            </div>
-            <div className="flex items-center gap-4 flex-shrink-0 ml-4">
-              <div className="text-right">
-                <div className="text-sm font-semibold text-slate-900">{company.total}</div>
-                <div className="text-xs text-slate-400">total</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold text-blue-600">{company.shortlisted}</div>
-                <div className="text-xs text-slate-400">shortlisted</div>
-              </div>
-              <div className="text-right">
-                <div className="text-sm font-semibold text-yellow-600">{company.waitlisted}</div>
-                <div className="text-xs text-slate-400">waitlisted</div>
-              </div>
-              <svg className="w-4 h-4 text-slate-300 group-hover:text-blue-400 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </div>
-          </button>
-        ))}
+          <div style={{ padding: 48, textAlign: "center", color: "#8D9096", fontSize: 14 }}>No companies found.</div>
+        ) : (
+          <table className="pp-table" style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th style={{ width: 36, textAlign: "center" }}>#</th>
+                <th>Company</th>
+                <th>Venue</th>
+                <th style={{ textAlign: "center" }}>Total</th>
+                <th style={{ textAlign: "center" }}>Shortlisted</th>
+                <th style={{ textAlign: "center" }}>Waitlisted</th>
+                <th style={{ textAlign: "center" }}>Status</th>
+                <th style={{ width: 32 }}></th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((company, idx) => (
+                <tr
+                  key={company._id}
+                  style={{ cursor: "pointer" }}
+                  onClick={() => navigate(`/scheduler/companies/${company._id}`)}
+                >
+                  <td style={{ textAlign: "center", color: "#8D9096", fontSize: 12 }}>{idx + 1}</td>
+                  <td style={{ fontWeight: 600, color: "#1E2532" }}>{company.name}</td>
+                  <td style={{ color: "#8D9096", fontSize: 13 }}>{company.venue || "—"}</td>
+                  <td style={{ textAlign: "center", color: "#353B47" }}>{company.total}</td>
+                  <td style={{ textAlign: "center", color: "#14213D", fontWeight: 600 }}>{company.shortlisted}</td>
+                  <td style={{ textAlign: "center", color: "#7B5700" }}>{company.waitlisted}</td>
+                  <td style={{ textAlign: "center" }}>
+                    {company.isProcessCompleted ? (
+                      <span style={{ padding: "2px 8px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#F4F2F1", color: "#8D9096", border: "1px solid #E9E9EB" }}>
+                        Completed
+                      </span>
+                    ) : (
+                      <span style={{ padding: "2px 8px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB" }}>
+                        Active
+                      </span>
+                    )}
+                  </td>
+                  <td style={{ color: "#DBDDE0", textAlign: "center" }}>›</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   );
