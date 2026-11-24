@@ -92,8 +92,17 @@ export const getPOCCompanyStudents = async (req, res) => {
     // Get all shortlisted students
     const shortlists = await Shortlist.find({ companyId: companyId })
       .populate('studentId', 'name emailId phoneNo')
-      .sort({ createdAt: -1 })
       .lean();
+
+    // Honor the scheduler's manual drag-and-drop order (sortOrder) instead of ignoring it and
+    // always showing newest-added-first — same ordering rule as scheduler.controller.js's
+    // getSchedulerShortlist: null sortOrder (never reordered) sorts after numbered ones.
+    shortlists.sort((a, b) => {
+      const aOrd = a.sortOrder ?? Infinity;
+      const bOrd = b.sortOrder ?? Infinity;
+      if (aOrd !== bOrd) return aOrd - bOrd;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
 
     // Get Student documents for placement status
     const studentIds = shortlists.map(s => s.studentId._id);
