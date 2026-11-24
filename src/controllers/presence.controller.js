@@ -41,40 +41,53 @@ export const enterPresence = async (req, res) => {
     }
 
     const studentUserId = shortlist.studentId._id;
-    const existing = await StudentPresence.findOne({ studentId: studentUserId }).lean();
 
-    if (existing && existing.status === "busy") {
-      const thisCompanyId = shortlist.companyId._id.toString();
-      const busyAtCompanyId = existing.companyId?.toString();
-
-      if (busyAtCompanyId === thisCompanyId) {
+    // Atomic conditional write — no separate read-then-write gap.
+    //
+    // The filter { studentId, status: { $ne: "busy" } } only matches when the
+    // student is free (or has no presence doc yet).
+    // - Free → matches → updates to busy → returns updated doc.
+    // - No doc yet → no match → upsert inserts new busy doc → returns new doc.
+    // - Already busy → no match → upsert tries to insert a second doc with the
+    //   same studentId → unique index fires E11000.  We catch that and return
+    //   the same 409 we would have returned from the old race-prone check.
+    //   A findOne inside the catch gives us the current state for the message.
+    let presence;
+    try {
+      presence = await StudentPresence.findOneAndUpdate(
+        { studentId: studentUserId, status: { $ne: "busy" } },
+        {
+          $set: {
+            status: "busy",
+            companyId: shortlist.companyId._id,
+            companyName: shortlist.companyId.name,
+            venue: shortlist.companyId.venue || null,
+            round: round || null,
+            enteredAt: new Date(),
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
+    } catch (writeErr) {
+      if (writeErr.code === 11000) {
+        // Atomic loss: student is (or just became) busy — fetch to build message
+        const current = await StudentPresence.findOne({ studentId: studentUserId }).lean();
+        const thisCompanyId = shortlist.companyId._id.toString();
+        if (current?.companyId?.toString() === thisCompanyId) {
+          return res.status(409).json({
+            message: `${shortlist.studentId.name} is already checked in here (${current.round || ""}). Use End Interview to release them first.`,
+          });
+        }
+        const sinceTime = current?.enteredAt
+          ? new Date(current.enteredAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
+          : "";
         return res.status(409).json({
-          message: `${shortlist.studentId.name} is already checked in here (${existing.round || ""}). Use End Interview to release them first.`,
+          message: `${shortlist.studentId.name} is currently in an interview at ${current?.companyName} (${current?.round || ""})${sinceTime ? ` since ${sinceTime}` : ""}. Ask that POC to mark them free first.`,
+          busyAt: { companyName: current?.companyName, round: current?.round, enteredAt: current?.enteredAt },
         });
       }
-
-      // Busy at a different company — block outright
-      const sinceTime = existing.enteredAt
-        ? new Date(existing.enteredAt).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })
-        : "";
-      return res.status(409).json({
-        message: `${shortlist.studentId.name} is currently in an interview at ${existing.companyName} (${existing.round || ""})${sinceTime ? ` since ${sinceTime}` : ""}. Ask that POC to mark them free first.`,
-        busyAt: { companyName: existing.companyName, round: existing.round, enteredAt: existing.enteredAt },
-      });
+      throw writeErr; // other DB error — rethrow to outer catch
     }
-
-    const presence = await StudentPresence.findOneAndUpdate(
-      { studentId: studentUserId },
-      {
-        status: "busy",
-        companyId: shortlist.companyId._id,
-        companyName: shortlist.companyId.name,
-        venue: shortlist.companyId.venue || null,
-        round: round || null,
-        enteredAt: new Date(),
-      },
-      { upsert: true, new: true, setDefaultsOnInsert: true }
-    );
 
     logger.info(`Presence enter: ${shortlist.studentId.name} @ ${shortlist.companyId.name} (${round})`);
 
