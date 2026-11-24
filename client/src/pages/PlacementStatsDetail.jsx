@@ -293,6 +293,21 @@ export default function PlacementStatsDetail() {
                         <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.interview_call} /></td>
                         <td className="px-5 py-3.5 text-center"><Check value={entry.stages?.offered} /></td>
                         <td className="px-5 py-3.5"><StageBadge stage={entry.current_stage} /></td>
+                        <td className="px-5 py-3.5">
+                          {entry.dday_status === "shortlisted" && (
+                            <span style={{ padding: "2px 8px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#EBF2FC", color: "#14213D", border: "1px solid #BDD3F0" }}>
+                              Shortlisted
+                            </span>
+                          )}
+                          {entry.dday_status === "waitlisted" && (
+                            <span style={{ padding: "2px 8px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A" }}>
+                              Waitlisted
+                            </span>
+                          )}
+                          {!entry.dday_status && (
+                            <span style={{ color: "#C8CAD0", fontSize: 12 }}>—</span>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
