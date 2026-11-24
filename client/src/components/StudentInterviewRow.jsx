@@ -174,9 +174,9 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   };
 
   const getStatusButtonConfig = () => {
-    if (currentStage === "WAITLISTED") return { label: "→ Shortlist", action: () => handleStatusChange("shortlisted", false), color: "bg-blue-600 hover:bg-blue-700 text-white" };
-    if (currentStage?.startsWith("R")) return { label: "↩ Remove Round", action: () => handleStatusChange("shortlisted", true), color: "bg-orange-600 hover:bg-orange-700 text-white" };
-    if (currentStage === "SHORTLISTED") return { label: "→ Waitlist", action: () => handleStatusChange("waitlisted", false), color: "bg-yellow-600 hover:bg-yellow-700 text-white" };
+    if (currentStage === "WAITLISTED") return { label: "Shortlist", action: () => handleStatusChange("shortlisted", false), color: "bg-blue-600 hover:bg-blue-700 text-white" };
+    if (currentStage?.startsWith("R")) return { label: "Remove Round", action: () => handleStatusChange("shortlisted", true), color: "bg-orange-600 hover:bg-orange-700 text-white" };
+    if (currentStage === "SHORTLISTED") return { label: "Waitlist", action: () => handleStatusChange("waitlisted", false), color: "bg-yellow-600 hover:bg-yellow-700 text-white" };
     return null;
   };
 
@@ -212,12 +212,12 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               {/* Presence badges — desktop only (mobile gets own line below) */}
               {presence && presenceStatus === "busy-here" && (
                 <span className="hidden sm:inline-flex" style={{ alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", whiteSpace: "nowrap" }}>
-                  ● In interview — {presence.round}
+                  In interview — {presence.round}
                 </span>
               )}
               {presence && presenceStatus === "busy-elsewhere" && (
                 <span className="hidden sm:inline-flex" style={{ alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", whiteSpace: "nowrap" }}>
-                  ● In interview elsewhere
+                  In interview elsewhere
                 </span>
               )}
             </div>
@@ -227,12 +227,12 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               <div className="sm:hidden mt-1">
                 {presenceStatus === "busy-here" && (
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A" }}>
-                    ● In interview — {presence.round}
+                    In interview — {presence.round}
                   </span>
                 )}
                 {presenceStatus === "busy-elsewhere" && (
                   <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6" }}>
-                    ● In interview elsewhere
+                    In interview elsewhere
                   </span>
                 )}
               </div>
@@ -297,7 +297,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                     style={{ padding: "3px 10px", fontSize: 12, fontWeight: 700, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer" }}
                     title="Mark student as entered the interview room"
                   >
-                    {checkingIn ? "…" : "▶ Start"}
+                    {checkingIn ? "..." : "Start"}
                   </button>
                 )}
                 {presenceStatus === "busy-here" && (
@@ -307,7 +307,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                     style={{ padding: "3px 10px", fontSize: 12, fontWeight: 700, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", cursor: "pointer" }}
                     title="Mark student as done with interview"
                   >
-                    {checkingOut ? "…" : "■ End"}
+                    {checkingOut ? "..." : "End"}
                   </button>
                 )}
                 {presenceStatus === "busy-elsewhere" && (
@@ -322,7 +322,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
             )}
 
             {isPlacedHere ? (
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Placed Here ✓</span>
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Placed Here</span>
             ) : isPlacedElsewhere ? (
               <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-semibold rounded-full">Not Available</span>
             ) : hasRejectedOffer ? (
@@ -355,7 +355,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
           {/* ── MOBILE controls (below sm): reorganized for thumb use ── */}
           <div className="sm:hidden mt-2" onClick={stopProp}>
             {isPlacedHere ? (
-              <span className="inline-flex px-3 py-1.5 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">Placed Here ✓</span>
+              <span className="inline-flex px-3 py-1.5 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">Placed Here</span>
             ) : isPlacedElsewhere ? (
               <span className="inline-flex px-3 py-1.5 bg-slate-100 text-slate-500 text-sm font-semibold rounded-full">Not Available</span>
             ) : hasRejectedOffer ? (
@@ -398,7 +398,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                         disabled={checkingIn}
                         style={{ width: "100%", padding: "11px", fontSize: 15, fontWeight: 700, borderRadius: 3, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer" }}
                       >
-                        {checkingIn ? "Starting…" : "▶ Start Interview"}
+                        {checkingIn ? "Starting..." : "Start Interview"}
                       </button>
                     )}
                     {presenceStatus === "busy-here" && (
@@ -407,7 +407,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                         disabled={checkingOut}
                         style={{ width: "100%", padding: "11px", fontSize: 15, fontWeight: 700, borderRadius: 3, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", cursor: "pointer" }}
                       >
-                        {checkingOut ? "Ending…" : "■ End Interview"}
+                        {checkingOut ? "Ending..." : "End Interview"}
                       </button>
                     )}
                     {presenceStatus === "busy-elsewhere" && (
@@ -444,7 +444,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                       onClick={() => setShowMore(m => !m)}
                       className="text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1 py-1"
                     >
-                      {showMore ? "Less ▲" : "More options ▾"}
+                      {showMore ? "Less" : "More options"}
                     </button>
                     {showMore && (
                       <div className="flex gap-2 mt-2 flex-wrap">
