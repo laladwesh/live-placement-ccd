@@ -9,7 +9,7 @@ import { logger } from "../utils/logger.js";
  */
 export const getSchedulerCompanies = async (req, res) => {
   try {
-    const companies = await Company.find({})
+    const companies = await Company.find({ placementYear: null })
       .select("name venue description isProcessCompleted shortlistedStudents waitlistedStudents")
       .lean();
 
