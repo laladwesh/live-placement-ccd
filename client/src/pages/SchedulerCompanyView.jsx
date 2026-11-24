@@ -72,6 +72,57 @@ export default function SchedulerCompanyView() {
   const [dragIndex, setDragIndex]       = useState(null);
   const [dropBefore, setDropBefore]     = useState(null); // insert BEFORE this display index
 
+  // Auto-scroll during drag
+  const listContainerRef  = useRef(null);
+  const clientYRef        = useRef(0);
+  const scrollRAFRef      = useRef(null);
+  const isDraggingRef     = useRef(false);
+
+  const findScrollContainer = () => {
+    let el = listContainerRef.current?.parentElement;
+    while (el) {
+      const { overflowY } = window.getComputedStyle(el);
+      if (overflowY === "auto" || overflowY === "scroll") return el;
+      el = el.parentElement;
+    }
+    return document.documentElement;
+  };
+
+  const scrollTick = useCallback(() => {
+    if (!isDraggingRef.current) return;
+    const container = findScrollContainer();
+    const rect = container.getBoundingClientRect
+      ? container.getBoundingClientRect()
+      : { top: 0, bottom: window.innerHeight };
+    const y = clientYRef.current;
+    const ZONE = 100;
+    const distTop    = y - rect.top;
+    const distBottom = rect.bottom - y;
+    if (distTop < ZONE && distTop >= 0)      container.scrollTop -= Math.ceil((ZONE - distTop)    / 8);
+    else if (distBottom < ZONE && distBottom >= 0) container.scrollTop += Math.ceil((ZONE - distBottom) / 8);
+    scrollRAFRef.current = requestAnimationFrame(scrollTick);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleDocDragOver = useCallback((e) => {
+    clientYRef.current = e.clientY;
+  }, []);
+
+  const startAutoScroll = useCallback(() => {
+    isDraggingRef.current = true;
+    document.addEventListener("dragover", handleDocDragOver);
+    scrollRAFRef.current = requestAnimationFrame(scrollTick);
+  }, [handleDocDragOver, scrollTick]);
+
+  const stopAutoScroll = useCallback(() => {
+    isDraggingRef.current = false;
+    cancelAnimationFrame(scrollRAFRef.current);
+    document.removeEventListener("dragover", handleDocDragOver);
+  }, [handleDocDragOver]);
+
+  // Cleanup on unmount
+  useEffect(() => () => stopAutoScroll(), [stopAutoScroll]);
+
   // ── Auth & fetch ──────────────────────────────────────────────────
   useEffect(() => {
     if (user) { fetchData(); return; }
@@ -134,10 +185,12 @@ export default function SchedulerCompanyView() {
   // ── HTML5 drag handlers (work in both filtered and unfiltered) ────
   const onDragStart = (e, displayIdx) => {
     dragFromRef.current = displayIdx;
+    clientYRef.current = e.clientY;
     setDragIndex(displayIdx);
     setDragging(true);
     e.dataTransfer.effectAllowed = "move";
     e.dataTransfer.setData("text/plain", String(displayIdx));
+    startAutoScroll();
   };
 
   const onDragOver = (e, displayIdx) => {
@@ -172,6 +225,7 @@ export default function SchedulerCompanyView() {
   const onDragEnd = () => resetDrag();
 
   const resetDrag = () => {
+    stopAutoScroll();
     dragFromRef.current = null;
     setDragging(false);
     setDragIndex(null);
@@ -280,6 +334,7 @@ export default function SchedulerCompanyView() {
         </div>
       ) : (
         <div
+          ref={listContainerRef}
           onDragOver={onContainerDragOver}
           onDrop={onDrop}
         >
