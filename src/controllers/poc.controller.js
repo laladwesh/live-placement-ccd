@@ -951,44 +951,29 @@ export const getStudentCrossCompanyDetails = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
 
-    // Find all shortlists for this student
+    // Fetch shortlists — only need POC contacts, no company names or statuses
     const shortlists = await Shortlist.find({ studentId: studentId })
       .populate({
         path: 'companyId',
-        select: 'name description venue POCs',
+        select: 'POCs',
         populate: {
           path: 'POCs',
-          select: 'name phoneNo emailId'
+          select: 'name phoneNo'
         }
       })
-      .sort({ 'companyId.name': 1 })
       .lean();
 
-    // Format response
-    const companyDetails = shortlists.map(s => {
-      // Determine current stage/status
-      let currentStatus = s.status;
-      if (s.isOffered) {
-        currentStatus = "OFFERED";
-      } else if (s.stage) {
-        currentStatus = s.stage;
-      }
-
-      // Defensive handling: populated companyId can be null if the company was deleted
-      const comp = s.companyId || null;
-
-      return {
-        companyName: comp?.name || s.companyName || "Deleted Company",
-        status: currentStatus,
-        slot: comp?.description || s.companyName?.description || "N/A",
-        venue: comp?.venue || "N/A",
-        pocs: Array.isArray(comp?.POCs) ? comp.POCs.map(p => ({
-          name: p?.name || "N/A",
-          phone: p?.phoneNo || "N/A",
-          email: p?.emailId || "N/A"
-        })) : []
-      };
-    });
+    // Flatten all POC contacts across companies, deduplicate by phone
+    const seen = new Set();
+    const pocs = shortlists
+      .flatMap(s => Array.isArray(s.companyId?.POCs) ? s.companyId.POCs : [])
+      .filter(p => {
+        const phone = p?.phoneNo;
+        if (!p?.name || !phone || phone === "N/A" || seen.has(phone)) return false;
+        seen.add(phone);
+        return true;
+      })
+      .map(p => ({ name: p.name, phone: p.phoneNo }));
 
     return res.json({
       student: {
@@ -996,7 +981,7 @@ export const getStudentCrossCompanyDetails = async (req, res) => {
         email: studentUser.emailId,
         phone: studentUser.phoneNo
       },
-      companies: companyDetails
+      pocs
     });
 
   } catch (err) {

@@ -173,7 +173,19 @@ export const getPresenceForCompany = async (req, res) => {
 
     const presences = await StudentPresence.find({ studentId: { $in: studentIds } }).lean();
     const map = {};
-    presences.forEach(p => { map[p.studentId.toString()] = p; });
+    presences.forEach(p => {
+      const uid = p.studentId.toString();
+      const isHere = p.companyId?.toString() === companyId;
+      if (p.status !== "busy") {
+        map[uid] = { status: "free" };
+      } else if (isHere) {
+        // Busy at THIS company — expose round/enteredAt for the POC's own UI
+        map[uid] = { status: "busy", companyId: p.companyId, round: p.round, enteredAt: p.enteredAt };
+      } else {
+        // Busy at a competing company — only expose status, no competitor info
+        map[uid] = { status: "busy" };
+      }
+    });
 
     return res.json({ presence: map });
   } catch (err) {

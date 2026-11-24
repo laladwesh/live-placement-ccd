@@ -34,12 +34,10 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false, isVi
 
   if (!isOpen) return null;
 
-  // Flatten all POC contacts across companies (for POC view)
-  const allPOCs = isPOC && data?.companies
-    ? data.companies.flatMap(c => c.pocs || []).filter(p => p.name && p.name !== "N/A")
+  // Backend already deduplicates — just filter out blank entries
+  const uniquePOCs = isPOC
+    ? (data?.pocs || []).filter(p => p.name && p.name !== "N/A")
     : [];
-  // Deduplicate by phone
-  const uniquePOCs = allPOCs.filter((p, i, arr) => arr.findIndex(x => x.phone === p.phone) === i);
 
   return (
     <Modal
