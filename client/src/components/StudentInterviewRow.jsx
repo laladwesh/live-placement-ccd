@@ -214,7 +214,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               )}
               {presence && presenceStatus === "busy-elsewhere" && (
                 <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", whiteSpace: "nowrap" }}>
-                  ● In interview elsewhere
+                  ● In interview at {presence.companyName}
                 </span>
               )}
             </div>

@@ -117,12 +117,6 @@ export default function AdminOffersDashboard() {
       const approved = allConfirmed.filter(o => o.approvalStatus === "APPROVED");
       const rejected = allConfirmed.filter(o => o.approvalStatus === "REJECTED");
 
-      console.log(" [Admin] Fetched offers:", {
-        pending: pendingRes.data.offers?.length || 0,
-        confirmed: approved.length,
-        rejected: rejected.length
-      });
-      
       setPendingOffers(pendingRes.data.offers || []);
       setConfirmedOffers(approved);
       setRejectedOffers(rejected);

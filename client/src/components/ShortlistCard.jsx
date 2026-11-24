@@ -52,9 +52,7 @@ export default function ShortlistCard({ shortlist }) {
 
   const isClickable = false; // Set to true if you want the card to be clickable
 
-  const handleClick = () => {
-    console.log("Shortlist clicked:", shortlist._id);
-  };
+  const handleClick = () => {};
 
   return (
     <div

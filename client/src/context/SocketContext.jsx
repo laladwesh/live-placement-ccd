@@ -31,11 +31,6 @@ export const SocketProvider = ({ children }) => {
     const socketBase = process.env.REACT_APP_BACKEND_URL || (isDev ? "http://localhost:4000" : window.location.origin);
     const socketPath = process.env.REACT_APP_SOCKET_PATH || "/dday/api/socket.io";
 
-    console.log("[Socket.IO] Client Config:");
-    console.log("  Environment:", process.env.NODE_ENV);
-    console.log("  Base URL:", socketBase);
-    console.log("  Path:", socketPath);
-    console.log("  Full URL:", `${socketBase}${socketPath}`);
 
     const newSocket = io(socketBase, {
       path: socketPath,
@@ -48,30 +43,9 @@ export const SocketProvider = ({ children }) => {
       // forceNew removed: default manager reuse prevents duplicate sockets on React remounts
     });
 
-    newSocket.on("connect", () => {
-      console.log(" Socket connected:", newSocket.id);
-      console.log("   Transport:", newSocket.io.engine.transport.name);
-      setConnected(true);
-    });
-
-    newSocket.on("disconnect", (reason) => {
-      console.log(" Socket disconnected:", reason);
-      setConnected(false);
-    });
-
-    newSocket.on("connect_error", (error) => {
-      console.error(" Socket connection error:", error.message);
-      console.error("   Error details:", error);
-      setConnected(false);
-    });
-
-    newSocket.io.on("reconnect_attempt", () => {
-      console.log("[Reconnect] Attempting to reconnect...");
-    });
-
-    newSocket.io.on("reconnect", (attemptNumber) => {
-      console.log(" Reconnected after", attemptNumber, "attempts");
-    });
+    newSocket.on("connect", () => { setConnected(true); });
+    newSocket.on("disconnect", () => { setConnected(false); });
+    newSocket.on("connect_error", () => { setConnected(false); });
 
     setSocket(newSocket);
 
