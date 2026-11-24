@@ -825,12 +825,14 @@ async function pullShortlistForCompany(company) {
       continue;
     }
 
+    const sortOrderVal = await Shortlist.countDocuments({ companyId: company._id });
     await Shortlist.create({
       companyId: company._id,
       companyName: company.name,
       studentId: user._id,
       studentEmail: email,
       status: isWaitlisted ? Status.WAITLISTED : Status.SHORTLISTED,
+      sortOrder: sortOrderVal,
     });
 
     if (isWaitlisted) {

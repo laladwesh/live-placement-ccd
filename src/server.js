@@ -27,6 +27,7 @@ import placementStatsRoutes from "./routes/placement-stats.routes.js";
 import prevPlacementRoutes from "./routes/prev-placement.routes.js";
 import shareRoutes from "./routes/share.routes.js";
 import mailRoutes from "./routes/mail.routes.js";
+import schedulerRoutes from "./routes/scheduler.routes.js";
 import { logger } from "./utils/logger.js";
 import { authMiddleware } from "./middleware/auth.middleware.js";
 import { whoami } from "./controllers/me.controller.js";
@@ -135,6 +136,7 @@ app.use(prefixed('/api'), placementStatsRoutes);
 app.use(prefixed('/api'), prevPlacementRoutes);
 app.use(prefixed('/api/share'), shareRoutes);
 app.use(prefixed('/api/mail'), mailRoutes);
+app.use(prefixed('/api/scheduler'), schedulerRoutes);
 app.get(prefixed('/api/users/me'), authMiddleware, whoami);
 
 // =======================================================

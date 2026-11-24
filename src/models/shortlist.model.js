@@ -49,6 +49,11 @@ const ShortlistSchema = new mongoose.Schema({
   // function's reconciliation branch.
   manualStatusOverride: { type: Boolean, default: false },
   
+  // Scheduler-managed display order within a company's shortlist.
+  // Set to countDocuments({companyId}) at creation → new entries always append.
+  // Reorder API bulk-writes this field; portal syncs never touch it.
+  sortOrder: { type: Number, default: null },
+
   // Placement tracking fields
   isStudentPlaced: { type: Boolean, default: false },
   studentPlacedCompany: { type: String, trim: true } // Name of company where student got placed

@@ -812,6 +812,7 @@ export const addWalkInStudent = async (req, res) => {
     }
 
     // Create shortlist entry as walk-in
+    const walkInSortOrder = await Shortlist.countDocuments({ companyId });
     const shortlist = new Shortlist({
       studentId: user._id,
       companyId: companyId,
@@ -820,7 +821,8 @@ export const addWalkInStudent = async (req, res) => {
       status: Status.SHORTLISTED,
       stage: null,
       interviewStatus: null,
-      isOffered: false
+      isOffered: false,
+      sortOrder: walkInSortOrder,
     });
 
     await shortlist.save();
