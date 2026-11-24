@@ -27,6 +27,8 @@ import InternStatsLive from "./pages/InternStatsLive";
 import InternStatsLiveDetail from "./pages/InternStatsLiveDetail";
 import PlacementStatsDetail from "./pages/PlacementStatsDetail";
 import PrevPlacementData from "./pages/PrevPlacementData";
+import SchedulerCompanies from "./pages/SchedulerCompanies";
+import SchedulerCompanyView from "./pages/SchedulerCompanyView";
 import Footer          from "./components/Footer";
 
 function App() {
@@ -73,6 +75,8 @@ function App() {
             <Route path="/intern-stats-live/:rollNumber"      element={<InternStatsLiveDetail />} />
             <Route path="/placement-stats/:rollNumber"        element={<PlacementStatsDetail />} />
             <Route path="/prev-placement"                     element={<PrevPlacementData />} />
+            <Route path="/scheduler"                          element={<SchedulerCompanies />} />
+            <Route path="/scheduler/companies/:companyId"     element={<SchedulerCompanyView />} />
           </Route>
         </Routes>
 

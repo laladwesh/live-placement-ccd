@@ -14,6 +14,7 @@ import {
   CloseOutlined,
   LogoutOutlined,
   UserOutlined,
+  CalendarOutlined,
 } from '@ant-design/icons';
 
 // ── Role → nav items ──────────────────────────────────────────────
@@ -41,6 +42,9 @@ const NAV = {
     { to: '/viewers/confirmed',  label: 'Confirmed Placements',        Icon: CheckCircleOutlined },
     { to: '/intern-stats-live',  label: 'Live Intern Data',            Icon: BarChartOutlined    },
     { to: '/intern-master-data', label: 'Prev Intern Data',            Icon: DatabaseOutlined    },
+  ],
+  scheduler: [
+    { to: '/scheduler',          label: 'Companies',                   Icon: CalendarOutlined    },
   ],
 };
 

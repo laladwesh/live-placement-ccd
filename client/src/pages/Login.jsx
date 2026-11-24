@@ -33,11 +33,12 @@ export default function Login() {
       try {
         const res = await api.get("/users/me");
         const user = res.data.user;
-        if (user.role === "admin")        navigate("/admin",             { replace: true });
-        else if (user.role === "poc")     navigate("/poc",               { replace: true });
-        else if (user.role === "student") navigate("/student",           { replace: true });
-        else if (user.role === "viewer")  navigate("/viewers/confirmed", { replace: true });
-        else                              navigate("/dashboard",         { replace: true });
+        if (user.role === "admin")          navigate("/admin",             { replace: true });
+        else if (user.role === "poc")       navigate("/poc",               { replace: true });
+        else if (user.role === "student")   navigate("/student",           { replace: true });
+        else if (user.role === "viewer")    navigate("/viewers/confirmed", { replace: true });
+        else if (user.role === "scheduler") navigate("/scheduler",         { replace: true });
+        else                                navigate("/dashboard",         { replace: true });
       } catch {
         localStorage.removeItem("jwt_token");
         setCheckingAuth(false);
@@ -68,11 +69,12 @@ export default function Login() {
       localStorage.setItem("jwt_token", token);
       const userRes = await api.get("/users/me");
       const user = userRes.data.user;
-      if (user.role === "admin")        navigate("/admin");
-      else if (user.role === "poc")     navigate("/poc");
-      else if (user.role === "student") navigate("/student");
-      else if (user.role === "viewer")  navigate("/viewers/confirmed");
-      else                              navigate("/dashboard");
+      if (user.role === "admin")          navigate("/admin");
+      else if (user.role === "poc")       navigate("/poc");
+      else if (user.role === "student")   navigate("/student");
+      else if (user.role === "viewer")    navigate("/viewers/confirmed");
+      else if (user.role === "scheduler") navigate("/scheduler");
+      else                                navigate("/dashboard");
     } catch (e) {
       setErr(e.response?.data?.message || e.message || "Login failed");
     } finally {
