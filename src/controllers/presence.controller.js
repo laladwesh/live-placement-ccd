@@ -2,12 +2,15 @@ import Shortlist from "../models/shortlist.model.js";
 import StudentPresence from "../models/studentPresence.model.js";
 import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
+import Company from "../models/company.model.js";
 import { logger } from "../utils/logger.js";
 import { emitStudentPresenceUpdate } from "../config/socket.js";
 
-/** All company IDs the student is shortlisted at — used for socket fan-out */
+/** Current-year company IDs the student is shortlisted at — used for socket fan-out */
 async function getStudentCompanyIds(studentUserId) {
-  const shortlists = await Shortlist.find({ studentId: studentUserId }).select("companyId").lean();
+  const currentCompanies = await Company.find({ placementYear: null }).select("_id").lean();
+  const currentCompanyIds = currentCompanies.map(c => c._id);
+  const shortlists = await Shortlist.find({ studentId: studentUserId, companyId: { $in: currentCompanyIds } }).select("companyId").lean();
   return shortlists.map(s => s.companyId.toString());
 }
 
@@ -194,8 +197,12 @@ export const getAllPresence = async (req, res) => {
       .lean();
     const presenceMap = new Map(presences.map(p => [p.studentId?._id?.toString(), p]));
 
-    // All distinct student User IDs that appear in any shortlist
-    const shortlists = await Shortlist.find({}).select("studentId").lean();
+    // Current-year companies only (placementYear: null = active season)
+    const currentCompanies = await Company.find({ placementYear: null }).select("_id").lean();
+    const currentCompanyIds = currentCompanies.map(c => c._id);
+
+    // All distinct student User IDs shortlisted at current-year companies
+    const shortlists = await Shortlist.find({ companyId: { $in: currentCompanyIds } }).select("studentId").lean();
     const allStudentIds = [...new Set(shortlists.map(s => s.studentId?.toString()).filter(Boolean))];
 
     // Fetch User + Student (roll) for all shortlisted students
