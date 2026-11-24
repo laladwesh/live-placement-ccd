@@ -1,4 +1,3 @@
-// src/components/StudentInterviewRow.jsx
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -13,32 +12,22 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
 
-  // PIN confirmation states
   const [showPINConfirm, setShowPINConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [actionMetadata, setActionMetadata] = useState(null);
 
-  // Check if student is placed at THIS company (student.isPlaced means placed at this company)
   const isPlacedHere = shortlist.student?.isPlaced;
-
-  console.log("Shortlist data:", shortlist);
-  // Check if student is placed at ANOTHER company (shortlist.isStudentPlaced but NOT student.isPlaced)
   const isPlacedElsewhere = shortlist.isStudentPlaced && !shortlist.student?.isPlaced;
   const placedCompanyName = shortlist.studentPlacedCompany;
-  // Check if student has a rejected offer (admin rejected the offer)
   const hasRejectedOffer = shortlist.hasRejectedOffer;
-  // const isBlocked = shortlist.student?.isBlocked;
   const currentStage = shortlist.currentStage;
 
-  // Wrapper function to handle PIN confirmation for POCs
   const withPINConfirmation = (action, actionType, title, message) => {
     if (isPOC) {
-      // Show PIN modal for POCs
       setPendingAction(() => action);
       setActionMetadata({ type: actionType, title, message });
       setShowPINConfirm(true);
     } else {
-      // Execute immediately for non-POCs (admin)
       action();
     }
   };
@@ -53,115 +42,89 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
 
   const handleStageChange = async (newStage) => {
     if (isPlacedHere || isPlacedElsewhere || hasRejectedOffer || updating) return;
-
     const action = async () => {
       setUpdating(true);
       try {
         await api.patch(`/poc/shortlist/${shortlist._id}/stage`, { stage: newStage });
-        // Don't call onStageUpdate() - let socket handle the refresh
-        // The socket will update all connected clients including this one
       } catch (err) {
-        console.error("Error updating stage:", err);
         toast.error(err.response?.data?.message || "Failed to update stage");
       } finally {
         setUpdating(false);
       }
     };
-
     const stageLabel = newStage === "REJECTED" ? "Reject" : `Move to ${newStage}`;
-    withPINConfirmation(
-      action,
-      newStage === "REJECTED" ? "reject" : "update",
-      `${stageLabel} Student`,
-      `Are you sure you want to ${stageLabel.toLowerCase()} ${shortlist.student?.name}?`
-    );
+    withPINConfirmation(action, newStage === "REJECTED" ? "reject" : "update", `${stageLabel} Student`, `Are you sure you want to ${stageLabel.toLowerCase()} ${shortlist.student?.name}?`);
   };
 
   const handleStatusChange = async (newStatus, clearStage = false) => {
     if (isPlacedHere || isPlacedElsewhere || hasRejectedOffer || updatingStatus) return;
-
     const action = async () => {
       setUpdatingStatus(true);
       try {
-        await api.patch(`/poc/shortlist/${shortlist._id}/status`, { 
-          status: newStatus,
-          clearStage: clearStage
-        });
-        // Don't call onStageUpdate() - let socket handle the refresh
-        toast.success(`Student moved to ${newStatus === 'shortlisted' ? 'Shortlisted' : 'Waitlisted'}`);
+        await api.patch(`/poc/shortlist/${shortlist._id}/status`, { status: newStatus, clearStage });
+        toast.success(`Student moved to ${newStatus === "shortlisted" ? "Shortlisted" : "Waitlisted"}`);
       } catch (err) {
-        console.error("Error updating status:", err);
         toast.error(err.response?.data?.message || "Failed to update status");
       } finally {
         setUpdatingStatus(false);
       }
     };
-
-    const statusLabel = newStatus === 'shortlisted' ? 'Shortlisted' : 'Waitlisted';
-    withPINConfirmation(
-      action,
-      "update",
-      `Move to ${statusLabel}`,
-      `Are you sure you want to move ${shortlist.student?.name} to ${statusLabel}?`
-    );
+    const statusLabel = newStatus === "shortlisted" ? "Shortlisted" : "Waitlisted";
+    withPINConfirmation(action, "update", `Move to ${statusLabel}`, `Are you sure you want to move ${shortlist.student?.name} to ${statusLabel}?`);
   };
 
   const handleCreateOffer = async () => {
     if (isPlacedHere || isPlacedElsewhere || hasRejectedOffer || creatingOffer) return;
-
     const action = async () => {
       setCreatingOffer(true);
       try {
         await api.post(`/poc/shortlist/${shortlist._id}/offer`);
         toast.success(`Offer created for ${shortlist.student?.name}`);
-        // Don't call onOfferCreated() - let socket handle the refresh
-        // The socket will update all connected clients including this one
       } catch (err) {
-        console.error("Error creating offer:", err);
         toast.error(err.response?.data?.message || "Failed to create offer");
       } finally {
         setCreatingOffer(false);
       }
     };
-
-    withPINConfirmation(
-      action,
-      "offer",
-      "Create Offer",
-      `Are you sure you want to create an offer for ${shortlist.student?.name}? This will be sent to admin for approval.`
-    );
+    withPINConfirmation(action, "offer", "Create Offer", `Are you sure you want to create an offer for ${shortlist.student?.name}? This will be sent to admin for approval.`);
   };
 
   const handleRevertOffer = async () => {
     if (revertingOffer) return;
-
     const action = async () => {
       setRevertingOffer(true);
       try {
         await api.delete(`/poc/shortlist/${shortlist._id}/offer`);
         toast.success(`Offer reverted for ${shortlist.student?.name}`);
-        // Socket will handle the refresh
       } catch (err) {
-        console.error("Error reverting offer:", err);
         toast.error(err.response?.data?.message || "Failed to revert offer");
       } finally {
         setRevertingOffer(false);
       }
     };
-
-    withPINConfirmation(
-      action,
-      "delete",
-      "Revert Offer",
-      `Are you sure you want to revert the offer for ${shortlist.student?.name}?`
-    );
+    withPINConfirmation(action, "delete", "Revert Offer", `Are you sure you want to revert the offer for ${shortlist.student?.name}?`);
   };
 
-  // ── Presence: determine status relative to current company ──────────────────
+  const handleUndoRejection = async () => {
+    if (undoingRejection) return;
+    const action = async () => {
+      setUndoingRejection(true);
+      try {
+        await api.patch(`/poc/shortlist/${shortlist._id}/undo-rejection`);
+        toast.success(`Rejection undone for ${shortlist.student?.name}`);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to undo rejection");
+      } finally {
+        setUndoingRejection(false);
+      }
+    };
+    withPINConfirmation(action, "update", "Undo Rejection", `Are you sure you want to undo the rejection for ${shortlist.student?.name}?`);
+  };
+
+  // ── Presence ──────────────────────────────────────────────────────────────
   const presenceStatus = (() => {
     if (!presence || presence.status === "free") return "free";
-    const isBusyHere = presence.companyId?.toString() === companyId?.toString();
-    return isBusyHere ? "busy-here" : "busy-elsewhere";
+    return presence.companyId?.toString() === companyId?.toString() ? "busy-here" : "busy-elsewhere";
   })();
 
   const handleEnterPresence = async () => {
@@ -169,7 +132,6 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     setCheckingIn(true);
     try {
       await api.post(`/poc/shortlist/${shortlist._id}/presence/enter`, { round });
-      // Socket will push the updated presence back to the parent
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to start interview");
     } finally {
@@ -188,31 +150,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     }
   };
 
-  const handleUndoRejection = async () => {
-    if (undoingRejection) return;
-
-    const action = async () => {
-      setUndoingRejection(true);
-      try {
-        await api.patch(`/poc/shortlist/${shortlist._id}/undo-rejection`);
-        toast.success(`Rejection undone for ${shortlist.student?.name}`);
-        // Socket will handle the refresh
-      } catch (err) {
-        console.error("Error undoing rejection:", err);
-        toast.error(err.response?.data?.message || "Failed to undo rejection");
-      } finally {
-        setUndoingRejection(false);
-      }
-    };
-
-    withPINConfirmation(
-      action,
-      "update",
-      "Undo Rejection",
-      `Are you sure you want to undo the rejection for ${shortlist.student?.name}?`
-    );
-  };
-
+  // ── Helpers ───────────────────────────────────────────────────────────────
   const getStageColor = (stage) => {
     const colors = {
       SHORTLISTED: "bg-blue-100 text-blue-800",
@@ -220,270 +158,221 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
       R1: "bg-purple-100 text-purple-800",
       R2: "bg-purple-100 text-purple-800",
       R3: "bg-purple-100 text-purple-800",
+      R4: "bg-purple-100 text-purple-800",
       OFFERED: "bg-green-100 text-green-800",
-      REJECTED: "bg-red-100 text-red-800"
+      REJECTED: "bg-red-100 text-red-800",
     };
     return colors[stage] || "bg-gray-100 text-gray-800";
   };
 
   const getRoundButtonColor = (round) => {
-    if (currentStage === `R${round}`) {
-      return "bg-purple-600 text-white";
-    }
-    const roundNum = parseInt(currentStage.replace('R', ''));
-    if (!isNaN(roundNum) && round < roundNum) {
-      return "bg-purple-400 text-white";
-    }
+    if (currentStage === `R${round}`) return "bg-purple-600 text-white";
+    const roundNum = parseInt((currentStage || "").replace("R", ""));
+    if (!isNaN(roundNum) && round < roundNum) return "bg-purple-400 text-white";
     return "bg-slate-100 text-slate-700 hover:bg-slate-200";
   };
 
-  // Determine what the dynamic status button should do
   const getStatusButtonConfig = () => {
-    if (currentStage === 'WAITLISTED') {
-      return {
-        label: 'Mark as Shortlisted',
-        action: () => handleStatusChange('shortlisted', false),
-        color: 'bg-blue-600 hover:bg-blue-700 text-white'
-      };
-    } else if (currentStage?.startsWith('R')) {
-      return {
-        label: 'Remove from Rounds',
-        action: () => handleStatusChange('shortlisted', true),
-        color: 'bg-orange-600 hover:bg-orange-700 text-white'
-      };
-    } else if (currentStage === 'SHORTLISTED') {
-      return {
-        label: 'Move to Waitlist',
-        action: () => handleStatusChange('waitlisted', false),
-        color: 'bg-yellow-600 hover:bg-yellow-700 text-white'
-      };
-    }
+    if (currentStage === "WAITLISTED") return { label: "→ Shortlist", action: () => handleStatusChange("shortlisted", false), color: "bg-blue-600 hover:bg-blue-700 text-white" };
+    if (currentStage?.startsWith("R")) return { label: "↩ Remove Round", action: () => handleStatusChange("shortlisted", true), color: "bg-orange-600 hover:bg-orange-700 text-white" };
+    if (currentStage === "SHORTLISTED") return { label: "→ Waitlist", action: () => handleStatusChange("waitlisted", false), color: "bg-yellow-600 hover:bg-yellow-700 text-white" };
     return null;
   };
 
   const statusButtonConfig = getStatusButtonConfig();
+  const stopProp = (e) => e.stopPropagation();
 
-  const handleRowClick = (e) => {
-    if (onClick) {
-      onClick();
-    }
-  };
-
-  const stopProp = (e) => {
-    e.stopPropagation();
-  };
-
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div 
-      className={`p-4 ${isPlacedHere || isPlacedElsewhere ? 'bg-gray-50' : 'hover:bg-slate-50'} ${onClick ? 'cursor-pointer transition-colors duration-150' : ''}`}
-      onClick={handleRowClick}
+    <div
+      className={`px-4 py-3 ${isPlacedHere || isPlacedElsewhere ? "bg-gray-50" : "hover:bg-slate-50"} ${onClick ? "cursor-pointer transition-colors duration-150" : ""}`}
+      onClick={onClick || undefined}
     >
-      <div className="flex items-center gap-4">
-        {/* Student Info */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 font-medium flex-shrink-0">
-              {shortlist.student?.name?.charAt(0).toUpperCase()}
+      {/* Layout: avatar | [info + controls stacked on mobile / inline on desktop] */}
+      <div className="flex items-start gap-3">
+        {/* Avatar */}
+        <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-semibold flex-shrink-0 mt-0.5">
+          {shortlist.student?.name?.charAt(0).toUpperCase()}
+        </div>
+
+        {/* Content: info + controls */}
+        <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+
+          {/* Student info */}
+          <div className="flex-1 min-w-0">
+            {/* Name + roll + presence badge */}
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="font-semibold text-slate-900 text-sm">{shortlist.student?.name}</span>
+              {shortlist.student?.rollNumber && (
+                <span className="text-xs text-slate-400">({shortlist.student.rollNumber})</span>
+              )}
+              {/* Presence badge — only shown when there's a presence record */}
+              {presence && presenceStatus === "busy-here" && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", whiteSpace: "nowrap" }}>
+                  ● In interview — {presence.round}
+                </span>
+              )}
+              {presence && presenceStatus === "busy-elsewhere" && (
+                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", whiteSpace: "nowrap" }}>
+                  ● In interview elsewhere
+                </span>
+              )}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="font-medium text-slate-900 truncate flex items-center gap-2 flex-wrap">
-                {shortlist.student?.name}
-                {shortlist.student?.rollNumber && (
-                  <span className="text-xs font-normal text-slate-500">({shortlist.student.rollNumber})</span>
+            {/* Email */}
+            <div className="text-xs text-slate-400 truncate mt-0.5">{shortlist.student?.email}</div>
+            {/* Notices */}
+            {isPlacedElsewhere && placedCompanyName && (
+              <div className="flex items-center gap-1 text-xs text-slate-500 font-medium mt-1">
+                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+                Placed elsewhere ({placedCompanyName})
+              </div>
+            )}
+            {hasRejectedOffer && (
+              <div className="flex items-center gap-1 text-xs text-red-500 font-medium mt-1">
+                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Offer rejected by admin
+              </div>
+            )}
+          </div>
+
+          {/* Controls: stage badge + round buttons + action buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0" onClick={stopProp}>
+            {/* Stage badge */}
+            <span className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 ${getStageColor(currentStage)}`}>
+              {currentStage}
+            </span>
+
+            {/* Round + presence buttons — only for active students */}
+            {!isPlacedHere && !isPlacedElsewhere && !hasRejectedOffer && !["OFFERED", "REJECTED"].includes(currentStage) && (
+              <>
+                {statusButtonConfig && (
+                  <button
+                    onClick={() => statusButtonConfig.action()}
+                    disabled={updatingStatus}
+                    className={`px-2.5 py-1 text-xs font-semibold rounded transition disabled:opacity-50 ${statusButtonConfig.color}`}
+                  >
+                    {updatingStatus ? "…" : statusButtonConfig.label}
+                  </button>
                 )}
-                {/* Live presence badge */}
+
+                {[...Array(maxRounds)].map((_, i) => {
+                  const r = i + 1;
+                  return (
+                    <button
+                      key={r}
+                      onClick={() => handleStageChange(`R${r}`)}
+                      disabled={updating}
+                      className={`px-2.5 py-1 text-xs font-semibold rounded transition disabled:opacity-50 ${getRoundButtonColor(r)}`}
+                    >
+                      R{r}
+                    </button>
+                  );
+                })}
+
+                {/* Presence: Start / End */}
                 {presenceStatus === "free" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", transition: "all 0.2s", whiteSpace: "nowrap" }}>
-                    ● Free
-                  </span>
+                  <button
+                    onClick={() => handleEnterPresence()}
+                    disabled={checkingIn}
+                    style={{ padding: "3px 10px", fontSize: 12, fontWeight: 700, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer" }}
+                    title="Mark student as entered the interview room"
+                  >
+                    {checkingIn ? "…" : "▶ Start"}
+                  </button>
                 )}
                 {presenceStatus === "busy-here" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", transition: "all 0.2s", whiteSpace: "nowrap" }}>
-                    ● In interview here ({presence.round})
-                  </span>
+                  <button
+                    onClick={() => handleExitPresence()}
+                    disabled={checkingOut}
+                    style={{ padding: "3px 10px", fontSize: 12, fontWeight: 700, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", cursor: "pointer" }}
+                    title="Mark student as done with interview"
+                  >
+                    {checkingOut ? "…" : "■ End"}
+                  </button>
                 )}
                 {presenceStatus === "busy-elsewhere" && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", transition: "all 0.2s", whiteSpace: "nowrap" }}>
-                    ● In interview at {presence.companyName} ({presence.round})
+                  <span
+                    style={{ padding: "3px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#F4F2F1", color: "#8D9096", border: "1px solid #E9E9EB", cursor: "not-allowed" }}
+                    title={`${shortlist.student?.name} is currently in another interview`}
+                  >
+                    In interview elsewhere
                   </span>
                 )}
-              </div>
-              <div className="text-sm text-slate-500 truncate">
-                {shortlist.student?.email}
-              </div>
-              {isPlacedElsewhere && placedCompanyName && (
-                <div className="flex items-center gap-1 text-xs text-slate-600 font-medium mt-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                  </svg>
-                  <span>Placed elsewhere ({placedCompanyName})</span>
-                </div>
-              )}
-              {hasRejectedOffer && (
-                <div className="flex items-center gap-1 text-xs text-red-600 font-medium mt-1">
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  <span>Offer rejected by admin</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Stage Badge */}
-        <div className="flex-shrink-0">
-          <span className={`px-3 py-1 text-xs font-medium rounded-full ${getStageColor(currentStage)}`}>
-            {currentStage}
-          </span>
-        </div>
-
-        {/* Round Buttons + Presence Controls */}
-        {!isPlacedHere && !isPlacedElsewhere && !hasRejectedOffer && !["OFFERED", "REJECTED"].includes(currentStage) && (
-          <div className="flex gap-2 flex-shrink-0 flex-wrap items-center">
-            {/* Dynamic Status Button */}
-            {statusButtonConfig && (
-              <button
-                onClick={(e) => { stopProp(e); statusButtonConfig.action(); }}
-                disabled={updatingStatus}
-                className={`px-3 py-1 text-sm font-medium rounded transition disabled:opacity-50 ${statusButtonConfig.color}`}
-                title={statusButtonConfig.label}
-              >
-                {updatingStatus ? "..." : statusButtonConfig.label}
-              </button>
+              </>
             )}
 
-            {/* Round Buttons */}
-            {[...Array(maxRounds)].map((_, index) => {
-              const round = index + 1;
-              return (
-                <button
-                  key={round}
-                  onClick={(e) => { stopProp(e); handleStageChange(`R${round}`); }}
-                  disabled={updating}
-                  className={`px-3 py-1 text-sm font-medium rounded transition disabled:opacity-50 ${getRoundButtonColor(round)}`}
-                  title={`Move to Round ${round}`}
-                >
-                  R{round}
-                </button>
-              );
-            })}
-
-            {/* ── Presence: Start / End Interview ─────── */}
-            {presenceStatus === "free" && (
-              <button
-                onClick={(e) => { stopProp(e); handleEnterPresence(); }}
-                disabled={checkingIn}
-                style={{ padding: "2px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer", transition: "opacity 0.15s" }}
-                title="Student is entering the interview room"
-              >
-                {checkingIn ? "…" : "▶ Start"}
-              </button>
-            )}
-            {presenceStatus === "busy-here" && (
-              <button
-                onClick={(e) => { stopProp(e); handleExitPresence(); }}
-                disabled={checkingOut}
-                style={{ padding: "2px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", cursor: "pointer", transition: "opacity 0.15s" }}
-                title="Student has left the interview room"
-              >
-                {checkingOut ? "…" : "■ End"}
-              </button>
-            )}
-            {presenceStatus === "busy-elsewhere" && (
-              <span
-                style={{ padding: "2px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#F4F2F1", color: "#8D9096", border: "1px solid #E9E9EB", cursor: "not-allowed" }}
-                title={`${shortlist.student?.name} is currently at ${presence?.companyName}`}
-              >
-                In interview elsewhere
+            {/* Final action buttons */}
+            {isPlacedHere ? (
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">
+                Placed Here ✓
               </span>
+            ) : isPlacedElsewhere ? (
+              <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-semibold rounded-full">
+                Not Available
+              </span>
+            ) : hasRejectedOffer ? (
+              <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
+                Offer Rejected
+              </span>
+            ) : currentStage === "OFFERED" ? (
+              <button
+                onClick={handleRevertOffer}
+                disabled={revertingOffer}
+                className="px-3 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-700 transition disabled:opacity-50"
+              >
+                {revertingOffer ? "Reverting…" : "Revert Offer"}
+              </button>
+            ) : currentStage === "REJECTED" ? (
+              <button
+                onClick={handleUndoRejection}
+                disabled={undoingRejection}
+                className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50"
+              >
+                {undoingRejection ? "Undoing…" : "Undo Reject"}
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => handleStageChange("REJECTED")}
+                  disabled={updating}
+                  className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 transition disabled:opacity-50 border border-red-200"
+                >
+                  Reject
+                </button>
+                <button
+                  onClick={handleCreateOffer}
+                  disabled={creatingOffer || currentStage === "SHORTLISTED" || currentStage === "WAITLISTED"}
+                  className="px-3 py-1 bg-green-600 text-white text-xs font-semibold rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                  title={currentStage === "SHORTLISTED" || currentStage === "WAITLISTED" ? "Complete at least one round first" : "Create offer"}
+                >
+                  {creatingOffer ? "Creating…" : "Offer"}
+                </button>
+              </>
             )}
           </div>
-        )}
-
-        {/* Action Buttons */}
-        <div className="flex gap-2 flex-shrink-0" onClick={stopProp}>
-          {isPlacedHere ? (
-            <div className="px-4 py-2 bg-emerald-100 text-emerald-800 text-sm font-medium rounded">
-              Placed Here
-            </div>
-          ) : isPlacedElsewhere ? (
-            <div className="px-4 py-2 bg-slate-100 text-slate-700 text-sm font-medium rounded">
-              Not Available (Placed elsewhere)
-            </div>
-          ) : hasRejectedOffer ? (
-            <div className="px-4 py-2 bg-red-100 text-red-700 text-sm font-medium rounded">
-              Offer Rejected by Admin
-            </div>
-          ) : currentStage === "OFFERED" ? (
-            <button
-              onClick={handleRevertOffer}
-              disabled={revertingOffer}
-              className="px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded hover:bg-orange-700 transition disabled:opacity-50"
-              title="Revert offer and move back to previous round"
-            >
-              {revertingOffer ? "Reverting..." : "Revert Offer"}
-            </button>
-          ) : currentStage === "REJECTED" ? (
-            <button
-              onClick={handleUndoRejection}
-              disabled={undoingRejection}
-              className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition disabled:opacity-50"
-              title="Undo rejection and move back to previous round"
-            >
-              {undoingRejection ? "Undoing..." : "Undo Rejection"}
-            </button>
-          ) : (
-            <>
-              {/* Reject Button */}
-              <button
-                onClick={() => handleStageChange("REJECTED")}
-                disabled={updating}
-                className="px-3 py-1 bg-red-100 text-red-700 text-sm font-medium rounded hover:bg-red-200 transition disabled:opacity-50"
-                title="Reject candidate"
-              >
-                Reject
-              </button>
-              
-              {/* Offer Button */}
-              <button
-                onClick={handleCreateOffer}
-                disabled={creatingOffer || currentStage === "SHORTLISTED" || currentStage === "WAITLISTED"}
-                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                title={currentStage === "SHORTLISTED" || currentStage === "WAITLISTED" ? "Complete at least one round first" : "Create offer"}
-              >
-                {creatingOffer ? "Creating..." : "Offer"}
-              </button>
-            </>
-          )}
         </div>
       </div>
 
-      {/* Phone Number */}
+      {/* Phone + Remarks — indented under avatar */}
       {shortlist.student?.phoneNumber && (
-        <div className="flex items-center gap-2 mt-2 ml-14 text-sm text-slate-600">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="flex items-center gap-1.5 mt-1.5 ml-12 text-xs text-slate-400">
+          <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
           </svg>
           {shortlist.student.phoneNumber}
         </div>
       )}
-
-      {/* Remarks */}
       {shortlist.remarks && (
-        <div className="mt-2 ml-14 text-sm text-slate-500 italic">
-          Note: {shortlist.remarks}
-        </div>
+        <div className="mt-1 ml-12 text-xs text-slate-400 italic">Note: {shortlist.remarks}</div>
       )}
 
-      {/* PIN Confirmation Modal (for POCs only) */}
       <PINConfirmModal
         isOpen={showPINConfirm}
-        onClose={() => {
-          setShowPINConfirm(false);
-          setPendingAction(null);
-          setActionMetadata(null);
-        }}
+        onClose={() => { setShowPINConfirm(false); setPendingAction(null); setActionMetadata(null); }}
         onConfirm={executePendingAction}
         title={actionMetadata?.title || "Confirm Action"}
         message={actionMetadata?.message || "Please enter PIN to confirm this action."}
