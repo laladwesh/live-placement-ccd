@@ -108,6 +108,12 @@ export function initializeSocket(server) {
       logger.info(`Socket ${socket.id} joined poc room`);
     });
 
+    // Handle admin joining presence tracking room (for Student Tracker page)
+    socket.on("join:presence-admin", () => {
+      socket.join("presence:admin");
+      logger.info(`Socket ${socket.id} joined presence:admin room`);
+    });
+
     // Handle disconnection
     socket.on("disconnect", () => {
       logger.info(`Socket disconnected: ${socket.id}`);
@@ -314,6 +320,25 @@ export function emitOfferStatusUpdate(data) {
     
     logger.info(`Emitted offer status update for offer ${data.offerId}`);
   }
+}
+
+/**
+ * Emit real-time presence update for a student.
+ * Fans out to: the student's personal room, every company room they're shortlisted in,
+ * and the presence:admin room (watched by the Admin Student Tracker page).
+ * @param {string} studentId - User._id string
+ * @param {object} presence  - The updated StudentPresence document (plain object)
+ * @param {string[]} shortlistedCompanyIds - All company IDs where the student is shortlisted
+ */
+export function emitStudentPresenceUpdate(studentId, presence, shortlistedCompanyIds) {
+  if (!io) return;
+  const payload = { studentId, presence };
+  io.to(`student:${studentId}`).emit("student:presence", payload);
+  (shortlistedCompanyIds || []).forEach(cid => {
+    io.to(`company:${cid}`).emit("student:presence", payload);
+  });
+  io.to("presence:admin").emit("student:presence", payload);
+  logger.info(`Emitted presence update for student ${studentId} (${presence.status})`);
 }
 
 /**

@@ -19,6 +19,10 @@ import {
   getAllStudents,
   addStudentManually
 } from "../controllers/student-upload.controller.js";
+import {
+  getAllPresence,
+  forceFreePresence,
+} from "../controllers/presence.controller.js";
 import { authMiddleware, permit } from "../middleware/auth.middleware.js";
 
 // Multer configuration for file upload (memory storage)
@@ -48,6 +52,10 @@ router.post("/companies/:companyId/complete", authMiddleware, permit("admin"), s
 
 // Admin view: get student cross-company details (includes academic fields)
 router.get('/students/:studentId/details', authMiddleware, permit('admin'), getStudentDetails);
+
+// Presence tracking (admin read + force-free override)
+router.get("/presence", authMiddleware, permit("admin"), getAllPresence);
+router.post("/presence/:studentId/force-free", authMiddleware, permit("admin"), forceFreePresence);
 
 // Placement portal sync
 router.post("/sync/students", authMiddleware, permit("admin"), syncStudentsFromPortal);

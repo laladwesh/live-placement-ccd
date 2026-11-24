@@ -45,7 +45,7 @@ export const SocketProvider = ({ children }) => {
       reconnectionDelay: 1000,
       reconnectionAttempts: 5,
       timeout: 20000,
-      forceNew: true
+      // forceNew removed: default manager reuse prevents duplicate sockets on React remounts
     });
 
     newSocket.on("connect", () => {

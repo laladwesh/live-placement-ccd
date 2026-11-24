@@ -4,12 +4,14 @@ import toast from "react-hot-toast";
 import api from "../api/axios";
 import PINConfirmModal from "./PINConfirmModal";
 
-export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdate, onOfferCreated, isPOC = false, onClick }) {
+export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdate, onOfferCreated, isPOC = false, onClick, presence = null, companyId = null }) {
   const [updating, setUpdating] = useState(false);
   const [creatingOffer, setCreatingOffer] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
   const [revertingOffer, setRevertingOffer] = useState(false);
   const [undoingRejection, setUndoingRejection] = useState(false);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [checkingOut, setCheckingOut] = useState(false);
 
   // PIN confirmation states
   const [showPINConfirm, setShowPINConfirm] = useState(false);
@@ -155,6 +157,37 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     );
   };
 
+  // ── Presence: determine status relative to current company ──────────────────
+  const presenceStatus = (() => {
+    if (!presence || presence.status === "free") return "free";
+    const isBusyHere = presence.companyId?.toString() === companyId?.toString();
+    return isBusyHere ? "busy-here" : "busy-elsewhere";
+  })();
+
+  const handleEnterPresence = async () => {
+    const round = currentStage?.startsWith("R") ? currentStage : "R1";
+    setCheckingIn(true);
+    try {
+      await api.post(`/poc/shortlist/${shortlist._id}/presence/enter`, { round });
+      // Socket will push the updated presence back to the parent
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to start interview");
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  const handleExitPresence = async () => {
+    setCheckingOut(true);
+    try {
+      await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to end interview");
+    } finally {
+      setCheckingOut(false);
+    }
+  };
+
   const handleUndoRejection = async () => {
     if (undoingRejection) return;
 
@@ -253,10 +286,26 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               {shortlist.student?.name?.charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-slate-900 truncate">
+              <div className="font-medium text-slate-900 truncate flex items-center gap-2 flex-wrap">
                 {shortlist.student?.name}
                 {shortlist.student?.rollNumber && (
-                  <span className="ml-2 text-xs font-normal text-slate-500">({shortlist.student.rollNumber})</span>
+                  <span className="text-xs font-normal text-slate-500">({shortlist.student.rollNumber})</span>
+                )}
+                {/* Live presence badge */}
+                {presenceStatus === "free" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", transition: "all 0.2s", whiteSpace: "nowrap" }}>
+                    ● Free
+                  </span>
+                )}
+                {presenceStatus === "busy-here" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", transition: "all 0.2s", whiteSpace: "nowrap" }}>
+                    ● In interview here ({presence.round})
+                  </span>
+                )}
+                {presenceStatus === "busy-elsewhere" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", transition: "all 0.2s", whiteSpace: "nowrap" }}>
+                    ● In interview at {presence.companyName} ({presence.round})
+                  </span>
                 )}
               </div>
               <div className="text-sm text-slate-500 truncate">
@@ -289,9 +338,9 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
           </span>
         </div>
 
-        {/* Round Buttons */}
+        {/* Round Buttons + Presence Controls */}
         {!isPlacedHere && !isPlacedElsewhere && !hasRejectedOffer && !["OFFERED", "REJECTED"].includes(currentStage) && (
-          <div className="flex gap-2 flex-shrink-0">
+          <div className="flex gap-2 flex-shrink-0 flex-wrap items-center">
             {/* Dynamic Status Button */}
             {statusButtonConfig && (
               <button
@@ -303,7 +352,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                 {updatingStatus ? "..." : statusButtonConfig.label}
               </button>
             )}
-            
+
             {/* Round Buttons */}
             {[...Array(maxRounds)].map((_, index) => {
               const round = index + 1;
@@ -319,6 +368,36 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                 </button>
               );
             })}
+
+            {/* ── Presence: Start / End Interview ─────── */}
+            {presenceStatus === "free" && (
+              <button
+                onClick={(e) => { stopProp(e); handleEnterPresence(); }}
+                disabled={checkingIn}
+                style={{ padding: "2px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer", transition: "opacity 0.15s" }}
+                title="Student is entering the interview room"
+              >
+                {checkingIn ? "…" : "▶ Start"}
+              </button>
+            )}
+            {presenceStatus === "busy-here" && (
+              <button
+                onClick={(e) => { stopProp(e); handleExitPresence(); }}
+                disabled={checkingOut}
+                style={{ padding: "2px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", cursor: "pointer", transition: "opacity 0.15s" }}
+                title="Student has left the interview room"
+              >
+                {checkingOut ? "…" : "■ End"}
+              </button>
+            )}
+            {presenceStatus === "busy-elsewhere" && (
+              <span
+                style={{ padding: "2px 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, background: "#F4F2F1", color: "#8D9096", border: "1px solid #E9E9EB", cursor: "not-allowed" }}
+                title={`${shortlist.student?.name} is currently at ${presence?.companyName}`}
+              >
+                In interview elsewhere
+              </span>
+            )}
           </div>
         )}
 

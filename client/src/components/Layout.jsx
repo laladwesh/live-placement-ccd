@@ -15,6 +15,7 @@ import {
   LogoutOutlined,
   UserOutlined,
   CalendarOutlined,
+  AimOutlined,
 } from '@ant-design/icons';
 
 // ── Role → nav items ──────────────────────────────────────────────
@@ -23,6 +24,7 @@ const NAV = {
     { to: '/admin',              label: 'Offer Management', end: true, Icon: FileTextOutlined  },
     { to: '/admin/company',      label: 'Companies',                   Icon: BankOutlined      },
     { to: '/admin/students',     label: 'Students',                    Icon: TeamOutlined      },
+    { to: '/admin/tracker',      label: 'Student Tracker',             Icon: AimOutlined       },
     { to: '/prev-placement',     label: 'Prev Placement Data',         Icon: DatabaseOutlined  },
     { to: '/intern-stats-live',  label: 'Live Intern Data',            Icon: BarChartOutlined  },
     { to: '/intern-master-data', label: 'Prev Intern Data',            Icon: DatabaseOutlined  },
@@ -31,6 +33,7 @@ const NAV = {
     { to: '/admin',              label: 'Offer Management', end: true, Icon: FileTextOutlined  },
     { to: '/admin/company',      label: 'Companies',                   Icon: BankOutlined      },
     { to: '/admin/students',     label: 'Students',                    Icon: TeamOutlined      },
+    { to: '/admin/tracker',      label: 'Student Tracker',             Icon: AimOutlined       },
     { to: '/poc',                label: 'POC View',                    Icon: EyeOutlined       },
     { to: '/prev-placement',     label: 'Prev Placement Data',         Icon: DatabaseOutlined  },
     { to: '/intern-stats-live',  label: 'Live Intern Data',            Icon: BarChartOutlined  },

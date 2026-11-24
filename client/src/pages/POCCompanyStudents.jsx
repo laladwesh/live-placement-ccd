@@ -20,6 +20,8 @@ export default function POCCompanyStudents() {
   const [shortlists, setShortlists] = useState([]);
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  // presenceMap: { [studentUserId]: StudentPresence doc } — keyed by User._id string
+  const [presenceMap, setPresenceMap] = useState({});
 const [searchTerm, setSearchTerm] = useState("");
   const [filterStage, setFilterStage] = useState("all");
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false);
@@ -40,9 +42,19 @@ const [searchTerm, setSearchTerm] = useState("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const fetchPresence = async () => {
+    try {
+      const res = await api.get(`/poc/companies/${companyId}/presence`);
+      setPresenceMap(res.data.presence || {});
+    } catch (err) {
+      console.error("Error fetching presence:", err);
+    }
+  };
+
   useEffect(() => {
     if (user) {
       fetchCompanyStudents();
+      fetchPresence();
       // One-time refresh after 3s — catches any updates that arrive between initial load and socket connecting
       const t = setTimeout(() => fetchCompanyStudents(), 3000);
       return () => clearTimeout(t);
@@ -62,6 +74,8 @@ const [searchTerm, setSearchTerm] = useState("");
     socket.on('connect', () => {
       socket.emit("join:company", companyId);
       socket.emit("join:poc");
+      // Re-fetch presence snapshot on reconnect to catch any events missed while disconnected
+      fetchPresence();
     });
 
     // Silent refresh function - no loading screen
@@ -135,6 +149,13 @@ const [searchTerm, setSearchTerm] = useState("");
       silentRefresh(); // Refresh to show updated placement status
     });
 
+    // Listen for live presence updates — merge single-student delta into local map
+    socket.on("student:presence", (data) => {
+      if (data?.studentId && data?.presence) {
+        setPresenceMap(prev => ({ ...prev, [data.studentId]: data.presence }));
+      }
+    });
+
     // Listen for company process changes (completed/reopened)
     socket.on("company:process-changed", (data) => {
       if (!data || data.companyId !== companyId) return;
@@ -175,6 +196,7 @@ const [searchTerm, setSearchTerm] = useState("");
       socket.off("student:removed");
       socket.off("student:placed");
       socket.off("company:process-changed");
+      socket.off("student:presence");
     };
   }, [socket, companyId, user]);
 
@@ -699,6 +721,8 @@ const handleStudentClick = (studentId) => {
                     onOfferCreated={handleOfferCreated}
                     isPOC={user?.role === "poc"}
                     onClick={() => handleStudentClick(shortlist.student._id)}
+                    presence={presenceMap[shortlist.student?._id?.toString()] || null}
+                    companyId={companyId}
                   />
                 ))}
               </div>

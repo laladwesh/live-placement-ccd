@@ -13,6 +13,11 @@ import {
   markProcessCompleted,
   getStudentCrossCompanyDetails
 } from "../controllers/poc.controller.js";
+import {
+  enterPresence,
+  exitPresence,
+  getPresenceForCompany,
+} from "../controllers/presence.controller.js";
 
 const router = express.Router();
 
@@ -46,5 +51,12 @@ router.post("/companies/:companyId/walkin", addWalkInStudent);
 
 // Mark company process as completed
 router.post("/companies/:companyId/complete", markProcessCompleted);
+
+// Presence: get snapshot for a company's students
+router.get("/companies/:companyId/presence", permit("poc", "admin"), getPresenceForCompany);
+
+// Presence: explicit check-in / check-out (POC or admin only)
+router.post("/shortlist/:shortlistId/presence/enter", enterPresence);
+router.post("/shortlist/:shortlistId/presence/exit", exitPresence);
 
 export default router;

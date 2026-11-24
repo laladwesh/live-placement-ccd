@@ -29,6 +29,7 @@ import PlacementStatsDetail from "./pages/PlacementStatsDetail";
 import PrevPlacementData from "./pages/PrevPlacementData";
 import SchedulerCompanies from "./pages/SchedulerCompanies";
 import SchedulerCompanyView from "./pages/SchedulerCompanyView";
+import AdminStudentTracker from "./pages/AdminStudentTracker";
 import Footer          from "./components/Footer";
 
 function App() {
@@ -61,6 +62,7 @@ function App() {
             <Route path="/admin"                              element={<AdminDashboard />} />
             <Route path="/admin/offers"                       element={<AdminOffersDashboard />} />
             <Route path="/admin/students"                     element={<AdminStudents />} />
+            <Route path="/admin/tracker"                      element={<AdminStudentTracker />} />
             <Route path="/admin/company"                      element={<AdminCompanyDetails />} />
             <Route path="/admin/companies/:companyId"         element={<CompanyDetails />} />
             <Route path="/company/:companyId"                 element={<CompanyDetails />} />

@@ -9,6 +9,7 @@ import Student from "../models/student.model.js";
 import { logger } from "../utils/logger.js";
 import { emitShortlistUpdate, emitOfferCreated, emitStudentAdded, emitOfferStatusUpdate, emitOfferReverted } from "../config/socket.js";
 import { emitCompanyProcessChanged } from "../config/socket.js";
+import { autoReleasePresenceIfAtCompany } from "./presence.controller.js";
 
 const PLACEMENT_API = process.env.PLACEMENT_PORTAL_API ;
 const SYNC_KEY = process.env.DDAY_SYNC_KEY || "";
@@ -282,6 +283,11 @@ export const updateInterviewStage = async (req, res) => {
 
     logger.info(`POC ${req.user.emailId} updated ${shortlist.studentId.emailId} to stage ${stage}`);
 
+    // Auto-release presence when student is rejected — avoids stale "busy" state
+    if (stage === Stage.REJECTED) {
+      autoReleasePresenceIfAtCompany(shortlist.studentId._id, shortlist.companyId._id);
+    }
+
     // Emit socket event for real-time update
     emitShortlistUpdate(shortlist.companyId._id.toString(), shortlist.studentId._id.toString(), {
       shortlistId: shortlist._id,
@@ -488,6 +494,9 @@ export const createOffer = async (req, res) => {
     // Update shortlist to mark as offered
     shortlist.isOffered = true;
     await shortlist.save();
+
+    // Auto-release presence — the interview is effectively concluded with an offer
+    autoReleasePresenceIfAtCompany(shortlist.studentId._id, shortlist.companyId._id);
 
     await offer.populate('studentId', 'name emailId phoneNo');
     await offer.populate('companyId', 'name venue');
