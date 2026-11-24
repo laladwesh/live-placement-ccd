@@ -57,6 +57,20 @@ function FunnelTile({ label, value, color }) {
   );
 }
 
+const FILTER_OPTIONS = [
+  { key: "applied",        label: "Applied",         cls: "bg-slate-100 text-slate-700 border-slate-300",       activeCls: "bg-slate-700 text-white border-slate-700"       },
+  { key: "oa_appeared",    label: "OA Appeared",     cls: "bg-blue-50 text-blue-700 border-blue-200",           activeCls: "bg-blue-600 text-white border-blue-600"         },
+  { key: "oa_shortlisted", label: "OA Shortlisted",  cls: "bg-indigo-50 text-indigo-700 border-indigo-200",     activeCls: "bg-indigo-600 text-white border-indigo-600"     },
+  { key: "interview_call", label: "Interview Call",  cls: "bg-amber-50 text-amber-700 border-amber-200",        activeCls: "bg-amber-500 text-white border-amber-500"       },
+  { key: "offered",        label: "Offered",         cls: "bg-emerald-50 text-emerald-700 border-emerald-200",  activeCls: "bg-emerald-600 text-white border-emerald-600"   },
+  { key: "placed",         label: "Placed",          cls: "bg-emerald-50 text-emerald-800 border-emerald-300",  activeCls: "bg-emerald-700 text-white border-emerald-700"   },
+];
+
+function stageMatch(entry, key) {
+  if (key === "placed") return !!entry.is_placed_here;
+  return !!entry.stages?.[key];
+}
+
 export default function PlacementStatsDetail() {
   const { rollNumber } = useParams();
   const navigate = useNavigate();
@@ -64,6 +78,15 @@ export default function PlacementStatsDetail() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [activeFilters, setActiveFilters] = useState(new Set());
+
+  const toggleFilter = (key) => {
+    setActiveFilters(prev => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+  };
 
   const fetchDetail = async () => {
     setLoading(true);
@@ -192,12 +215,43 @@ export default function PlacementStatsDetail() {
           )}
 
           {/* ── Trail table ── */}
-          {data.trail && data.trail.length > 0 && (
+          {data.trail && data.trail.length > 0 && (() => {
+            const filteredTrail = activeFilters.size === 0
+              ? data.trail
+              : data.trail.filter(e => [...activeFilters].some(k => stageMatch(e, k)));
+            return (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-              <div className="px-6 py-4 border-b border-slate-100">
+              <div className="px-6 py-4 border-b border-slate-100 flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-sm font-bold uppercase tracking-widest text-slate-400">
-                  Application Trail — {data.trail.length} {data.trail.length === 1 ? "company" : "companies"}
+                  Application Trail —{" "}
+                  <span className="text-slate-700">
+                    {filteredTrail.length}
+                    {activeFilters.size > 0 && <span className="text-slate-400"> / {data.trail.length}</span>}
+                  </span>{" "}
+                  {filteredTrail.length === 1 ? "company" : "companies"}
                 </h2>
+                <div className="flex flex-wrap gap-1.5">
+                  {FILTER_OPTIONS.map(({ key, label, cls, activeCls }) => {
+                    const isActive = activeFilters.has(key);
+                    return (
+                      <button
+                        key={key}
+                        onClick={() => toggleFilter(key)}
+                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${isActive ? activeCls : cls} hover:opacity-80`}
+                      >
+                        {label}
+                      </button>
+                    );
+                  })}
+                  {activeFilters.size > 0 && (
+                    <button
+                      onClick={() => setActiveFilters(new Set())}
+                      className="px-3 py-1 rounded-full text-xs font-semibold border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all"
+                    >
+                      Clear
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
@@ -214,7 +268,13 @@ export default function PlacementStatsDetail() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {data.trail.map((entry, idx) => (
+                    {filteredTrail.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="px-5 py-10 text-center text-slate-400 text-sm">
+                          No companies match the selected filters.
+                        </td>
+                      </tr>
+                    ) : filteredTrail.map((entry, idx) => (
                       <tr
                         key={entry.job_id || idx}
                         className={`hover:bg-slate-50/80 transition-colors ${entry.is_placed_here ? "bg-emerald-50/40" : ""}`}
@@ -238,7 +298,8 @@ export default function PlacementStatsDetail() {
                 </table>
               </div>
             </div>
-          )}
+            );
+          })()}
 
           {data.trail && data.trail.length === 0 && (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-10 text-center text-slate-500">
