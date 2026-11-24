@@ -30,6 +30,7 @@ import PrevPlacementData from "./pages/PrevPlacementData";
 import SchedulerCompanies from "./pages/SchedulerCompanies";
 import SchedulerCompanyView from "./pages/SchedulerCompanyView";
 import AdminStudentTracker from "./pages/AdminStudentTracker";
+import NotFound         from "./pages/NotFound";
 import Footer          from "./components/Footer";
 
 function App() {
@@ -80,6 +81,9 @@ function App() {
             <Route path="/scheduler"                          element={<SchedulerCompanies />} />
             <Route path="/scheduler/companies/:companyId"     element={<SchedulerCompanyView />} />
           </Route>
+
+          {/* Catch-all 404 */}
+          <Route path="*" element={<NotFound />} />
         </Routes>
 
         <Footer />
