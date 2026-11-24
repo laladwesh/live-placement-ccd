@@ -126,7 +126,7 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false, isVi
                           <div style={{ fontWeight: 600, fontSize: 14, color: "#1E2532" }}>{poc.name}</div>
                           {poc.phone && poc.phone !== "N/A" && (
                             <a href={`tel:${poc.phone}`} style={{ fontSize: 13, color: "#14213D", textDecoration: "none", fontWeight: 500 }}>
-                              📞 {poc.phone}
+                              {poc.phone}
                             </a>
                           )}
                         </div>
