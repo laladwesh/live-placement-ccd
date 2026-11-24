@@ -11,6 +11,7 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   const [undoingRejection, setUndoingRejection] = useState(false);
   const [checkingIn, setCheckingIn] = useState(false);
   const [checkingOut, setCheckingOut] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   const [showPINConfirm, setShowPINConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
@@ -183,12 +184,14 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   const stopProp = (e) => e.stopPropagation();
 
   // ── Render ────────────────────────────────────────────────────────────────
+  const isActive = !isPlacedHere && !isPlacedElsewhere && !hasRejectedOffer && !["OFFERED", "REJECTED"].includes(currentStage);
+
   return (
     <div
-      className={`px-4 py-3 ${isPlacedHere || isPlacedElsewhere ? "bg-gray-50" : "hover:bg-slate-50"} ${onClick ? "cursor-pointer transition-colors duration-150" : ""}`}
+      className={`px-4 py-4 sm:py-3 ${isPlacedHere || isPlacedElsewhere ? "bg-gray-50" : "hover:bg-slate-50"} ${onClick ? "cursor-pointer transition-colors duration-150" : ""}`}
       onClick={onClick || undefined}
     >
-      {/* Layout: avatar | [info + controls stacked on mobile / inline on desktop] */}
+      {/* Layout: avatar | info */}
       <div className="flex items-start gap-3">
         {/* Avatar */}
         <div className="w-9 h-9 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-semibold flex-shrink-0 mt-0.5">
@@ -200,24 +203,41 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
 
           {/* Student info */}
           <div className="flex-1 min-w-0">
-            {/* Name + roll + presence badge */}
+            {/* Name + roll */}
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="font-semibold text-slate-900 text-sm">{shortlist.student?.name}</span>
               {shortlist.student?.rollNumber && (
                 <span className="text-xs text-slate-400">({shortlist.student.rollNumber})</span>
               )}
-              {/* Presence badge — only shown when there's a presence record */}
+              {/* Presence badges — desktop only (mobile gets own line below) */}
               {presence && presenceStatus === "busy-here" && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", whiteSpace: "nowrap" }}>
+                <span className="hidden sm:inline-flex" style={{ alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", whiteSpace: "nowrap" }}>
                   ● In interview — {presence.round}
                 </span>
               )}
               {presence && presenceStatus === "busy-elsewhere" && (
-                <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", whiteSpace: "nowrap" }}>
+                <span className="hidden sm:inline-flex" style={{ alignItems: "center", gap: 3, padding: "1px 7px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6", whiteSpace: "nowrap" }}>
                   ● In interview elsewhere
                 </span>
               )}
             </div>
+
+            {/* Mobile-only presence badge — own line under name so it doesn't crowd the name */}
+            {presence && presenceStatus !== "free" && (
+              <div className="sm:hidden mt-1">
+                {presenceStatus === "busy-here" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A" }}>
+                    ● In interview — {presence.round}
+                  </span>
+                )}
+                {presenceStatus === "busy-elsewhere" && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "2px 8px", fontSize: 11, fontWeight: 700, borderRadius: 2, background: "#FEF0ED", color: "#C0300A", border: "1px solid #F4C5B6" }}>
+                    ● In interview elsewhere
+                  </span>
+                )}
+              </div>
+            )}
+
             {/* Email */}
             <div className="text-xs text-slate-400 truncate mt-0.5">{shortlist.student?.email}</div>
             {/* Notices */}
@@ -239,15 +259,14 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
             )}
           </div>
 
-          {/* Controls: stage badge + round buttons + action buttons */}
-          <div className="flex flex-wrap items-center gap-1.5 flex-shrink-0" onClick={stopProp}>
+          {/* ── DESKTOP controls (sm+): original layout, unchanged ── */}
+          <div className="hidden sm:flex flex-wrap items-center gap-1.5 flex-shrink-0" onClick={stopProp}>
             {/* Stage badge */}
             <span className={`px-2 py-0.5 text-xs font-semibold rounded-full flex-shrink-0 ${getStageColor(currentStage)}`}>
               {currentStage}
             </span>
 
-            {/* Round + presence buttons — only for active students */}
-            {!isPlacedHere && !isPlacedElsewhere && !hasRejectedOffer && !["OFFERED", "REJECTED"].includes(currentStage) && (
+            {isActive && (
               <>
                 {statusButtonConfig && (
                   <button
@@ -258,7 +277,6 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                     {updatingStatus ? "…" : statusButtonConfig.label}
                   </button>
                 )}
-
                 {[...Array(maxRounds)].map((_, i) => {
                   const r = i + 1;
                   return (
@@ -272,8 +290,6 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                     </button>
                   );
                 })}
-
-                {/* Presence: Start / End */}
                 {presenceStatus === "free" && (
                   <button
                     onClick={() => handleEnterPresence()}
@@ -305,42 +321,23 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               </>
             )}
 
-            {/* Final action buttons */}
             {isPlacedHere ? (
-              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">
-                Placed Here ✓
-              </span>
+              <span className="px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-semibold rounded-full">Placed Here ✓</span>
             ) : isPlacedElsewhere ? (
-              <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-semibold rounded-full">
-                Not Available
-              </span>
+              <span className="px-3 py-1 bg-slate-100 text-slate-500 text-xs font-semibold rounded-full">Not Available</span>
             ) : hasRejectedOffer ? (
-              <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">
-                Offer Rejected
-              </span>
+              <span className="px-3 py-1 bg-red-100 text-red-700 text-xs font-semibold rounded-full">Offer Rejected</span>
             ) : currentStage === "OFFERED" ? (
-              <button
-                onClick={handleRevertOffer}
-                disabled={revertingOffer}
-                className="px-3 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-700 transition disabled:opacity-50"
-              >
+              <button onClick={handleRevertOffer} disabled={revertingOffer} className="px-3 py-1 bg-orange-600 text-white text-xs font-semibold rounded hover:bg-orange-700 transition disabled:opacity-50">
                 {revertingOffer ? "Reverting…" : "Revert Offer"}
               </button>
             ) : currentStage === "REJECTED" ? (
-              <button
-                onClick={handleUndoRejection}
-                disabled={undoingRejection}
-                className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50"
-              >
+              <button onClick={handleUndoRejection} disabled={undoingRejection} className="px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50">
                 {undoingRejection ? "Undoing…" : "Undo Reject"}
               </button>
             ) : (
               <>
-                <button
-                  onClick={() => handleStageChange("REJECTED")}
-                  disabled={updating}
-                  className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 transition disabled:opacity-50 border border-red-200"
-                >
+                <button onClick={() => handleStageChange("REJECTED")} disabled={updating} className="px-3 py-1 bg-red-50 text-red-700 text-xs font-semibold rounded hover:bg-red-100 transition disabled:opacity-50 border border-red-200">
                   Reject
                 </button>
                 <button
@@ -354,6 +351,127 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
               </>
             )}
           </div>
+
+          {/* ── MOBILE controls (below sm): reorganized for thumb use ── */}
+          <div className="sm:hidden mt-2" onClick={stopProp}>
+            {isPlacedHere ? (
+              <span className="inline-flex px-3 py-1.5 bg-emerald-100 text-emerald-800 text-sm font-semibold rounded-full">Placed Here ✓</span>
+            ) : isPlacedElsewhere ? (
+              <span className="inline-flex px-3 py-1.5 bg-slate-100 text-slate-500 text-sm font-semibold rounded-full">Not Available</span>
+            ) : hasRejectedOffer ? (
+              <span className="inline-flex px-3 py-1.5 bg-red-100 text-red-700 text-sm font-semibold rounded-full">Offer Rejected</span>
+            ) : (
+              <div className="flex flex-col gap-2.5">
+                {/* Row A: stage badge + primary CTA (Offer / Revert / Undo) */}
+                <div className="flex items-center justify-between gap-2">
+                  <span className={`px-2.5 py-1 text-xs font-semibold rounded-full flex-shrink-0 ${getStageColor(currentStage)}`}>
+                    {currentStage}
+                  </span>
+                  {currentStage === "OFFERED" && (
+                    <button onClick={handleRevertOffer} disabled={revertingOffer} className="px-4 py-1.5 bg-orange-600 text-white text-sm font-semibold rounded hover:bg-orange-700 transition disabled:opacity-50">
+                      {revertingOffer ? "Reverting…" : "Revert Offer"}
+                    </button>
+                  )}
+                  {currentStage === "REJECTED" && (
+                    <button onClick={handleUndoRejection} disabled={undoingRejection} className="px-4 py-1.5 bg-blue-600 text-white text-sm font-semibold rounded hover:bg-blue-700 transition disabled:opacity-50">
+                      {undoingRejection ? "Undoing…" : "Undo Reject"}
+                    </button>
+                  )}
+                  {isActive && (
+                    <button
+                      onClick={handleCreateOffer}
+                      disabled={creatingOffer || currentStage === "SHORTLISTED" || currentStage === "WAITLISTED"}
+                      className="px-4 py-1.5 bg-green-600 text-white text-sm font-semibold rounded hover:bg-green-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      title={currentStage === "SHORTLISTED" || currentStage === "WAITLISTED" ? "Complete at least one round first" : "Create offer"}
+                    >
+                      {creatingOffer ? "Creating…" : "Offer"}
+                    </button>
+                  )}
+                </div>
+
+                {/* Row B: presence action — full width, most-used button on live day */}
+                {isActive && (
+                  <>
+                    {presenceStatus === "free" && (
+                      <button
+                        onClick={handleEnterPresence}
+                        disabled={checkingIn}
+                        style={{ width: "100%", padding: "11px", fontSize: 15, fontWeight: 700, borderRadius: 3, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer" }}
+                      >
+                        {checkingIn ? "Starting…" : "▶ Start Interview"}
+                      </button>
+                    )}
+                    {presenceStatus === "busy-here" && (
+                      <button
+                        onClick={handleExitPresence}
+                        disabled={checkingOut}
+                        style={{ width: "100%", padding: "11px", fontSize: 15, fontWeight: 700, borderRadius: 3, background: "#FFF8E6", color: "#7B5700", border: "1px solid #F5D87A", cursor: "pointer" }}
+                      >
+                        {checkingOut ? "Ending…" : "■ End Interview"}
+                      </button>
+                    )}
+                    {presenceStatus === "busy-elsewhere" && (
+                      <div style={{ width: "100%", padding: "10px", fontSize: 13, fontWeight: 600, borderRadius: 3, background: "#F4F2F1", color: "#8D9096", border: "1px solid #E9E9EB", textAlign: "center" }}>
+                        In interview elsewhere
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* Row C: round grid — each pill gets equal width, thumb-sized */}
+                {isActive && (
+                  <div style={{ display: "grid", gridTemplateColumns: `repeat(${maxRounds}, 1fr)`, gap: 6 }}>
+                    {[...Array(maxRounds)].map((_, i) => {
+                      const r = i + 1;
+                      return (
+                        <button
+                          key={r}
+                          onClick={() => handleStageChange(`R${r}`)}
+                          disabled={updating}
+                          className={`py-2.5 text-sm font-semibold rounded transition disabled:opacity-50 ${getRoundButtonColor(r)}`}
+                        >
+                          R{r}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {/* Row D: "More" toggle — reveals secondary actions (status, reject) */}
+                {isActive && (
+                  <div>
+                    <button
+                      onClick={() => setShowMore(m => !m)}
+                      className="text-xs font-semibold text-slate-500 hover:text-slate-700 flex items-center gap-1 py-1"
+                    >
+                      {showMore ? "Less ▲" : "More options ▾"}
+                    </button>
+                    {showMore && (
+                      <div className="flex gap-2 mt-2 flex-wrap">
+                        {statusButtonConfig && (
+                          <button
+                            onClick={() => statusButtonConfig.action()}
+                            disabled={updatingStatus}
+                            className={`flex-1 py-2.5 text-sm font-semibold rounded transition disabled:opacity-50 ${statusButtonConfig.color}`}
+                          >
+                            {updatingStatus ? "…" : statusButtonConfig.label}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleStageChange("REJECTED")}
+                          disabled={updating}
+                          className="flex-1 py-2.5 bg-red-50 text-red-700 text-sm font-semibold rounded hover:bg-red-100 transition disabled:opacity-50 border border-red-200"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 

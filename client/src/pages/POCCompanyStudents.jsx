@@ -651,7 +651,7 @@ const handleStudentClick = (studentId) => {
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200 w-full">
+              <div className="divide-y divide-slate-100 w-full">
                 {filteredShortlists.map((shortlist) => (
                   <StudentInterviewRow
                     key={shortlist._id}
