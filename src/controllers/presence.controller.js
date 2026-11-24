@@ -181,26 +181,48 @@ export const getPresenceForCompany = async (req, res) => {
 
 /**
  * GET /api/admin/presence
- * Returns ALL presence records with student name/roll/email, for the Admin Student Tracker.
+ * Returns ALL shortlisted students with their current presence status.
+ * Students with no presence doc appear as "free" — this ensures the tracker
+ * shows every student, not just those who have been checked in at least once.
  */
 export const getAllPresence = async (req, res) => {
   try {
+    // All existing presence docs, keyed by studentId string
     const presences = await StudentPresence.find({})
       .populate("studentId", "name emailId")
       .populate("companyId", "name venue")
       .lean();
+    const presenceMap = new Map(presences.map(p => [p.studentId?._id?.toString(), p]));
 
-    // Enrich with roll numbers from Student docs
-    const userIds = presences.map(p => p.studentId?._id).filter(Boolean);
-    const students = await Student.find({ userId: { $in: userIds } }).select("userId rollNumber").lean();
-    const rollMap = new Map(students.map(s => [s.userId.toString(), s.rollNumber]));
+    // All distinct student User IDs that appear in any shortlist
+    const shortlists = await Shortlist.find({}).select("studentId").lean();
+    const allStudentIds = [...new Set(shortlists.map(s => s.studentId?.toString()).filter(Boolean))];
 
-    const enriched = presences.map(p => ({
-      ...p,
-      rollNumber: p.studentId ? (rollMap.get(p.studentId._id.toString()) || null) : null,
-    }));
+    // Fetch User + Student (roll) for all shortlisted students
+    const users = await User.find({ _id: { $in: allStudentIds } }).select("name emailId").lean();
+    const stuDocs = await Student.find({ userId: { $in: allStudentIds } }).select("userId rollNumber").lean();
+    const rollMap = new Map(stuDocs.map(s => [s.userId.toString(), s.rollNumber]));
 
-    return res.json({ presence: enriched });
+    // Merge: real presence doc if it exists, synthetic free record otherwise
+    const result = users.map(user => {
+      const uid = user._id.toString();
+      const p = presenceMap.get(uid);
+      const rollNumber = rollMap.get(uid) || null;
+      if (p) return { ...p, rollNumber };
+      return {
+        _id: uid,
+        studentId: user,
+        status: "free",
+        companyId: null,
+        companyName: null,
+        venue: null,
+        round: null,
+        enteredAt: null,
+        rollNumber,
+      };
+    });
+
+    return res.json({ presence: result });
   } catch (err) {
     logger.error("getAllPresence error:", err);
     return res.status(500).json({ message: "Server error" });

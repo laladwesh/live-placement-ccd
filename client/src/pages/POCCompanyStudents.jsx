@@ -1,5 +1,5 @@
 ﻿// src/pages/POCCompanyStudents.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import api from "../api/axios";
@@ -51,137 +51,88 @@ const [searchTerm, setSearchTerm] = useState("");
     }
   };
 
+  // Silent background refresh — does NOT set loading, so no spinner flash
+  const silentRefresh = useCallback(async () => {
+    try {
+      const res = await api.get(`/poc/companies/${companyId}/students`);
+      setCompany(res.data.company);
+      setShortlists(res.data.shortlists || []);
+      setStats(res.data.stats || {});
+    } catch (err) {
+      console.error("Silent refresh error:", err);
+    }
+  }, [companyId]);
+
   useEffect(() => {
     if (user) {
       fetchCompanyStudents();
       fetchPresence();
-      // One-time refresh after 3s — catches any updates that arrive between initial load and socket connecting
-      const t = setTimeout(() => fetchCompanyStudents(), 3000);
-      return () => clearTimeout(t);
+      // No 3-second timeout — socket reconnect handles any missed events
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, companyId]);
 
-  // Socket.IO listeners - Silent background updates
-  // Include `user` in dependencies so the handler sees the current role (POC vs admin)
+  // Socket.IO listeners — silent background updates, no loading flicker
   useEffect(() => {
     if (!socket || !companyId) return;
 
-    // Join company room and poc room; re-join on reconnect
     socket.emit("join:company", companyId);
     socket.emit("join:poc");
 
-    socket.on('connect', () => {
+    socket.on("connect", () => {
       socket.emit("join:company", companyId);
       socket.emit("join:poc");
-      // Re-fetch presence snapshot on reconnect to catch any events missed while disconnected
+      // Re-sync on reconnect (missed events while disconnected)
+      silentRefresh();
       fetchPresence();
     });
 
-    // Silent refresh function - no loading screen
-    const silentRefresh = async (message) => {
-      try {
-        if (message) {
-          toast.success(message);
-        }
-        const res = await api.get(`/poc/companies/${companyId}/students`);
-        setCompany(res.data.company);
-        setShortlists(res.data.shortlists || []);
-        setStats(res.data.stats || {});
-      } catch (err) {
-        console.error("Silent refresh error:", err);
-      }
-    };
+    // Stage/status changes — triggered by this POC or others; row already shows its own toast
+    socket.on("shortlist:update", () => silentRefresh());
+    socket.on("offer:created",    () => silentRefresh());
+    socket.on("offer:reverted",   () => silentRefresh());
+    socket.on("offer:status-update", () => silentRefresh());
+    socket.on("student:added",    () => silentRefresh());
+    socket.on("student:removed",  () => silentRefresh());
 
-    // Listen for shortlist updates
-    socket.on("shortlist:update", (data) => {
-      // console.log("Shortlist update received:", data);
-      silentRefresh("Interview stage updated"); // Silent background refresh
-    });
-
-    // Listen for new offers
-    socket.on("offer:created", (data) => {
-      // console.log("Offer created:", data);
-      silentRefresh("New offer created");
-    });
-
-    // Listen for offer approved by admin
+    // Admin actions the POC needs to know about → keep the toast
     socket.on("offer:approved", (data) => {
-      // console.log("Offer approved by admin:", data);
-      silentRefresh(`Offer for ${data.studentName} approved by admin`);
+      toast.success(`Offer for ${data?.studentName} approved by admin`);
+      silentRefresh();
     });
-
-    // Listen for offer rejected by admin
     socket.on("offer:rejected", (data) => {
-      // console.log("❌ Offer rejected by admin:", data);
-      silentRefresh(`Offer for ${data.studentName} rejected by admin`);
+      toast.error(`Offer for ${data?.studentName} rejected by admin`);
+      silentRefresh();
     });
-
-    // Listen for offer reverted (POC undid offer)
-    socket.on("offer:reverted", (data) => {
-      silentRefresh(`Offer reverted for ${data.studentName}`);
-    });
-
-    // Listen for offer status updates
-    socket.on("offer:status-update", (data) => {
-      // console.log("Offer status updated:", data);
+    socket.on("student:placed", (data) => {
+      toast.success(`Student placed at ${data?.placedCompanyName}`, { duration: 5000 });
       silentRefresh();
     });
 
-    // Listen for students added
-    socket.on("student:added", (data) => {
-      // console.log("Student added:", data);
-      silentRefresh("New student added");
-    });
-
-    // Listen for students removed
-    socket.on("student:removed", (data) => {
-      // console.log("Student removed:", data);
-      silentRefresh("Student removed");
-    });
-
-    // Listen for student placement notifications (real-time update when student gets placed elsewhere)
-    socket.on("student:placed", (data) => {
-      // console.log("Student placed elsewhere:", data);
-      toast.success(`Student placed at ${data.placedCompanyName}`, {
-        duration: 5000,
-      });
-      silentRefresh(); // Refresh to show updated placement status
-    });
-
-    // Listen for live presence updates — merge single-student delta into local map
+    // Live presence delta — no API call needed, just merge into the map
     socket.on("student:presence", (data) => {
       if (data?.studentId && data?.presence) {
         setPresenceMap(prev => ({ ...prev, [data.studentId]: data.presence }));
       }
     });
 
-    // Listen for company process changes (completed/reopened)
+    // Company process changes
     socket.on("company:process-changed", (data) => {
       if (!data || data.companyId !== companyId) return;
-      // If company is marked completed
       if (data.completed) {
-        // If current user is a POC (not admin), navigate away to POC list
         if (user?.role === "poc") {
-          toast(`This company's process was marked completed`, {
-            duration: 4000,
-          });
+          toast(`This company's process was marked completed`, { duration: 4000 });
           setTimeout(() => navigate("/poc"), 250);
-        } else if (user?.role === "admin") {
-          // Admins can stay but refresh data
-          silentRefresh("Company process marked completed");
         } else {
-          // Other roles - just refresh
+          toast.success("Company process marked completed");
           silentRefresh();
         }
       } else {
-        // Reopened
         toast.success("Company process reopened", { duration: 3000 });
         silentRefresh();
       }
     });
 
-    // Cleanup
     return () => {
       socket.emit("leave:company", companyId);
       socket.emit("leave:poc");
@@ -198,7 +149,8 @@ const [searchTerm, setSearchTerm] = useState("");
       socket.off("company:process-changed");
       socket.off("student:presence");
     };
-  }, [socket, companyId, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [socket, companyId, user, silentRefresh]);
 
   const fetchCompanyStudents = async () => {
     try {
@@ -227,13 +179,8 @@ const [searchTerm, setSearchTerm] = useState("");
     }
   };
 
-  const handleStageUpdate = () => {
-    fetchCompanyStudents();
-  };
-
-  const handleOfferCreated = () => {
-    fetchCompanyStudents();
-  };
+  const handleStageUpdate = () => silentRefresh();
+  const handleOfferCreated = () => silentRefresh();
 
 const handleStudentClick = (studentId) => {
     setSelectedStudentId(studentId);
