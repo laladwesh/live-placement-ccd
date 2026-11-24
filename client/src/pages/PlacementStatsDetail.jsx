@@ -265,12 +265,13 @@ export default function PlacementStatsDetail() {
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Interview Call</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400 text-center">Offered</th>
                       <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">Current Stage</th>
+                      <th className="px-5 py-3 text-[11px] font-bold uppercase tracking-widest text-indigo-500">DDay Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {filteredTrail.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="px-5 py-10 text-center text-slate-400 text-sm">
+                        <td colSpan={9} className="px-5 py-10 text-center text-slate-400 text-sm">
                           No companies match the selected filters.
                         </td>
                       </tr>

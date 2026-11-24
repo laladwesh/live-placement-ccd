@@ -102,9 +102,29 @@ async function buildFromLocalDB(rollNumber) {
   };
 }
 
+/** Fetch this student's DDay shortlist statuses keyed by normalised company name */
+async function getDDayStatusMap(rollNumber) {
+  try {
+    const studentDoc = await Student.findOne({ rollNumber }).select("userId").lean();
+    if (!studentDoc) return {};
+    const shortlists = await Shortlist.find({ studentId: studentDoc.userId })
+      .select("companyName status")
+      .lean();
+    const map = {};
+    shortlists.forEach(s => {
+      const key = (s.companyName || "").trim().toLowerCase();
+      if (key) map[key] = s.status; // "shortlisted" | "waitlisted"
+    });
+    return map;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * GET /api/placement-stats/:rollNumber
  * Tries placement portal first; falls back to local MongoDB on 404.
+ * Always attaches live DDay shortlist status to each trail entry.
  */
 export const getPlacementStatsByRoll = async (req, res) => {
   const { rollNumber } = req.params;
@@ -113,7 +133,10 @@ export const getPlacementStatsByRoll = async (req, res) => {
 
   const cached = statsCache.get(rollNumber);
   if (!cacheBust && cached && now - cached.fetchedAt < CACHE_TTL_MS) {
-    return res.json(cached.data);
+    // Still attach fresh DDay data (not cached — it changes in real-time)
+    const ddayMap = await getDDayStatusMap(rollNumber);
+    const data = attachDDayStatus(cached.data, ddayMap);
+    return res.json(data);
   }
 
   // ── Try placement portal first ──────────────────────────────────────────
@@ -128,7 +151,8 @@ export const getPlacementStatsByRoll = async (req, res) => {
       // Portal wraps response in { status, data } — unwrap before forwarding
       const payload = upstream.data?.data ?? upstream.data;
       statsCache.set(rollNumber, { data: payload, fetchedAt: now });
-      return res.json(payload);
+      const ddayMap = await getDDayStatusMap(rollNumber);
+      return res.json(attachDDayStatus(payload, ddayMap));
     } catch (err) {
       const status = err?.response?.status;
       if (status !== 404) {
@@ -146,9 +170,22 @@ export const getPlacementStatsByRoll = async (req, res) => {
       return res.status(404).json({ message: "Student not found" });
     }
     statsCache.set(rollNumber, { data: local, fetchedAt: now });
-    return res.json(local);
+    const ddayMap = await getDDayStatusMap(rollNumber);
+    return res.json(attachDDayStatus(local, ddayMap));
   } catch (err) {
     logger.error("getPlacementStatsByRoll local fallback error:", err);
     return res.status(500).json({ message: "Server error" });
   }
 };
+
+/** Attach dday_status to each trail entry by matching company name */
+function attachDDayStatus(data, ddayMap) {
+  if (!data?.trail || !Object.keys(ddayMap).length) return data;
+  return {
+    ...data,
+    trail: data.trail.map(entry => ({
+      ...entry,
+      dday_status: ddayMap[(entry.company || "").trim().toLowerCase()] || null,
+    })),
+  };
+}
