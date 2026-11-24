@@ -235,209 +235,203 @@ export default function SchedulerCompanyView() {
   // ── Render ────────────────────────────────────────────────────────
   if (!user || loading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "80px 0" }}>
+        <div style={{ width: 28, height: 28, border: "2px solid #E9E9EB", borderTopColor: "#14213D", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
       </div>
     );
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
-      {/* Back */}
+    <div style={{ padding: "24px 28px", fontFamily: "Inter, -apple-system, sans-serif" }}>
+
+      {/* Back link */}
       <button
         onClick={() => navigate("/scheduler")}
-        className="flex items-center text-slate-500 hover:text-slate-800 text-sm mb-5 transition-colors gap-1"
+        style={{ display: "flex", alignItems: "center", gap: 4, background: "none", border: "none", cursor: "pointer", color: "#8D9096", fontSize: 13, fontWeight: 600, marginBottom: 16, padding: 0, fontFamily: "inherit" }}
+        onMouseOver={e => (e.currentTarget.style.color = "#353B47")}
+        onMouseOut={e  => (e.currentTarget.style.color = "#8D9096")}
       >
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        All Companies
+        ‹ All Companies
       </button>
 
-      {/* Header card */}
-      <div className="bg-white rounded-xl border border-slate-200 px-6 py-4 mb-5 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900 leading-tight">{company?.name}</h1>
+      {/* Page header */}
+      <div style={{ marginBottom: 16 }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1E2532", margin: 0 }}>{company?.name}</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 4 }}>
           {company?.venue && (
-            <p className="text-sm text-slate-500 mt-1 flex items-center gap-1">
-              <svg className="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              {company.venue}
-            </p>
+            <span style={{ fontSize: 13, color: "#8D9096" }}>📍 {company.venue}</span>
           )}
-        </div>
-        <div className="flex items-center gap-3 flex-shrink-0 text-sm">
-          {saving ? (
-            <span className="text-slate-400 flex items-center gap-1.5">
-              <span className="w-3 h-3 border-2 border-slate-300 border-t-slate-500 rounded-full animate-spin inline-block" />
-              Saving…
-            </span>
-          ) : savedOnce ? (
-            <span className="text-emerald-600 flex items-center gap-1 font-medium text-xs">
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-              </svg>
-              Saved
-            </span>
-          ) : null}
-          <span className="text-slate-500 text-xs font-medium">{entries.length} students</span>
+          <span style={{ fontSize: 13, color: "#8D9096" }}>{entries.length} students</span>
+          {saving && <span style={{ fontSize: 12, color: "#8D9096" }}>Saving…</span>}
+          {!saving && savedOnce && <span style={{ fontSize: 12, color: "#1A6B2A", fontWeight: 600 }}>✓ Saved</span>}
         </div>
       </div>
 
-      {/* Search */}
-      <div className="relative mb-3">
-        <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input
-          type="text"
-          placeholder="Search by name, email or roll number…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          className="w-full pl-9 pr-10 py-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-        />
-        {search && (
-          <button
-            onClick={() => setSearch("")}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      {/* Card */}
+      <div className="pp-card">
+
+        {/* Toolbar */}
+        <div style={{ padding: "12px 16px", borderBottom: "1px solid #E9E9EB", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: "#1E2532" }}>Shortlist</span>
+            {isFiltered && (
+              <span style={{ fontSize: 12, color: "#8D9096" }}>
+                {filtered.length} / {entries.length} · positions shown from full list · drag works
+              </span>
+            )}
+            {!isFiltered && entries.length > 0 && !dragging && (
+              <span style={{ fontSize: 12, color: "#8D9096" }}>drag ⠿ to reorder · auto-saved</span>
+            )}
+          </div>
+
+          {/* Search */}
+          <div style={{ position: "relative", width: 280 }}>
+            <svg style={{ position: "absolute", left: 9, top: "50%", transform: "translateY(-50%)", color: "#8D9096", pointerEvents: "none" }}
+              width="13" height="13" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-4.35-4.35M17 11A6 6 0 1 1 5 11a6 6 0 0 1 12 0z" />
             </svg>
-          </button>
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search name, email or roll…"
+              style={{
+                width: "100%", height: 30, paddingLeft: 28, paddingRight: search ? 28 : 10,
+                fontSize: 13, border: "1px solid #DBDDE0", borderRadius: 2, outline: "none",
+                fontFamily: "Inter, -apple-system, sans-serif", color: "#353B47", background: "#fff",
+                boxSizing: "border-box",
+              }}
+              onFocus={e => (e.target.style.borderColor = "#14213D")}
+              onBlur={e  => (e.target.style.borderColor = "#DBDDE0")}
+            />
+            {search && (
+              <button onClick={() => setSearch("")}
+                style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", color: "#8D9096", padding: 0, fontSize: 12 }}>
+                ✕
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Table header */}
+        {entries.length > 0 && (
+          <div style={{
+            display: "grid", gridTemplateColumns: "36px 36px 1fr 110px 100px 90px",
+            padding: "8px 16px", background: "#EDEEF0", borderBottom: "2px solid #E9E9EB",
+            fontSize: 11, fontWeight: 700, color: "#1E2532", textTransform: "uppercase", letterSpacing: "0.06em",
+            userSelect: "none",
+          }}>
+            <div></div>
+            <div style={{ textAlign: "center" }}>#</div>
+            <div>Student</div>
+            <div>Roll No.</div>
+            <div>Stage</div>
+            <div>Status</div>
+          </div>
         )}
-      </div>
 
-      {/* Filter info bar */}
-      {isFiltered && (
-        <div className="flex items-center justify-between mb-3 px-1">
-          <p className="text-xs text-slate-500">
-            <span className="font-semibold text-slate-700">{filtered.length}</span> of {entries.length} students —
-            numbers show position in full list · drag still works
-          </p>
-        </div>
-      )}
+        {/* Rows */}
+        {entries.length === 0 ? (
+          <div style={{ padding: 48, textAlign: "center", color: "#8D9096", fontSize: 14 }}>
+            No students shortlisted for this company yet.
+          </div>
+        ) : (
+          <div ref={listContainerRef} onDragOver={onContainerDragOver} onDrop={onDrop}>
+            {filtered.map((entry, displayIdx) => {
+              const isDraggingThis = dragIndex === displayIdx;
+              const realPos = fullPositionMap.get(entry._id) ?? displayIdx + 1;
+              const displayStage = entry.stage || entry.status?.toUpperCase() || "—";
+              const stageStyle = STAGE_STYLE[displayStage] || { background: "#F4F2F1", color: "#8D9096", border: "1px solid #E9E9EB" };
+              const showDropLine = dropBefore === displayIdx && dragging && dragIndex !== displayIdx && dragIndex !== displayIdx - 1;
 
-      {/* Hint when not filtered */}
-      {!isFiltered && entries.length > 0 && !dragging && (
-        <p className="text-xs text-slate-400 mb-3 px-1">
-          Drag <span className="text-slate-500 font-medium">⠿</span> to reorder · saved automatically
-        </p>
-      )}
+              return (
+                <React.Fragment key={entry._id}>
+                  {/* Drop indicator line BEFORE row */}
+                  <div style={{ height: showDropLine ? 2 : 0, background: "#14213D", margin: showDropLine ? "1px 0" : 0, transition: "height 0.08s, margin 0.08s" }} />
 
-      {/* List */}
-      {entries.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 text-center py-16 text-slate-400 text-sm">
-          No students shortlisted for this company yet.
-        </div>
-      ) : (
-        <div
-          ref={listContainerRef}
-          onDragOver={onContainerDragOver}
-          onDrop={onDrop}
-        >
-          {filtered.map((entry, displayIdx) => {
-            const isDraggingThis = dragIndex === displayIdx;
-            const realPos = fullPositionMap.get(entry._id) ?? displayIdx + 1;
-            const displayStage = entry.stage || entry.status?.toUpperCase() || "—";
-
-            return (
-              <React.Fragment key={entry._id}>
-                {/* Drop-line BEFORE this row */}
-                <div
-                  className={[
-                    "h-0.5 rounded-full mx-1 transition-all duration-100",
-                    dropBefore === displayIdx && dragging && dragIndex !== displayIdx && dragIndex !== displayIdx - 1
-                      ? "bg-blue-500 my-0.5"
-                      : "bg-transparent my-0",
-                  ].join(" ")}
-                />
-
-                {/* Row */}
-                <div
-                  draggable
-                  onDragStart={(e) => onDragStart(e, displayIdx)}
-                  onDragOver={(e) => onDragOver(e, displayIdx)}
-                  onDragEnd={onDragEnd}
-                  className={[
-                    "group flex items-center gap-3 bg-white rounded-xl border px-3 py-3 select-none transition-all duration-100",
-                    isDraggingThis
-                      ? "opacity-30 scale-[0.98] border-blue-200 shadow-none"
-                      : "border-slate-200 hover:border-slate-300 hover:shadow-sm",
-                    entry.isStudentPlaced ? "opacity-60" : "",
-                  ].join(" ")}
-                  style={{ cursor: "grab" }}
-                >
-                  {/* Drag handle */}
-                  <div className="flex-shrink-0 text-slate-200 group-hover:text-slate-400 transition-colors pl-0.5" style={{ cursor: "grab" }}>
-                    <GripIcon />
-                  </div>
-
-                  {/* Position number */}
+                  {/* Row */}
                   <div
-                    className={[
-                      "w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0",
-                      isFiltered
-                        ? "bg-amber-50 text-amber-700 ring-1 ring-amber-200"
-                        : "bg-slate-100 text-slate-500",
-                    ].join(" ")}
-                    title={isFiltered ? `Position ${realPos} in full list` : undefined}
+                    draggable
+                    onDragStart={(e) => onDragStart(e, displayIdx)}
+                    onDragOver={(e) => onDragOver(e, displayIdx)}
+                    onDragEnd={onDragEnd}
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "36px 36px 1fr 110px 100px 90px",
+                      alignItems: "center",
+                      padding: "0 16px",
+                      height: 44,
+                      borderBottom: "1px solid #E9E9EB",
+                      background: isDraggingThis ? "#F4F2F1" : entry.isStudentPlaced ? "#FAFFF8" : "#fff",
+                      opacity: isDraggingThis ? 0.4 : 1,
+                      cursor: "grab",
+                      userSelect: "none",
+                      transition: "background 0.1s, opacity 0.1s",
+                      fontSize: 13,
+                    }}
+                    onMouseOver={e => { if (!isDraggingThis) e.currentTarget.style.background = "#F5F8FD"; }}
+                    onMouseOut={e  => { e.currentTarget.style.background = isDraggingThis ? "#F4F2F1" : entry.isStudentPlaced ? "#FAFFF8" : "#fff"; }}
                   >
-                    {realPos}
-                  </div>
+                    {/* Grip */}
+                    <div style={{ color: "#DBDDE0", display: "flex", alignItems: "center" }}
+                      onMouseOver={e => (e.currentTarget.style.color = "#8D9096")}
+                      onMouseOut={e  => (e.currentTarget.style.color = "#DBDDE0")}
+                    >
+                      <GripIcon />
+                    </div>
 
-                  {/* Avatar */}
-                  <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-700 font-bold text-sm flex items-center justify-center flex-shrink-0">
-                    {entry.student?.name?.charAt(0).toUpperCase() || "?"}
-                  </div>
+                    {/* Position */}
+                    <div style={{
+                      textAlign: "center", fontSize: 12, fontWeight: 700,
+                      color: isFiltered ? "#7B5700" : "#8D9096",
+                    }}
+                      title={isFiltered ? `Position ${realPos} in full list` : undefined}
+                    >
+                      {realPos}
+                    </div>
 
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-slate-800 text-sm truncate flex items-center gap-2">
-                      {entry.student?.name || "—"}
-                      {entry.student?.rollNumber && (
-                        <span className="text-xs font-normal text-slate-400">{entry.student.rollNumber}</span>
+                    {/* Name + email */}
+                    <div style={{ minWidth: 0, overflow: "hidden" }}>
+                      <div style={{ fontWeight: 600, color: "#1E2532", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {entry.student?.name || "—"}
+                      </div>
+                      <div style={{ fontSize: 11, color: "#8D9096", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                        {entry.student?.email || "—"}
+                      </div>
+                    </div>
+
+                    {/* Roll */}
+                    <div style={{ fontFamily: "monospace", fontSize: 12, color: "#494D57" }}>
+                      {entry.student?.rollNumber || "—"}
+                    </div>
+
+                    {/* Stage badge */}
+                    <div>
+                      <span style={{ padding: "2px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, ...stageStyle }}>
+                        {displayStage}
+                      </span>
+                    </div>
+
+                    {/* Placed */}
+                    <div>
+                      {entry.isStudentPlaced && (
+                        <span style={{ padding: "2px 7px", fontSize: 11, fontWeight: 600, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB" }}>
+                          Placed
+                        </span>
                       )}
                     </div>
-                    <div className="text-xs text-slate-400 truncate">{entry.student?.email || "—"}</div>
                   </div>
+                </React.Fragment>
+              );
+            })}
 
-                  {/* Phone */}
-                  {entry.student?.phone && (
-                    <div className="text-xs text-slate-400 hidden md:block flex-shrink-0">
-                      {entry.student.phone}
-                    </div>
-                  )}
-
-                  {/* Stage badge */}
-                  <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full flex-shrink-0 ${STAGE_COLORS[displayStage] || "bg-gray-100 text-gray-600"}`}>
-                    {displayStage}
-                  </span>
-
-                  {/* Placed indicator */}
-                  {entry.isStudentPlaced && (
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700 font-medium flex-shrink-0 hidden sm:inline">
-                      Placed{entry.studentPlacedCompany ? ` @ ${entry.studentPlacedCompany}` : ""}
-                    </span>
-                  )}
-                </div>
-              </React.Fragment>
-            );
-          })}
-
-          {/* Drop-line AFTER last row */}
-          <div
-            className={[
-              "h-0.5 rounded-full mx-1 transition-all duration-100",
-              dropBefore === filtered.length && dragging && dragIndex !== filtered.length - 1
-                ? "bg-blue-500 mt-0.5"
-                : "bg-transparent",
-            ].join(" ")}
-          />
-        </div>
-      )}
+            {/* Drop indicator line AFTER last row */}
+            {(() => {
+              const show = dropBefore === filtered.length && dragging && dragIndex !== filtered.length - 1;
+              return <div style={{ height: show ? 2 : 0, background: "#14213D", margin: show ? "1px 0" : 0, transition: "height 0.08s" }} />;
+            })()}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
