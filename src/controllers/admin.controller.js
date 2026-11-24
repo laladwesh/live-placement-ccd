@@ -49,7 +49,8 @@ export const createUser = async (req, res) => {
       phoneNo,
       role, 
       passwordHash, 
-      isAllowed: !!isAllowed,
+      // poc/admin roles must always be able to log in; for other roles respect the flag
+      isAllowed: (role === "poc" || role === "admin") ? true : !!isAllowed,
       companyName: role === 'poc' ? companyName : undefined,
       providers: providers || []
     });
