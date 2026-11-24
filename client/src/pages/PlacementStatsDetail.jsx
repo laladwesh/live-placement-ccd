@@ -231,13 +231,20 @@ export default function PlacementStatsDetail() {
                   {filteredTrail.length === 1 ? "company" : "companies"}
                 </h2>
                 <div className="flex flex-wrap gap-1.5">
-                  {FILTER_OPTIONS.map(({ key, label, cls, activeCls }) => {
+                  {FILTER_OPTIONS.map(({ key, label }) => {
                     const isActive = activeFilters.has(key);
                     return (
                       <button
                         key={key}
                         onClick={() => toggleFilter(key)}
-                        className={`px-3 py-1 rounded-full text-xs font-semibold border transition-all ${isActive ? activeCls : cls} hover:opacity-80`}
+                        style={{
+                          height: 26, padding: "0 10px", fontSize: 12, fontWeight: 600,
+                          borderRadius: 2, cursor: "pointer", fontFamily: "Inter, -apple-system, sans-serif",
+                          border: isActive ? "1px solid #14213D" : "1px solid #DBDDE0",
+                          background: isActive ? "#14213D" : "#fff",
+                          color: isActive ? "#fff" : "#353B47",
+                          transition: "all 0.12s",
+                        }}
                       >
                         {label}
                       </button>
@@ -246,7 +253,7 @@ export default function PlacementStatsDetail() {
                   {activeFilters.size > 0 && (
                     <button
                       onClick={() => setActiveFilters(new Set())}
-                      className="px-3 py-1 rounded-full text-xs font-semibold border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all"
+                      style={{ height: 26, padding: "0 10px", fontSize: 12, fontWeight: 600, borderRadius: 2, cursor: "pointer", fontFamily: "Inter, -apple-system, sans-serif", border: "1px solid #F4C5B6", background: "#FEF0ED", color: "#C0300A" }}
                     >
                       Clear
                     </button>

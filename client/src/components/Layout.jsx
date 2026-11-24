@@ -237,8 +237,8 @@ export default function Layout() {
       ref={el => { if (el) el.style.height = '100dvh'; }}
       className="h-screen"
     >
-      {/* Mobile overlay */}
-      {sidebarOpen && (
+      {/* Mobile overlay — not shown for POC (no sidebar) */}
+      {sidebarOpen && user?.role !== 'poc' && (
         <div
           className="fixed inset-0 z-30 lg:hidden"
           style={{ background: 'rgba(0,0,0,0.4)' }}
@@ -246,12 +246,14 @@ export default function Layout() {
         />
       )}
 
-      <Sidebar
-        user={user}
-        open={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-        onLogout={logout}
-      />
+      {user?.role !== 'poc' && (
+        <Sidebar
+          user={user}
+          open={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
+          onLogout={logout}
+        />
+      )}
 
       {/* ── Content side ──────────────────────── */}
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, overflow: 'hidden' }}>
@@ -271,17 +273,21 @@ export default function Layout() {
             boxShadow: '0px 0.3px 0.9px rgba(27,33,45,0.08), 0px 1.6px 3.6px rgba(27,33,45,0.10)',
           }}
         >
-          {/* Mobile: hamburger + portal name */}
-          <div className="flex lg:hidden items-center gap-2">
-            <button
-              style={{ color: '#353B47', background: 'none', border: 'none', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 20 }}
-              onClick={() => setSidebarOpen(true)}
-              onTouchStart={() => {}}
-            >
-              <MenuOutlined />
-            </button>
+          {/* Mobile: hamburger + portal name — hidden for POC (no sidebar) */}
+          {user?.role !== 'poc' ? (
+            <div className="flex lg:hidden items-center gap-2">
+              <button
+                style={{ color: '#353B47', background: 'none', border: 'none', cursor: 'pointer', minWidth: 44, minHeight: 44, display: 'flex', alignItems: 'center', fontSize: 20 }}
+                onClick={() => setSidebarOpen(true)}
+                onTouchStart={() => {}}
+              >
+                <MenuOutlined />
+              </button>
+              <span style={{ fontWeight: 700, fontSize: 14, color: '#1E2532' }}>DDay Portal</span>
+            </div>
+          ) : (
             <span style={{ fontWeight: 700, fontSize: 14, color: '#1E2532' }}>DDay Portal</span>
-          </div>
+          )}
 
           {/* Desktop: empty left spacer */}
           <div className="hidden lg:block" />
