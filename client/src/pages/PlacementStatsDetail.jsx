@@ -163,9 +163,28 @@ export default function PlacementStatsDetail() {
           {/* ── Student header card ── */}
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
             <div className="flex items-start justify-between flex-wrap gap-4">
-              <div>
-                <h1 className="text-2xl font-extrabold text-slate-900">{data.student.name}</h1>
-                <p className="text-slate-500 mt-0.5 font-mono text-sm">{data.student.rollNumber}</p>
+              <div className="flex items-center gap-4">
+                {data.student.profile_pic ? (
+                  <img
+                    src={data.student.profile_pic}
+                    alt={data.student.name}
+                    className="w-16 h-16 rounded-full object-cover border border-slate-200 flex-shrink-0"
+                    // Falls back to the initial-letter avatar if the URL 404s/doesn't load —
+                    // the local-DB fallback path has no photo source at all, so this is the
+                    // normal state whenever upstream (main portal) data isn't being used.
+                    onError={(e) => { e.target.style.display = "none"; e.target.nextSibling.style.display = "flex"; }}
+                  />
+                ) : null}
+                <div
+                  className="w-16 h-16 rounded-full bg-slate-100 text-slate-400 font-bold text-xl items-center justify-center flex-shrink-0"
+                  style={{ display: data.student.profile_pic ? "none" : "flex" }}
+                >
+                  {(data.student.name || "?").charAt(0).toUpperCase()}
+                </div>
+                <div>
+                  <h1 className="text-2xl font-extrabold text-slate-900">{data.student.name}</h1>
+                  <p className="text-slate-500 mt-0.5 font-mono text-sm">{data.student.rollNumber}</p>
+                </div>
               </div>
               <span className={`px-3 py-1.5 rounded-full text-sm font-semibold ${data.student.isPlaced ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>
                 {data.student.isPlaced ? "Placed" : "Not Placed Yet"}
