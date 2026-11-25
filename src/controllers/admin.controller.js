@@ -7,6 +7,7 @@ import Company from "../models/company.model.js";
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
 import Shortlist, { Status } from "../models/shortlist.model.js";
 import { sendOfferApprovalEmail } from "../utils/mailer.js";
+import { sendUserNotification } from "../utils/notifications.js";
 import { logger } from "../utils/logger.js";
 import { emitOfferApproved, emitOfferRejected, emitOfferStatusUpdate, emitStudentPlaced } from "../config/socket.js";
 
@@ -314,6 +315,14 @@ export const approveOffer = async (req, res) => {
     } catch (mailErr) {
       logger.error("Failed to send offer approval email:", mailErr);
     }
+
+    // Fire-and-forget push notification to student via CCD app
+    sendUserNotification({
+      email: approvedOffer.studentId.emailId,
+      title: "Congratulations! You are placed",
+      body: `CCD has confirmed your placement at ${approvedOffer.companyId.name}. You are now out of the further placement process.`,
+      type: "placement",
+    }).catch(err => logger.error("[CCDApp] placement notification failed:", err));
 
     // Fire-and-forget write-back to placement portal. Always fire — even when the
     // company has no placementPortalJobId (not created via "Sync All Companies"):
