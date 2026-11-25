@@ -19,26 +19,38 @@ export const getDdayStats = async (req, res) => {
     const companyIds = companies.map(c => c._id);
     const companyMap = new Map(companies.map(c => [c._id.toString(), c]));
 
-    const [shortlists, presences, offers, placements] = await Promise.all([
-      Shortlist.find({ companyId: { $in: companyIds } })
-        .populate("studentId", "name emailId")
-        .select("companyId studentId status stage isOffered isStudentPlaced")
-        .lean(),
-      StudentPresence.find({ status: "busy" })
+    // Shortlists first — they define who belongs to this season.
+    // Every downstream query uses this student set so nothing from past seasons leaks in.
+    const shortlists = await Shortlist.find({ companyId: { $in: companyIds } })
+      .populate("studentId", "name emailId")
+      .select("companyId studentId status stage isOffered isStudentPlaced")
+      .lean();
+
+    const currentStudentIdSet = new Set(
+      shortlists.map(s => s.studentId?._id?.toString() ?? s.studentId?.toString()).filter(Boolean)
+    );
+    const currentStudentIds = Array.from(currentStudentIdSet);
+
+    // All remaining queries are scoped to current-season companies AND students.
+    const [presences, offers, placements] = await Promise.all([
+      StudentPresence.find({ studentId: { $in: currentStudentIds }, status: "busy" })
         .populate("studentId", "name")
         .lean(),
-      Offer.find({ companyId: { $in: companyIds } })
+      Offer.find({ companyId: { $in: companyIds }, studentId: { $in: currentStudentIds } })
         .select("companyId studentId approvalStatus offerStatus")
         .lean(),
-      Student.find({ placementYear: null, isPlaced: true })
+      Student.find({ userId: { $in: currentStudentIds }, placementYear: null, isPlaced: true })
         .select("userId placedCompany")
         .populate("placedCompany", "name")
         .lean(),
     ]);
 
     // ── 2. Index building ────────────────────────────────────────────────────
-    // Presence: studentId -> presence doc (only busy students in current companies)
     const currentCompanyIdSet = new Set(companyIds.map(id => id.toString()));
+
+    // Presence: studentId -> presence doc
+    // Query is already scoped to current-season students; additionally guard companyId
+    // so a student busy at a non-current company (edge case) doesn't inflate live counts.
     const presenceMap = new Map();
     for (const p of presences) {
       if (p.companyId && currentCompanyIdSet.has(p.companyId.toString())) {
