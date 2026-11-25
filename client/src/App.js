@@ -36,6 +36,7 @@ const PrevPlacementData        = lazy(() => import("./pages/PrevPlacementData"))
 const SchedulerCompanies       = lazy(() => import("./pages/SchedulerCompanies"));
 const SchedulerCompanyView     = lazy(() => import("./pages/SchedulerCompanyView"));
 const AdminStudentTracker      = lazy(() => import("./pages/AdminStudentTracker"));
+const AdminDDayStats           = lazy(() => import("./pages/AdminDDayStats"));
 const NotFound                 = lazy(() => import("./pages/NotFound"));
 
 const RouteLoadingFallback = () => (
@@ -76,6 +77,7 @@ function App() {
             <Route path="/admin/offers"                       element={<AdminOffersDashboard />} />
             <Route path="/admin/students"                     element={<AdminStudents />} />
             <Route path="/admin/tracker"                      element={<AdminStudentTracker />} />
+            <Route path="/admin/dday"                         element={<AdminDDayStats />} />
             <Route path="/admin/company"                      element={<AdminCompanyDetails />} />
             <Route path="/admin/companies/:companyId"         element={<CompanyDetails />} />
             <Route path="/company/:companyId"                 element={<CompanyDetails />} />

@@ -23,6 +23,7 @@ import {
   getAllPresence,
   forceFreePresence,
 } from "../controllers/presence.controller.js";
+import { getDdayStats } from "../controllers/ddayStats.controller.js";
 import { authMiddleware, permit } from "../middleware/auth.middleware.js";
 
 // Multer configuration for file upload (memory storage)
@@ -52,6 +53,9 @@ router.post("/companies/:companyId/complete", authMiddleware, permit("admin"), s
 
 // Admin view: get student cross-company details (includes academic fields)
 router.get('/students/:studentId/details', authMiddleware, permit('admin'), getStudentDetails);
+
+// D-Day analytics
+router.get("/dday-stats", authMiddleware, permit("admin"), getDdayStats);
 
 // Presence tracking (admin read + force-free override)
 router.get("/presence", authMiddleware, permit("admin"), getAllPresence);
