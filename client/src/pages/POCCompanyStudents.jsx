@@ -79,45 +79,36 @@ const [searchTerm, setSearchTerm] = useState("");
     socket.emit("join:company", companyId);
     socket.emit("join:poc");
 
-    socket.on("connect", () => {
-      socket.emit("join:company", companyId);
-      socket.emit("join:poc");
-      // Re-sync on reconnect (missed events while disconnected)
+    // SPA navigation: socket is already connected so "connect" won't fire again.
+    // Sync immediately so we're not working with potentially stale initial data.
+    if (socket.connected) {
       silentRefresh();
       fetchPresence();
-    });
+    }
 
-    // Stage/status changes — triggered by this POC or others; row already shows its own toast
-    socket.on("shortlist:update", () => silentRefresh());
-    socket.on("offer:created",    () => silentRefresh());
-    socket.on("offer:reverted",   () => silentRefresh());
-    socket.on("offer:status-update", () => silentRefresh());
-    socket.on("student:added",    () => silentRefresh());
-    socket.on("student:removed",  () => silentRefresh());
-
-    // Admin actions the POC needs to know about → keep the toast
-    socket.on("offer:approved", (data) => {
-      toast.success(`Offer for ${data?.studentName} approved by admin`);
+    // Named handlers so cleanup removes only THIS effect's listeners, not
+    // SocketContext's own "connect" handler or any other component's listeners.
+    const onConnect = () => {
+      socket.emit("join:company", companyId);
+      socket.emit("join:poc");
       silentRefresh();
-    });
-    socket.on("offer:rejected", (data) => {
-      toast.error(`Offer for ${data?.studentName} rejected by admin`);
-      silentRefresh();
-    });
-    socket.on("student:placed", (data) => {
-      toast.success(`Student placed at ${data?.placedCompanyName}`, { duration: 5000 });
-      silentRefresh();
-    });
-
-    // Live presence delta — no API call needed, just merge into the map
-    socket.on("student:presence", (data) => {
+      fetchPresence();
+    };
+    const onShortlistUpdate  = () => silentRefresh();
+    const onOfferCreated     = () => silentRefresh();
+    const onOfferReverted    = () => silentRefresh();
+    const onOfferStatusUpdate = () => silentRefresh();
+    const onStudentAdded     = () => silentRefresh();
+    const onStudentRemoved   = () => silentRefresh();
+    const onOfferApproved    = (data) => { toast.success(`Offer for ${data?.studentName} approved by admin`); silentRefresh(); };
+    const onOfferRejected    = (data) => { toast.error(`Offer for ${data?.studentName} rejected by admin`); silentRefresh(); };
+    const onStudentPlaced    = (data) => { toast.success(`Student placed at ${data?.placedCompanyName}`, { duration: 5000 }); silentRefresh(); };
+    const onPresence         = (data) => {
       if (data?.studentId && data?.presence) {
         setPresenceMap(prev => ({ ...prev, [data.studentId]: data.presence }));
       }
-    });
-
-    // Company process changes
-    socket.on("company:process-changed", (data) => {
+    };
+    const onProcessChanged   = (data) => {
       if (!data || data.companyId !== companyId) return;
       if (data.completed) {
         if (user?.role === "poc") {
@@ -131,23 +122,36 @@ const [searchTerm, setSearchTerm] = useState("");
         toast.success("Company process reopened", { duration: 3000 });
         silentRefresh();
       }
-    });
+    };
+
+    socket.on("connect",             onConnect);
+    socket.on("shortlist:update",    onShortlistUpdate);
+    socket.on("offer:created",       onOfferCreated);
+    socket.on("offer:reverted",      onOfferReverted);
+    socket.on("offer:status-update", onOfferStatusUpdate);
+    socket.on("student:added",       onStudentAdded);
+    socket.on("student:removed",     onStudentRemoved);
+    socket.on("offer:approved",      onOfferApproved);
+    socket.on("offer:rejected",      onOfferRejected);
+    socket.on("student:placed",      onStudentPlaced);
+    socket.on("student:presence",    onPresence);
+    socket.on("company:process-changed", onProcessChanged);
 
     return () => {
       socket.emit("leave:company", companyId);
       socket.emit("leave:poc");
-      socket.off("connect");
-      socket.off("shortlist:update");
-      socket.off("offer:created");
-      socket.off("offer:approved");
-      socket.off("offer:rejected");
-      socket.off("offer:reverted");
-      socket.off("offer:status-update");
-      socket.off("student:added");
-      socket.off("student:removed");
-      socket.off("student:placed");
-      socket.off("company:process-changed");
-      socket.off("student:presence");
+      socket.off("connect",             onConnect);
+      socket.off("shortlist:update",    onShortlistUpdate);
+      socket.off("offer:created",       onOfferCreated);
+      socket.off("offer:reverted",      onOfferReverted);
+      socket.off("offer:status-update", onOfferStatusUpdate);
+      socket.off("student:added",       onStudentAdded);
+      socket.off("student:removed",     onStudentRemoved);
+      socket.off("offer:approved",      onOfferApproved);
+      socket.off("offer:rejected",      onOfferRejected);
+      socket.off("student:placed",      onStudentPlaced);
+      socket.off("student:presence",    onPresence);
+      socket.off("company:process-changed", onProcessChanged);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket, companyId, user, silentRefresh]);
