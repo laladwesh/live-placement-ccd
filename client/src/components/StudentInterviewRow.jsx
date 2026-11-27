@@ -153,14 +153,17 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
   };
 
   const handleExitPresence = async () => {
-    setCheckingOut(true);
-    try {
-      await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to end interview");
-    } finally {
-      setCheckingOut(false);
-    }
+    const action = async () => {
+      setCheckingOut(true);
+      try {
+        await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
+      } catch (err) {
+        toast.error(err.response?.data?.message || "Failed to end interview");
+      } finally {
+        setCheckingOut(false);
+      }
+    };
+    withPINConfirmation(action, "update", "End Interview", `Are you sure you want to end the interview for ${shortlist.student?.name}?`);
   };
 
   // ── Helpers ───────────────────────────────────────────────────────────────
