@@ -193,6 +193,9 @@ export default function PrevPlacementData() {
         studentEmail: placeEmail.trim(),
       });
       toast.success(res.data.message);
+      if (res.data?.warning) {
+        toast.error(res.data.warning, { duration: 10000 });
+      }
       setPlaceStudentOpen(false);
       loadOffers(selectedYear);
     } catch (err) {

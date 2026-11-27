@@ -324,45 +324,50 @@ export const approveOffer = async (req, res) => {
       type: "placement",
     }).catch(err => logger.error("[CCDApp] placement notification failed:", err));
 
-    // Fire-and-forget write-back to placement portal. Always fire — even when the
-    // company has no placementPortalJobId (not created via "Sync All Companies"):
-    // the portal will reply 400 and we log the reason, instead of silently
-    // skipping. A proper placement requires a real placementPortalJobId (= the
-    // placement-portal job id) so the portal can set job_placed → company.
+    // Write-back to placement portal. Always fire — even when the company has no
+    // placementPortalJobId (not created via "Sync All Companies"): the portal will
+    // reply 400, and we surface that failure in the response below instead of only
+    // logging it, since a silent failure here means the student stays placed in
+    // D-Day but never shows as placed on the main portal. A proper placement
+    // requires a real placementPortalJobId (= the placement-portal job id) so the
+    // portal can set job_placed → company.
+    let portalSyncWarning = null;
     {
       const webhookBody = {
         studentEmail: approvedOffer.studentId.emailId,
         placementPortalJobId: approvedOffer.companyId.placementPortalJobId || null,
       };
-      axios
-        .post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
+      try {
+        const r = await axios.post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
           headers: makeSyncHeaders(webhookBody),
           timeout: 8000,
-        })
-        .then((r) =>
-          logger.info(
-            `[sync] Placement portal notified: ${approvedOffer.studentId.emailId} placed ` +
-              `(HTTP ${r.status}: ${JSON.stringify(r.data)})`
-          )
-        )
-        .catch((err) =>
-          // Log the real reason: HTTP status + response body when the portal
-          // replied (401 = DDAY_SYNC_KEY mismatch, 404 = student not found),
-          // or the network error code (ECONNREFUSED = wrong PLACEMENT_PORTAL_API).
-          logger.error(
-            `[sync] Placement portal webhook failed for ${approvedOffer.studentId.emailId} ` +
-              `→ ${PLACEMENT_API}/sync/offer-approved : ` +
-              (err.response
-                ? `HTTP ${err.response.status} ${JSON.stringify(err.response.data)}`
-                : `${err.code || ""} ${err.message}`)
-          )
+        });
+        logger.info(
+          `[sync] Placement portal notified: ${approvedOffer.studentId.emailId} placed ` +
+            `(HTTP ${r.status}: ${JSON.stringify(r.data)})`
         );
+      } catch (err) {
+        // The real reason: HTTP status + response body when the portal replied
+        // (401 = DDAY_SYNC_KEY mismatch, 404 = student not found), or the network
+        // error code (ECONNREFUSED = wrong PLACEMENT_PORTAL_API).
+        const detail = err.response
+          ? `HTTP ${err.response.status} ${JSON.stringify(err.response.data)}`
+          : `${err.code || ""} ${err.message}`;
+        logger.error(
+          `[sync] Placement portal webhook failed for ${approvedOffer.studentId.emailId} ` +
+            `→ ${PLACEMENT_API}/sync/offer-approved : ${detail}`
+        );
+        portalSyncWarning =
+          `Student is placed in D-Day but the Placement Portal was NOT updated (${detail}). ` +
+          `Fix the underlying issue (e.g. link this company via "Sync All Companies") and re-sync manually.`;
+      }
     }
 
     return res.json({
       success: true,
       message: "Offer approved and sent to student",
-      offer: approvedOffer
+      offer: approvedOffer,
+      ...(portalSyncWarning ? { warning: portalSyncWarning } : {}),
     });
   } catch (err) {
     logger.error("approveOffer error", err);

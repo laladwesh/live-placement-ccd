@@ -128,9 +128,12 @@ export default function AdminOffersDashboard() {
   const handleApprove = async (offerId, studentId) => {
     try {
       setProcessing(offerId);
-      await api.post(`/admin/offers/${offerId}/approve`);
+      const res = await api.post(`/admin/offers/${offerId}/approve`);
       await fetchOffers(); // Refresh data
       toast.success("Offer approved! Other offers auto-rejected and marked as placed.");
+      if (res.data?.warning) {
+        toast.error(res.data.warning, { duration: 10000 });
+      }
     } catch (err) {
       console.error("Error approving offer:", err);
       toast.error(err.response?.data?.message || "Failed to approve offer");

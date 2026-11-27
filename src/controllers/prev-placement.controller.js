@@ -1,3 +1,5 @@
+import axios from "axios";
+import crypto from "crypto";
 import PlacementSeason from "../models/placement-season.model.js";
 import Company from "../models/company.model.js";
 import Offer, { ApprovalStatus } from "../models/offer.model.js";
@@ -5,6 +7,16 @@ import User from "../models/user.model.js";
 import Student from "../models/student.model.js";
 import { sendOfferApprovalEmail } from "../utils/mailer.js";
 import { logger } from "../utils/logger.js";
+
+const PLACEMENT_API = process.env.PLACEMENT_PORTAL_API;
+const SYNC_KEY = process.env.DDAY_SYNC_KEY || "";
+
+function makeSyncHeaders(body) {
+  const sig = SYNC_KEY
+    ? crypto.createHmac("sha256", SYNC_KEY).update(JSON.stringify(body)).digest("hex")
+    : "";
+  return { "x-sync-signature": sig, "Content-Type": "application/json" };
+}
 
 // Shared helper: company IDs for a given year
 async function companyIdsForYear(year) {
@@ -87,7 +99,9 @@ export const getPrevOffers = async (req, res) => {
 /**
  * POST /api/prev-placement/place-student
  * Directly places a student at an archived company and sends the approval email.
- * No placement portal webhook — admin-only, for late placements after season conclusion.
+ * Also fires the same placement-portal sync webhook as the live approval flow
+ * (admin.controller.js:approveOffer), so late placements made here don't leave the
+ * student stuck as "Sitting_Placement" on the main portal.
  * Body: { companyId, studentEmail }
  */
 export const placeStudentDirect = async (req, res) => {
@@ -166,6 +180,40 @@ export const placeStudentDirect = async (req, res) => {
     studentDoc.placedCompany = company._id;
     await studentDoc.save();
 
+    // Write-back to placement portal — same webhook as the live approval flow.
+    // Always fire, even when the archived company has no placementPortalJobId:
+    // the portal replies 400, and that failure is surfaced in the response below
+    // instead of only logged, since a silent failure here means the student stays
+    // placed in D-Day but never shows as placed on the main portal.
+    let portalSyncWarning = null;
+    {
+      const webhookBody = {
+        studentEmail: userDoc.emailId,
+        placementPortalJobId: company.placementPortalJobId || null,
+      };
+      try {
+        const r = await axios.post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
+          headers: makeSyncHeaders(webhookBody),
+          timeout: 8000,
+        });
+        logger.info(
+          `[sync] Placement portal notified: ${userDoc.emailId} placed ` +
+            `(HTTP ${r.status}: ${JSON.stringify(r.data)})`
+        );
+      } catch (err) {
+        const detail = err.response
+          ? `HTTP ${err.response.status} ${JSON.stringify(err.response.data)}`
+          : `${err.code || ""} ${err.message}`;
+        logger.error(
+          `[sync] Placement portal webhook failed for ${userDoc.emailId} ` +
+            `→ ${PLACEMENT_API}/sync/offer-approved : ${detail}`
+        );
+        portalSyncWarning =
+          `Student is placed in D-Day but the Placement Portal was NOT updated (${detail}). ` +
+          `Fix the underlying issue (e.g. link this company via "Sync All Companies") and re-sync manually.`;
+      }
+    }
+
     // Send placement confirmation email — fire and forget
     sendOfferApprovalEmail({
       to: userDoc.emailId,
@@ -179,6 +227,7 @@ export const placeStudentDirect = async (req, res) => {
       success: true,
       message: `${userDoc.name} placed at ${company.name} and email sent`,
       offer,
+      ...(portalSyncWarning ? { warning: portalSyncWarning } : {}),
     });
   } catch (err) {
     logger.error("placeStudentDirect error", err);
