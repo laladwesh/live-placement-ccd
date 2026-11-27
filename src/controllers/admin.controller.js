@@ -223,7 +223,7 @@ export const approveOffer = async (req, res) => {
 
     const offer = await Offer.findById(offerId)
       .populate('studentId', 'name emailId phoneNo')
-      .populate('companyId', 'name venue');
+      .populate('companyId', 'name venue placementPortalJobId');
 
     if (!offer) {
       return res.status(404).json({ message: "Offer not found" });
@@ -234,7 +234,7 @@ export const approveOffer = async (req, res) => {
       { _id: offerId, approvalStatus: ApprovalStatus.PENDING },
       { $set: { approvalStatus: ApprovalStatus.APPROVED, approvedBy: adminId, approvedAt: new Date(), offerStatus: "ACCEPTED" } },
       { new: true }
-    ).populate('studentId', 'name emailId phoneNo').populate('companyId', 'name venue');
+    ).populate('studentId', 'name emailId phoneNo').populate('companyId', 'name venue placementPortalJobId');
 
     if (!approvedOffer) {
       return res.status(400).json({ message: "Offer is already processed or no longer pending" });
