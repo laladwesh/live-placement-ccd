@@ -46,6 +46,10 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     const action = async () => {
       setUpdating(true);
       try {
+        // Auto-end presence if student is busy-here and being rejected
+        if (newStage === "REJECTED" && presenceStatus === "busy-here") {
+          await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
+        }
         await api.patch(`/poc/shortlist/${shortlist._id}/stage`, { stage: newStage });
         // Auto-start presence when moving to a round and student is currently free
         if (newStage.startsWith("R") && presenceStatus === "free") {
