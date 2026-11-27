@@ -47,6 +47,10 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
       setUpdating(true);
       try {
         await api.patch(`/poc/shortlist/${shortlist._id}/stage`, { stage: newStage });
+        // Auto-start presence when moving to a round and student is currently free
+        if (newStage.startsWith("R") && presenceStatus === "free") {
+          await handleEnterPresence(newStage);
+        }
       } catch (err) {
         toast.error(err.response?.data?.message || "Failed to update stage");
       } finally {
@@ -79,6 +83,10 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     const action = async () => {
       setCreatingOffer(true);
       try {
+        // Auto-end presence if student is currently in an interview here
+        if (presenceStatus === "busy-here") {
+          await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
+        }
         await api.post(`/poc/shortlist/${shortlist._id}/offer`);
         toast.success(`Offer created for ${shortlist.student?.name}`);
       } catch (err) {
@@ -128,8 +136,8 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     return presence.companyId?.toString() === companyId?.toString() ? "busy-here" : "busy-elsewhere";
   })();
 
-  const handleEnterPresence = async () => {
-    const round = currentStage?.startsWith("R") ? currentStage : "R1";
+  const handleEnterPresence = async (roundOverride) => {
+    const round = roundOverride || (currentStage?.startsWith("R") ? currentStage : "R1");
     setCheckingIn(true);
     try {
       await api.post(`/poc/shortlist/${shortlist._id}/presence/enter`, { round });
