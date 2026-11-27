@@ -18,6 +18,25 @@ function makeSyncHeaders(body) {
   return { "x-sync-signature": sig, "Content-Type": "application/json" };
 }
 
+// Retries only transient failures (DNS/connection errors — no HTTP response at all,
+// e.g. the EAI_AGAIN blips seen in production). An actual HTTP response (400/401/404)
+// means the portal processed the request and rejected it for a real reason — retrying
+// that would just get the same rejection, so it's thrown immediately instead.
+async function postSyncWithRetry(url, body, headers, { retries = 2, delayMs = 1500, timeout = 8000 } = {}) {
+  let lastErr;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      return await axios.post(url, body, { headers, timeout });
+    } catch (err) {
+      lastErr = err;
+      if (err.response || attempt === retries) throw err;
+      logger.warn(`[sync] Transient error posting to ${url} (attempt ${attempt + 1}/${retries + 1}): ${err.code || err.message} — retrying in ${delayMs}ms`);
+      await new Promise((r) => setTimeout(r, delayMs));
+    }
+  }
+  throw lastErr;
+}
+
 // Shared helper: company IDs for a given year
 async function companyIdsForYear(year) {
   const companies = await Company.find({ placementYear: year }).select("_id").lean();
@@ -192,10 +211,11 @@ export const placeStudentDirect = async (req, res) => {
         placementPortalJobId: company.placementPortalJobId || null,
       };
       try {
-        const r = await axios.post(`${PLACEMENT_API}/sync/offer-approved`, webhookBody, {
-          headers: makeSyncHeaders(webhookBody),
-          timeout: 8000,
-        });
+        const r = await postSyncWithRetry(
+          `${PLACEMENT_API}/sync/offer-approved`,
+          webhookBody,
+          makeSyncHeaders(webhookBody)
+        );
         logger.info(
           `[sync] Placement portal notified: ${userDoc.emailId} placed ` +
             `(HTTP ${r.status}: ${JSON.stringify(r.data)})`
