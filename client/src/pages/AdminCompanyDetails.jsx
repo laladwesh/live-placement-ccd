@@ -225,7 +225,7 @@ export default function AdminCompanyDetails() {
             <div className={`mb-3 px-4 py-2 rounded text-sm ${companySyncResult.error ? "bg-red-50 text-red-700" : "bg-emerald-50 text-emerald-800"}`}>
               {companySyncResult.error
                 ? companySyncResult.error
-                : `Sync done — ${companySyncResult.total} companies found: ${companySyncResult.created} added, ${companySyncResult.skipped} already present`}
+                : `Sync done — ${companySyncResult.total} companies found: ${companySyncResult.created} added, ${companySyncResult.linked ?? 0} linked to existing companies, ${companySyncResult.skipped} already present`}
             </div>
           )}
 

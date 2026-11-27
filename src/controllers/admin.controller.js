@@ -718,7 +718,13 @@ export const syncOffCampusPlacementsFromPortal = async (req, res) => {
   }
 };
 
-// POST /admin/sync/companies  — pull finalized-shortlist companies from placement portal, append-only
+// POST /admin/sync/companies  — pull finalized-shortlist companies from placement portal.
+// Creates new companies for JAFs dday doesn't know about yet, AND backfills
+// placementPortalJobId onto any existing current-season company that was created
+// without one (e.g. added manually, or approved in D-Day before the matching JAF
+// existed on the portal) — that missing link is what makes the offer-approval
+// webhook 400 silently on every approval for that company. Never overwrites a
+// company that's already linked to a (possibly different) job id.
 export const syncCompaniesFromPortal = async (req, res) => {
   try {
     const { data } = await axios.get(`${PLACEMENT_API}/sync/companies`, {
@@ -729,7 +735,7 @@ export const syncCompaniesFromPortal = async (req, res) => {
       return res.status(502).json({ message: "Placement portal returned error" });
     }
 
-    let created = 0, skipped = 0;
+    let created = 0, linked = 0, skipped = 0;
     for (const entry of data.data) {
       const { placementPortalJobId, ddayName } = entry;
       if (!placementPortalJobId) continue;
@@ -737,6 +743,22 @@ export const syncCompaniesFromPortal = async (req, res) => {
       // Already synced — skip
       const alreadySynced = await Company.findOne({ placementPortalJobId });
       if (alreadySynced) { skipped++; continue; }
+
+      // An existing CURRENT-SEASON company with this exact name but no job link yet
+      // — back-fill its link instead of creating a confusing duplicate. Archived
+      // companies (placementYear set) are never touched here: a recurring company
+      // name (e.g. the same employer year after year) must not get silently
+      // re-linked to this year's JAF.
+      const unlinkedMatch = await Company.findOne({
+        name: ddayName,
+        placementPortalJobId: null,
+        placementYear: null,
+      });
+      if (unlinkedMatch) {
+        await Company.updateOne({ _id: unlinkedMatch._id }, { $set: { placementPortalJobId } });
+        linked++;
+        continue;
+      }
 
       // Handle name collision
       let name = ddayName;
@@ -747,8 +769,8 @@ export const syncCompaniesFromPortal = async (req, res) => {
       created++;
     }
 
-    logger.info(`[sync] Companies — total: ${data.data.length}, created: ${created}, skipped: ${skipped}`);
-    return res.json({ status: "success", total: data.data.length, created, skipped });
+    logger.info(`[sync] Companies — total: ${data.data.length}, created: ${created}, linked: ${linked}, skipped: ${skipped}`);
+    return res.json({ status: "success", total: data.data.length, created, linked, skipped });
   } catch (err) {
     logger.error("syncCompaniesFromPortal error:", err.message);
     return res.status(500).json({ message: "Sync failed", error: err.message });
