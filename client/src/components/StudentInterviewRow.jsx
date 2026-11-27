@@ -302,16 +302,6 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                     </button>
                   );
                 })}
-                {presenceStatus === "free" && (
-                  <button
-                    onClick={() => handleEnterPresence()}
-                    disabled={checkingIn}
-                    style={{ padding: "3px 10px", fontSize: 12, fontWeight: 700, borderRadius: 2, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer" }}
-                    title="Mark student as entered the interview room"
-                  >
-                    {checkingIn ? "..." : "Start"}
-                  </button>
-                )}
                 {presenceStatus === "busy-here" && (
                   <button
                     onClick={() => handleExitPresence()}
@@ -404,15 +394,6 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
                 {/* Row B: presence action — full width, most-used button on live day */}
                 {isActive && (
                   <>
-                    {presenceStatus === "free" && (
-                      <button
-                        onClick={handleEnterPresence}
-                        disabled={checkingIn}
-                        style={{ width: "100%", padding: "11px", fontSize: 15, fontWeight: 700, borderRadius: 3, background: "#EFF6F0", color: "#1A6B2A", border: "1px solid #B3D9BB", cursor: "pointer" }}
-                      >
-                        {checkingIn ? "Starting..." : "Start Interview"}
-                      </button>
-                    )}
                     {presenceStatus === "busy-here" && (
                       <button
                         onClick={handleExitPresence}
