@@ -89,6 +89,10 @@ const StudentDetailsModal = ({ isOpen, onClose, studentId, isAdmin = false, isVi
                       <div style={{ fontWeight: 600, color: "#1E2532" }}>{data.student.department || "—"}</div>
                     </div>
                     <div>
+                      <span style={{ color: "#8D9096", fontSize: 12 }}>Discipline</span>
+                      <div style={{ fontWeight: 600, color: "#1E2532" }}>{data.student.discipline || "—"}</div>
+                    </div>
+                    <div>
                       <span style={{ color: "#8D9096", fontSize: 12 }}>CPI</span>
                       <div style={{ fontWeight: 600, color: "#1E2532" }}>
                         {data.student.cpi !== null && data.student.cpi !== undefined ? data.student.cpi : "—"}

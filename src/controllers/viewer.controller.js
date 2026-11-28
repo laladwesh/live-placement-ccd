@@ -48,7 +48,7 @@ export const getConfirmedForViewer = async (req, res) => {
     }
 
     const confirmedOffers = await Offer.find(offerQuery)
-      .populate('studentId', 'name emailId phoneNo programme department cpi')
+      .populate('studentId', 'name emailId phoneNo programme department discipline cpi')
       .populate('companyId', 'name venue')
       .populate('approvedBy', 'name emailId')
       .sort({ approvedAt: -1, createdAt: -1 })
@@ -63,6 +63,7 @@ export const getConfirmedForViewer = async (req, res) => {
       offer.studentId.rollNumber = vRollMap.get(offer.studentId._id.toString()) || "";
       offer.studentId.programme = offer.studentId.programme || null;
       offer.studentId.department = offer.studentId.department || null;
+      offer.studentId.discipline = offer.studentId.discipline || null;
       offer.studentId.cpi = (typeof offer.studentId.cpi === 'number') ? offer.studentId.cpi : null;
       // Off-campus offers have no companyId doc — shape a stand-in so every
       // existing "offer.companyId.name / .venue" read on the frontend keeps
@@ -91,7 +92,7 @@ export const getStudentDetailsForViewer = async (req, res) => {
     const user = await Student.findOne({ userId: studentId }).lean();
     // Also fetch the User doc for contact fields
     const UserModel = (await import('../models/user.model.js')).default;
-    const studentUser = await UserModel.findById(studentId).select('name emailId phoneNo programme department cpi').lean();
+    const studentUser = await UserModel.findById(studentId).select('name emailId phoneNo programme department discipline cpi').lean();
     if (!studentUser) return res.status(404).json({ message: 'Student not found' });
 
     // Get shortlists for this student
@@ -123,6 +124,7 @@ export const getStudentDetailsForViewer = async (req, res) => {
         phone: studentUser.phoneNo,
         programme: studentUser.programme || null,
         department: studentUser.department || null,
+        discipline: studentUser.discipline || null,
         cpi: (typeof studentUser.cpi === 'number') ? studentUser.cpi : null,
         rollNumber: user?.rollNumber || null
       },

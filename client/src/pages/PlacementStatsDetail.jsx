@@ -198,6 +198,7 @@ export default function PlacementStatsDetail() {
             </div>
             <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <InfoItem label="Mobile" value={data.student.mobile} />
+              <InfoItem label="Discipline" value={data.student.discipline} />
             </div>
           </div>
 

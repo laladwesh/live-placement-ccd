@@ -94,7 +94,7 @@ export const getPrevOffers = async (req, res) => {
       companyId: { $in: companyIds },
       approvalStatus: { $in: [ApprovalStatus.APPROVED, ApprovalStatus.REJECTED] },
     })
-      .populate("studentId", "name emailId phoneNo programme department cpi")
+      .populate("studentId", "name emailId phoneNo programme department discipline cpi")
       .populate("companyId", "name venue placementYear")
       .sort({ createdAt: -1 })
       .lean();
@@ -265,7 +265,7 @@ export const exportStudentsForYear = async (req, res) => {
     if (!year) return res.status(400).json({ message: "year query param required" });
 
     const students = await Student.find({ placementYear: year })
-      .populate("userId", "name emailId cpi programme department")
+      .populate("userId", "name emailId cpi programme department discipline")
       .populate("placedCompany", "name")
       .lean();
 
@@ -277,6 +277,7 @@ export const exportStudentsForYear = async (req, res) => {
       cpi: s.userId?.cpi ?? "",
       department: s.userId?.department || "",
       programme: s.userId?.programme || "",
+      discipline: s.userId?.discipline || "",
       email: s.userId?.emailId || "",
     }));
 

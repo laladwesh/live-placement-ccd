@@ -25,7 +25,7 @@ function hmacForGet() {
 /** Build stats from local MongoDB when the portal has no data for this student */
 async function buildFromLocalDB(rollNumber) {
   const studentDoc = await Student.findOne({ rollNumber })
-    .populate("userId", "name emailId phoneNo department programme cpi")
+    .populate("userId", "name emailId phoneNo department programme discipline cpi")
     .lean();
   if (!studentDoc) return null;
 
@@ -75,6 +75,7 @@ async function buildFromLocalDB(rollNumber) {
       rollNumber: studentDoc.rollNumber,
       department: user.department || "—",
       programme: user.programme || "—",
+      discipline: user.discipline || "—",
       cpi: typeof user.cpi === "number" ? user.cpi : null,
       iitgEmail: user.emailId,
       mobile: user.phoneNo || "—",

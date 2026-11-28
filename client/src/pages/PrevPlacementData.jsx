@@ -55,6 +55,7 @@ export default function PrevPlacementData() {
   const [cfSearch, setCfSearch] = useState("");
   const [cfProgramme, setCfProgramme] = useState("");
   const [cfDepartment, setCfDepartment] = useState("");
+  const [cfDiscipline, setCfDiscipline] = useState("");
   const [cfCompany, setCfCompany] = useState("");
   const [cfCpiMin, setCfCpiMin] = useState("");
   const [cfCpiMax, setCfCpiMax] = useState("");
@@ -243,7 +244,7 @@ export default function PrevPlacementData() {
       const rows = res.data.rows || [];
       if (rows.length === 0) { toast.error("No student data found for this year"); return; }
 
-      const headers = ["Name", "Roll Number", "Status", "Company", "CPI", "Branch", "Programme", "Email"];
+      const headers = ["Name", "Roll Number", "Status", "Company", "CPI", "Branch", "Discipline", "Programme", "Email"];
       const escape = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
       const csvLines = [
         headers.join(","),
@@ -254,6 +255,7 @@ export default function PrevPlacementData() {
           escape(r.company),
           escape(r.cpi),
           escape(r.department),
+          escape(r.discipline),
           escape(r.programme),
           escape(r.email),
         ].join(",")),
@@ -298,6 +300,7 @@ export default function PrevPlacementData() {
   // Confirmed-tab filter options (computed from placed students)
   const cfProgrammes  = useMemo(() => [...new Set(placedStudents.map(o => o.studentId?.programme).filter(Boolean))].sort(), [placedStudents]);
   const cfDepartments = useMemo(() => [...new Set(placedStudents.map(o => o.studentId?.department).filter(Boolean))].sort(), [placedStudents]);
+  const cfDisciplines = useMemo(() => [...new Set(placedStudents.map(o => o.studentId?.discipline).filter(Boolean))].sort(), [placedStudents]);
   const cfCompanies   = useMemo(() => [...new Set(placedStudents.map(o => o.companyId?.name).filter(Boolean))].sort(), [placedStudents]);
 
   const filteredPlaced = useMemo(() => {
@@ -306,6 +309,7 @@ export default function PrevPlacementData() {
       const st = o.studentId || {};
       if (cfProgramme  && st.programme  !== cfProgramme)  return false;
       if (cfDepartment && st.department !== cfDepartment)  return false;
+      if (cfDiscipline && st.discipline !== cfDiscipline)  return false;
       if (cfCompany    && !(o.companyId?.name || "").toLowerCase().includes(cfCompany.toLowerCase())) return false;
       if (cfCpiMin     && (st.cpi == null || st.cpi < Number(cfCpiMin))) return false;
       if (cfCpiMax     && (st.cpi == null || st.cpi > Number(cfCpiMax))) return false;
@@ -317,7 +321,7 @@ export default function PrevPlacementData() {
         (o.companyId?.name || "").toLowerCase().includes(s)
       );
     });
-  }, [placedStudents, cfSearch, cfProgramme, cfDepartment, cfCompany, cfCpiMin, cfCpiMax]);
+  }, [placedStudents, cfSearch, cfProgramme, cfDepartment, cfDiscipline, cfCompany, cfCpiMin, cfCpiMax]);
 
   const fmtDate = (d) => d
     ? new Date(d).toLocaleString("en-IN", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" })
@@ -603,9 +607,10 @@ export default function PrevPlacementData() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 mb-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <CfFilterGroup label="Programme"  value={cfProgramme}  onChange={setCfProgramme}  options={cfProgrammes} />
               <CfFilterGroup label="Department" value={cfDepartment} onChange={setCfDepartment} options={cfDepartments} />
+              <CfFilterGroup label="Discipline" value={cfDiscipline} onChange={setCfDiscipline} options={cfDisciplines} />
               <CfFilterGroup label="Company"    value={cfCompany}    onChange={setCfCompany}    options={cfCompanies} />
               <div className="flex flex-col">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">CPI Range</label>
@@ -619,7 +624,7 @@ export default function PrevPlacementData() {
               </div>
               <div className="flex items-end">
                 <button
-                  onClick={() => { setCfSearch(""); setCfProgramme(""); setCfDepartment(""); setCfCompany(""); setCfCpiMin(""); setCfCpiMax(""); }}
+                  onClick={() => { setCfSearch(""); setCfProgramme(""); setCfDepartment(""); setCfDiscipline(""); setCfCompany(""); setCfCpiMin(""); setCfCpiMax(""); }}
                   className="w-full py-2 text-sm font-semibold text-slate-500 hover:text-indigo-600 transition-colors"
                 >
                   Reset Filters
@@ -631,14 +636,14 @@ export default function PrevPlacementData() {
           {offersLoading ? (
             <Spinner label="Loading offers…" />
           ) : filteredPlaced.length === 0 ? (
-            <Empty label={cfSearch || cfProgramme || cfDepartment || cfCompany || cfCpiMin || cfCpiMax ? "No placements match your filters" : `No confirmed placements for ${selectedYear}`} />
+            <Empty label={cfSearch || cfProgramme || cfDepartment || cfDiscipline || cfCompany || cfCpiMin || cfCpiMax ? "No placements match your filters" : `No confirmed placements for ${selectedYear}`} />
           ) : (
             <div className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/70 border-b border-slate-100">
-                      <Th>#</Th><Th>Student</Th><Th>Programme / Branch</Th><Th>CPI</Th><Th>Company</Th><Th>Venue</Th><Th>Placed At</Th>
+                      <Th>#</Th><Th>Student</Th><Th>Programme / Branch / Discipline</Th><Th>CPI</Th><Th>Company</Th><Th>Venue</Th><Th>Placed At</Th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
@@ -652,7 +657,9 @@ export default function PrevPlacementData() {
                         </Td>
                         <Td>
                           <div className="text-sm text-slate-700">{o.studentId?.programme || "—"}</div>
-                          <div className="text-xs text-slate-400">{o.studentId?.department || "—"}</div>
+                          <div className="text-xs text-slate-400">
+                            {[o.studentId?.department, o.studentId?.discipline].filter(Boolean).join(" · ") || "—"}
+                          </div>
                         </Td>
                         <Td>{typeof o.studentId?.cpi === "number" ? o.studentId.cpi.toFixed(2) : "—"}</Td>
                         <Td><span className="font-medium text-indigo-700">{o.companyId?.name}</span></Td>

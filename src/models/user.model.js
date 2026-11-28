@@ -19,6 +19,7 @@ const UserSchema = new mongoose.Schema({
   // Academic / student fields
   programme: { type: String, trim: true, default: "" },
   department: { type: String, trim: true, default: "" },
+  discipline: { type: String, trim: true, default: "" },
   cpi: { type: Number, min: 0, max: 10, default: null },
   providers: [
     {

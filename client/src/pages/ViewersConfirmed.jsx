@@ -11,6 +11,7 @@ export default function ViewersConfirmed() {
   const [search, setSearch]   = useState('');
   const [programme, setProgramme] = useState('');
   const [department, setDepartment] = useState('');
+  const [discipline, setDiscipline] = useState('');
   const [company, setCompany] = useState('');
   const [cpiMin, setCpiMin]   = useState('');
   const [cpiMax, setCpiMax]   = useState('');
@@ -40,6 +41,7 @@ export default function ViewersConfirmed() {
 
   const programmes = useMemo(() => Array.from(new Set(offers.map(o => o.studentId?.programme).filter(Boolean))).sort(), [offers]);
   const departments = useMemo(() => Array.from(new Set(offers.map(o => o.studentId?.department).filter(Boolean))).sort(), [offers]);
+  const disciplines = useMemo(() => Array.from(new Set(offers.map(o => o.studentId?.discipline).filter(Boolean))).sort(), [offers]);
   const companies   = useMemo(() => Array.from(new Set(offers.map(o => o.companyId?.name).filter(Boolean))).sort(), [offers]);
 
   const filtered = useMemo(() => {
@@ -48,6 +50,7 @@ export default function ViewersConfirmed() {
       const st = o.studentId || {};
       if (programme && st.programme !== programme) return false;
       if (department && st.department !== department) return false;
+      if (discipline && st.discipline !== discipline) return false;
       if (company && !(o.companyId?.name || '').toLowerCase().includes(company.toLowerCase())) return false;
       if (cpiMin && (st.cpi == null || st.cpi < Number(cpiMin))) return false;
       if (cpiMax && (st.cpi == null || st.cpi > Number(cpiMax))) return false;
@@ -58,7 +61,7 @@ export default function ViewersConfirmed() {
         (o.companyId?.name || '').toLowerCase().includes(s)
       );
     });
-  }, [offers, search, programme, department, company, cpiMin, cpiMax]);
+  }, [offers, search, programme, department, discipline, company, cpiMin, cpiMax]);
 
   const formatDate = (d) => d
     ? new Date(d).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -84,7 +87,7 @@ export default function ViewersConfirmed() {
             {o.studentId?.rollNumber}
           </div>
           <div style={{ fontSize: 12, color: '#8D9096' }}>
-            {[o.studentId?.programme, o.studentId?.department].filter(Boolean).join(' · ')}
+            {[o.studentId?.programme, o.studentId?.department, o.studentId?.discipline].filter(Boolean).join(' · ')}
           </div>
         </div>
       ),
@@ -139,7 +142,7 @@ export default function ViewersConfirmed() {
         <Space wrap style={{ width: '100%', justifyContent: 'flex-end' }}>
           <Select
             value={selectedYear}
-            onChange={v => { setSelectedYear(v); setProgramme(''); setDepartment(''); setCompany(''); }}
+            onChange={v => { setSelectedYear(v); setProgramme(''); setDepartment(''); setDiscipline(''); setCompany(''); }}
             options={seasonOptions}
             style={{ width: 'min(180px, 100%)' }}
           />
@@ -169,6 +172,12 @@ export default function ViewersConfirmed() {
           options={departments.map(d => ({ label: d, value: d }))}
         />
         <Select
+          value={discipline || undefined}
+          onChange={v => setDiscipline(v || '')}
+          placeholder="Discipline" allowClear style={{ width: 160 }}
+          options={disciplines.map(d => ({ label: d, value: d }))}
+        />
+        <Select
           value={company || undefined}
           onChange={v => setCompany(v || '')}
           placeholder="Company" allowClear showSearch style={{ width: 200 }}
@@ -183,7 +192,7 @@ export default function ViewersConfirmed() {
           placeholder="CPI Max" style={{ width: 80 }} type="number"
         />
         <Button
-          onClick={() => { setProgramme(''); setDepartment(''); setCompany(''); setCpiMin(''); setCpiMax(''); setSearch(''); }}
+          onClick={() => { setProgramme(''); setDepartment(''); setDiscipline(''); setCompany(''); setCpiMin(''); setCpiMax(''); setSearch(''); }}
         >
           Reset
         </Button>

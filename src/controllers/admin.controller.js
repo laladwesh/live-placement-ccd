@@ -136,14 +136,15 @@ export const getPendingOffers = async (req, res) => {
 export const getConfirmedOffers = async (req, res) => {
   try {
     // Read optional server-side filters from query
-    const { programme, department, cpiMin, cpiMax } = req.query;
+    const { programme, department, discipline, cpiMin, cpiMax } = req.query;
 
     // If any academic filters provided, find matching user ids first
     let matchingUserIds = null;
-    if (programme || department || cpiMin || cpiMax) {
+    if (programme || department || discipline || cpiMin || cpiMax) {
       const userQuery = {};
       if (programme) userQuery.programme = programme;
       if (department) userQuery.department = department;
+      if (discipline) userQuery.discipline = discipline;
       if (cpiMin || cpiMax) {
         userQuery.cpi = {};
         if (cpiMin) userQuery.cpi.$gte = Number(cpiMin);
@@ -174,7 +175,7 @@ export const getConfirmedOffers = async (req, res) => {
     if (matchingUserIds) offerQuery.studentId = { $in: matchingUserIds };
 
     const confirmedOffers = await Offer.find(offerQuery)
-      .populate('studentId', 'name emailId phoneNo programme department cpi')
+      .populate('studentId', 'name emailId phoneNo programme department discipline cpi')
       .populate('companyId', 'name venue')
       .populate('approvedBy', 'name emailId')
       .sort({ approvedAt: -1, createdAt: -1 })
@@ -191,6 +192,7 @@ export const getConfirmedOffers = async (req, res) => {
       offer.studentId.rollNumber = confRollMap.get(offer.studentId._id.toString()) || "";
       offer.studentId.programme = offer.studentId.programme || null;
       offer.studentId.department = offer.studentId.department || null;
+      offer.studentId.discipline = offer.studentId.discipline || null;
       offer.studentId.cpi = (typeof offer.studentId.cpi === 'number') ? offer.studentId.cpi : null;
       // Off-campus offers have no companyId doc — shape a stand-in so every
       // existing "offer.companyId.name / .venue" read on the frontend keeps
@@ -563,6 +565,7 @@ export const getStudentDetails = async (req, res) => {
         rollNumber: studentDoc?.rollNumber || null,
         programme: studentUser.programme || null,
         department: studentUser.department || null,
+        discipline: studentUser.discipline || null,
         cpi: typeof studentUser.cpi === 'number' ? studentUser.cpi : null
       },
       companies: companyDetails
@@ -608,6 +611,7 @@ export const syncStudentsFromPortal = async (req, res) => {
           isAllowed: true,
           programme: s.programme || "",
           department: s.department || "",
+          discipline: s.discipline || "",
           cpi: typeof s.cpi === "number" ? s.cpi : null,
         });
         created++;
@@ -616,6 +620,7 @@ export const syncStudentsFromPortal = async (req, res) => {
         if (s.phoneNo && /^\d{10}$/.test(s.phoneNo)) user.phoneNo = s.phoneNo;
         if (s.programme) user.programme = s.programme;
         if (s.department) user.department = s.department;
+        if (s.discipline) user.discipline = s.discipline;
         if (typeof s.cpi === "number") user.cpi = s.cpi;
         user.isAllowed = true;
         await user.save();

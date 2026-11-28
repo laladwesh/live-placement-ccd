@@ -46,13 +46,19 @@ export default function StudentInterviewRow({ shortlist, maxRounds, onStageUpdat
     const action = async () => {
       setUpdating(true);
       try {
-        // Auto-end presence if student is busy-here and being rejected
+        const isRound = /^R\d+$/.test(newStage);
+        // Auto-end if rejecting while busy-here
         if (newStage === "REJECTED" && presenceStatus === "busy-here") {
           await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
         }
         await api.patch(`/poc/shortlist/${shortlist._id}/stage`, { stage: newStage });
-        // Auto-start presence when moving to a round and student is currently free
-        if (newStage.startsWith("R") && presenceStatus === "free") {
+        // Moving to a round while free → auto-start
+        if (isRound && presenceStatus === "free") {
+          await handleEnterPresence(newStage);
+        }
+        // Switching rounds while already in interview → exit old round, enter new one
+        if (isRound && presenceStatus === "busy-here") {
+          await api.post(`/poc/shortlist/${shortlist._id}/presence/exit`);
           await handleEnterPresence(newStage);
         }
       } catch (err) {

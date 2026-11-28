@@ -24,16 +24,20 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState("");
   const [programmeFilter, setProgrammeFilter] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [disciplineFilter, setDisciplineFilter] = useState("");
   const [cpiMin, setCpiMin] = useState("");
   const [cpiMax, setCpiMax] = useState("");
   const [tempProgramme, setTempProgramme] = useState("");
   const [tempDepartment, setTempDepartment] = useState("");
+  const [tempDiscipline, setTempDiscipline] = useState("");
   const [tempCpiMin, setTempCpiMin] = useState("");
   const [tempCpiMax, setTempCpiMax] = useState("");
   const [programmesList, setProgrammesList] = useState([]);
   const [departmentsList, setDepartmentsList] = useState([]);
+  const [disciplinesList, setDisciplinesList] = useState([]);
   const [programmesAll, setProgrammesAll] = useState([]);
   const [departmentsAll, setDepartmentsAll] = useState([]);
+  const [disciplinesAll, setDisciplinesAll] = useState([]);
   const [companiesList, setCompaniesList] = useState([]);
   const [companiesAll, setCompaniesAll] = useState([]);
   const [companyFilter, setCompanyFilter] = useState("");
@@ -90,9 +94,10 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const params = {};
-      const f = overrideFilters || { programme: programmeFilter, department: departmentFilter, cpiMin, cpiMax };
+      const f = overrideFilters || { programme: programmeFilter, department: departmentFilter, discipline: disciplineFilter, cpiMin, cpiMax };
       if (f.programme) params.programme = f.programme;
       if (f.department) params.department = f.department;
+      if (f.discipline) params.discipline = f.discipline;
       if (f.cpiMin) params.cpiMin = f.cpiMin;
       if (f.cpiMax) params.cpiMax = f.cpiMax;
       const [pendingRes, confirmedRes] = await Promise.all([
@@ -119,17 +124,19 @@ export default function AdminDashboard() {
         setRejectedOffers(rejectedList);
       }
       try {
-        const progs = new Set(), depts = new Set(), comps = new Set();
+        const progs = new Set(), depts = new Set(), discs = new Set(), comps = new Set();
         allConfirmed.forEach(o => {
           if (o.studentId?.programme) progs.add(o.studentId.programme);
           if (o.studentId?.department) depts.add(o.studentId.department);
+          if (o.studentId?.discipline) discs.add(o.studentId.discipline);
           if (o.companyId?.name) comps.add(o.companyId.name);
         });
-        const pa = Array.from(progs).sort(), da = Array.from(depts).sort(), ca = Array.from(comps).sort();
-        setProgrammesList(pa); setDepartmentsList(da); setCompaniesList(ca);
+        const pa = Array.from(progs).sort(), da = Array.from(depts).sort(), sa = Array.from(discs).sort(), ca = Array.from(comps).sort();
+        setProgrammesList(pa); setDepartmentsList(da); setDisciplinesList(sa); setCompaniesList(ca);
         if (!overrideFilters || Object.keys(overrideFilters).length === 0) {
           if (programmesAll.length === 0) setProgrammesAll(pa);
           if (departmentsAll.length === 0) setDepartmentsAll(da);
+          if (disciplinesAll.length === 0) setDisciplinesAll(sa);
           if (companiesAll.length === 0) setCompaniesAll(ca);
         }
       } catch { /* ignore */ }
@@ -214,7 +221,7 @@ export default function AdminDashboard() {
       <div style={{ fontSize: 12, color: '#666B72' }}>{student?.emailId}</div>
       {student?.phoneNo && <div style={{ fontSize: 12, color: '#666B72' }}>{student.phoneNo}</div>}
       <div style={{ fontSize: 11, color: '#8D9096' }}>
-        {[student?.programme, student?.department].filter(Boolean).join(' · ')}
+        {[student?.programme, student?.department, student?.discipline].filter(Boolean).join(' · ')}
       </div>
     </div>
   );
@@ -345,17 +352,18 @@ export default function AdminDashboard() {
 
   const progOptions  = (programmesAll.length ? programmesAll : programmesList).map(p => ({ label: p, value: p }));
   const deptOptions  = (departmentsAll.length ? departmentsAll : departmentsList).map(d => ({ label: d, value: d }));
+  const discOptions  = (disciplinesAll.length ? disciplinesAll : disciplinesList).map(d => ({ label: d, value: d }));
   const compOptions  = (companiesAll.length ? companiesAll : companiesList).map(c => ({ label: c, value: c }));
 
   const applyFilters = async () => {
-    setProgrammeFilter(tempProgramme); setDepartmentFilter(tempDepartment);
+    setProgrammeFilter(tempProgramme); setDepartmentFilter(tempDepartment); setDisciplineFilter(tempDiscipline);
     setCpiMin(tempCpiMin); setCpiMax(tempCpiMax); setCompanyFilter(tempCompany);
-    await fetchOffers({ programme: tempProgramme, department: tempDepartment, cpiMin: tempCpiMin, cpiMax: tempCpiMax, company: tempCompany });
+    await fetchOffers({ programme: tempProgramme, department: tempDepartment, discipline: tempDiscipline, cpiMin: tempCpiMin, cpiMax: tempCpiMax, company: tempCompany });
   };
 
   const clearFilters = async () => {
-    setProgrammeFilter(''); setDepartmentFilter(''); setCpiMin(''); setCpiMax(''); setCompanyFilter('');
-    setTempProgramme(''); setTempDepartment(''); setTempCpiMin(''); setTempCpiMax(''); setTempCompany('');
+    setProgrammeFilter(''); setDepartmentFilter(''); setDisciplineFilter(''); setCpiMin(''); setCpiMax(''); setCompanyFilter('');
+    setTempProgramme(''); setTempDepartment(''); setTempDiscipline(''); setTempCpiMin(''); setTempCpiMax(''); setTempCompany('');
     await fetchOffers({});
   };
 
@@ -370,6 +378,11 @@ export default function AdminDashboard() {
         value={tempDepartment || undefined}
         onChange={v => setTempDepartment(v || '')}
         placeholder="Department" allowClear style={{ width: 160 }} options={deptOptions}
+      />
+      <Select
+        value={tempDiscipline || undefined}
+        onChange={v => setTempDiscipline(v || '')}
+        placeholder="Discipline" allowClear style={{ width: 160 }} options={discOptions}
       />
       <Select
         value={tempCompany || undefined}
